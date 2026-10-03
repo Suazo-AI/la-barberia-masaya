@@ -75,8 +75,8 @@ const fragmentShader = `
     if (inImageArea && imageAlpha > 0.0) {
       float atlasSize = ceil(sqrt(uTextureCount));
       vec2 atlasPos = vec2(mod(texIndex, atlasSize), floor(texIndex / atlasSize));
-      vec2 atlasUV = (atlasPos + imageUV) / atlasSize;
-      atlasUV.y = 1.0 - atlasUV.y;
+      // Flip within the selected tile, not the entire atlas (which swaps rows).
+      vec2 atlasUV = (atlasPos + vec2(imageUV.x, 1.0 - imageUV.y)) / atlasSize;
       vec3 sourceColor = texture2D(uImageAtlas, atlasUV).rgb;
       vec3 imageColor = vec3(dot(sourceColor, vec3(0.299, 0.587, 0.114)));
       color = mix(color, imageColor, imageAlpha);
@@ -119,6 +119,10 @@ export async function mountArtGallery(container, sourceImages, onFailure) {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    if (dragging && container.hasPointerCapture(dragging.id))
+      container.releasePointerCapture(dragging.id);
+    dragging = null;
+    container.classList.remove('is-dragging');
     cancelAnimationFrame(frame);
     for (const cleanup of cleanups) cleanup();
     for (const texture of textures) gl.deleteTexture(texture);

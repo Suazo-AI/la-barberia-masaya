@@ -46,6 +46,12 @@ for (const viewport of [
     await expect(surface.locator('canvas')).toBeVisible();
     await expect(surface).toBeFocused();
     await expect(page.locator('.space-grid')).toBeHidden();
+    await expect(
+      page.getByRole('list', { name: 'Fotos incluidas en la galería' }).getByRole('listitem'),
+    ).toHaveCount(4);
+    await expect(page.getByRole('list', { name: 'Fotos incluidas en la galería' })).toContainText(
+      'Detalle de una lámpara',
+    );
     await expect
       .poll(() => surface.locator('canvas').evaluate((canvas) => canvas.width))
       .toBeGreaterThan(0);
@@ -79,6 +85,8 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Explorar galería' }).click();
     await expect(surface.locator('canvas')).toBeVisible();
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeVisible();
     await expect(page.locator('.space-grid')).toBeVisible();
     await expect(surface.locator('canvas')).toHaveCount(0);
     expect(errors).toEqual([]);
@@ -156,6 +164,7 @@ test('real context loss and pointer cancellation recover', async ({ page }) => {
   await surface.dispatchEvent('pointercancel', { pointerId: 1 });
   await page.mouse.up();
   await expect(surface).not.toHaveClass(/is-dragging/);
+  await page.mouse.down();
   await surface
     .locator('canvas')
     .evaluate((canvas) =>
@@ -163,6 +172,11 @@ test('real context loss and pointer cancellation recover', async ({ page }) => {
     );
   await expect(page.locator('.space-grid')).toBeVisible();
   await expect(page.getByRole('status')).toContainText('no está disponible');
+  await page.mouse.up();
+  await expect(surface).not.toHaveClass(/is-dragging/);
+  await page.getByRole('button', { name: 'Explorar galería' }).click();
+  await expect(surface.locator('canvas')).toBeVisible();
+  await expect(surface).not.toHaveClass(/is-dragging/);
 });
 
 test('reduced motion keeps static content and downloads no gallery engine', async ({ page }) => {

@@ -49,7 +49,7 @@
         </figure>
       </section>
       <section class="space-section" aria-labelledby="space-heading">
-        <h2 id="space-heading">EL LOCAL</h2>
+        <h2 id="space-heading" tabindex="-1">EL LOCAL</h2>
         <div class="gallery-tools" hidden>
           <button
             class="gallery-toggle"
@@ -62,6 +62,11 @@
           <p class="gallery-status" role="status"></p>
         </div>
         <div id="interactive-gallery" hidden>
+          <ul
+            class="sr-only"
+            id="gallery-photo-descriptions"
+            aria-label="Fotos incluidas en la galería"
+          ></ul>
           <p id="gallery-instructions">
             Arrastrá para explorar. En el móvil, deslizá de lado a lado. Con teclado, usá las
             flechas; Inicio vuelve al centro.

@@ -53,7 +53,7 @@ test('fonts carry redistributable license files', async () => {
 });
 
 test('approved local gallery uses four interior crops without customer-work claims', () => {
-  assert.match(html, /id="space-heading">EL LOCAL<\/h2>/);
+  assert.match(html, /id="space-heading" tabindex="-1">EL LOCAL<\/h2>/);
   assert.equal((html.match(/class="space-tile /g) || []).length, 4);
   assert.equal((html.match(/loading="lazy"/g) || []).length, 4);
   assert.doesNotMatch(html, /TRABAJOS|CLIENTES|nuestros cortes|nuestros resultados/);
@@ -67,4 +67,10 @@ test('progressive motion ships only one local script and retained upstream notic
     /Copyright - 2026 BHARGAVPATEL1244/,
   );
   assert.match(await readFile('dist/styles.css', 'utf8'), /prefers-reduced-motion: no-preference/);
+});
+
+test('Obsidian atlas flips within each tile so photo labels retain their source identity', async () => {
+  const source = await readFile('dist/art-gallery.js', 'utf8');
+  assert.match(source, /atlasPos \+ vec2\(imageUV.x, 1.0 - imageUV.y\)/);
+  assert.doesNotMatch(source, /atlasUV.y = 1.0 - atlasUV.y/);
 });

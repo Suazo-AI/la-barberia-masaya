@@ -34,6 +34,12 @@ const status = document.querySelector('.gallery-status');
 const interactive = document.querySelector('#interactive-gallery');
 const grid = document.querySelector('.space-grid');
 const surface = document.querySelector('.art-gallery');
+const descriptions = document.querySelector('#gallery-photo-descriptions');
+for (const image of grid.querySelectorAll('img')) {
+  const item = document.createElement('li');
+  item.textContent = image.alt;
+  descriptions.append(item);
+}
 let gallery;
 let generation = 0;
 
@@ -95,6 +101,11 @@ for (const button of document.querySelectorAll('[data-pan]')) {
 }
 document.querySelector('[data-reset]').addEventListener('click', () => gallery?.reset());
 reducedMotion.addEventListener('change', () => {
-  if (reducedMotion.matches) closeGallery('Movimiento reducido: se muestra la cuadrícula.');
+  if (reducedMotion.matches) {
+    const focusInControls =
+      tools.contains(document.activeElement) || interactive.contains(document.activeElement);
+    closeGallery('Movimiento reducido: se muestra la cuadrícula.');
+    if (focusInControls) document.querySelector('#space-heading').focus({ preventScroll: true });
+  }
   tools.hidden = reducedMotion.matches;
 });
