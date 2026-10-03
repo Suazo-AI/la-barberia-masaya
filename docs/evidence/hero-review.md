@@ -53,3 +53,7 @@ The user confirmed permission on 2026-10-03 to use photos and create referenced 
 - Host/domain and explicit release authorization, followed by deployed-artifact verification and rollback instructions
 
 No merge, auto-merge or public website deployment has occurred. No Mistakes remains inactive. This record and PR narrative supplement actual CI logs; they do not replace them or establish “zero bugs”.
+
+### Lighthouse runner compatibility
+
+The first separate launcher could not start pinned downloaded Chromium under Ubuntu 24.04 AppArmor (`No usable sandbox`). Diagnostics also showed chrome-launcher automatically appending `--disable-setuid-sandbox`. The bounded compatibility fix omits that disabling flag and uses the already-installed official `/opt/google/chrome/chrome-sandbox` helper only after verifying it is root-owned, setuid and not group/world-writable. It changes no host policy, AppArmor/sysctl configuration, credentials or permissions. This follows [Chromium’s documented sandbox-helper route](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md). If the existing helper is unavailable, the check fails rather than weakening isolation. No `--no-sandbox` workaround is added.

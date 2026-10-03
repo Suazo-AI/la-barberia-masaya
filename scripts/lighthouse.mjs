@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -7,6 +7,19 @@ import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
 import { chromium } from '@playwright/test';
 
+// Use the preinstalled official sandbox helper, never change host security policy or permissions.
+const sandboxHelper = '/opt/google/chrome/chrome-sandbox';
+const sandboxStat = await stat(sandboxHelper);
+if (
+  !sandboxStat.isFile() ||
+  sandboxStat.uid !== 0 ||
+  !(sandboxStat.mode & 0o4000) ||
+  sandboxStat.mode & 0o022
+) {
+  throw new Error(
+    'The existing official Chrome sandbox helper is missing or not securely configured. No security settings were changed.',
+  );
+}
 const url = 'http://127.0.0.1:4174/';
 const server = spawn(process.execPath, ['scripts/preview.mjs'], {
   env: { ...process.env, PORT: '4174', HOST: '127.0.0.1' },
@@ -35,7 +48,15 @@ try {
     try {
       chrome = await chromeLauncher.launch({
         chromePath: chromium.executablePath(),
-        chromeFlags: ['--headless', '--disable-dev-shm-usage'],
+        // Keep normal Lighthouse measurement flags but omit launcher's automatic
+        // --disable-setuid-sandbox, allowing Chrome's existing sandbox to operate.
+        ignoreDefaultFlags: true,
+        chromeFlags: [
+          ...chromeLauncher.Launcher.defaultFlags(),
+          '--headless',
+          '--disable-dev-shm-usage',
+        ],
+        envVars: { ...process.env, CHROME_DEVEL_SANDBOX: sandboxHelper },
         userDataDir: profile,
         port: 9222,
         logLevel: 'verbose',
@@ -100,6 +121,12 @@ try {
     url,
     node: process.version,
     coldProfilePerRun: true,
+    sandbox: {
+      helper: sandboxHelper,
+      ownerUid: sandboxStat.uid,
+      mode: (sandboxStat.mode & 0o7777).toString(8),
+      hostPolicyChanged: false,
+    },
     runs,
     median: { lcpMs: median('lcpMs'), cls: median('cls'), performance: median('performance') },
     thresholds: { lcpMs: 2500, cls: 0.1, performance: 90 },
