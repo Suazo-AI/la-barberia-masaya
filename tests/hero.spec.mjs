@@ -56,6 +56,14 @@ for (const viewport of viewports) {
     expect(external).toEqual([]);
     expect(errors).toEqual([]);
     if ([320, 390, 1440].includes(viewport.width)) {
+      for (const card of await page.locator('.work-photo').all()) {
+        await card.scrollIntoViewIfNeeded();
+        await expect(card.locator('img')).toHaveCount(1);
+        await expect
+          .poll(() => card.locator('img').evaluate((img) => img.complete && img.naturalWidth > 0))
+          .toBe(true);
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
       await mkdir('.private-evidence', { recursive: true });
       await page.screenshot({
         path: `.private-evidence/hero-${viewport.width}x${viewport.height}.png`,
@@ -242,6 +250,7 @@ for (const dpr of [1, 2]) {
       .evaluateAll((images) => images.map((img) => img.currentSrc));
     expect(new Set(frontSources).size).toBe(1);
     await page.locator('.work-grid').scrollIntoViewIfNeeded();
+    await expect(page.locator('.work-grid img')).toHaveCount(2);
     await expect
       .poll(() =>
         page
