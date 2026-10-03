@@ -703,3 +703,10 @@ h1 span {
 .review-card blockquote {
   overflow-wrap: anywhere;
 }
+
+.work-image-template {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: #22211f;
+}

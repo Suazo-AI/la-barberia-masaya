@@ -28,6 +28,27 @@ if (!reducedMotion.matches && 'IntersectionObserver' in window) {
   });
 }
 
+// Browser-native lazy loading can fetch distant cards early. Materialize originals
+// only near the viewport; noscript carries the same authentic images without JS.
+function revealWorkPhoto(card) {
+  const template = card.querySelector('.work-image-template');
+  if (template) template.replaceWith(template.content.cloneNode(true));
+}
+const photoCards = document.querySelectorAll('.work-photo');
+if ('IntersectionObserver' in window) {
+  const photoObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        revealWorkPhoto(entry.target);
+        photoObserver.unobserve(entry.target);
+      }
+    },
+    { rootMargin: '200px' },
+  );
+  photoCards.forEach((card) => photoObserver.observe(card));
+} else photoCards.forEach(revealWorkPhoto);
+
 const tools = document.querySelector('.gallery-tools');
 // Authentic source cards stay readable and linked while the optional canvas is active.
 if (tools?.dataset.contentStatus === 'ready') {
@@ -40,7 +61,11 @@ if (tools?.dataset.contentStatus === 'ready') {
   const items = [...grid.querySelectorAll('[data-gallery-item]')];
   for (const source of items) {
     const item = document.createElement('li');
-    item.textContent = source.querySelector('img')?.alt || source.textContent.trim();
+    item.textContent =
+      (
+        source.querySelector('img') ||
+        source.querySelector('template')?.content.querySelector('img')
+      )?.alt || source.textContent.trim();
     descriptions.append(item);
   }
   let gallery;
@@ -70,6 +95,7 @@ if (tools?.dataset.contentStatus === 'ready') {
     toggle.disabled = true;
     status.textContent = 'Preparando la galería…';
     try {
+      photoCards.forEach(revealWorkPhoto);
       const { mountArtGallery } = await import('./art-gallery.js');
       if (current !== generation || reducedMotion.matches) return;
       const mounted = await mountArtGallery(surface, items, () => {

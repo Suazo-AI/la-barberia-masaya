@@ -89,7 +89,7 @@ for (const viewport of [
       JSON.stringify(
         {
           commit: process.env.SOURCE_COMMIT || 'local-uncommitted',
-          baselineCommit: 'a2bf856af6d57775ee1750a58a8ff6a95b7f1745',
+          baselineCommit: 'c5dd0b9e1cc16f23ec00e0123ce91d4b291438cb',
           viewport,
           url: page.url(),
           checks: [
@@ -97,7 +97,7 @@ for (const viewport of [
             'Maps place ID',
             'keyboard focus',
             'repeated intercepted directions',
-            'pending gallery remains static across motion changes',
+            'premises remain static across motion changes; authentic gallery controls return',
           ],
           capture: 'Real Playwright Chromium screenshots and WebM',
         },

@@ -57,7 +57,7 @@ test('fonts carry redistributable license files', async () => {
 test('approved local gallery uses four interior crops without customer-work claims', () => {
   assert.match(html, /id="space-heading" tabindex="-1">EL LOCAL<\/h2>/);
   assert.equal((html.match(/class="space-tile /g) || []).length, 4);
-  assert.equal((html.match(/loading="lazy"/g) || []).length, 6);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 8);
   assert.doesNotMatch(html, /TRABAJOS|CLIENTES|nuestros cortes|nuestros resultados/);
 });
 

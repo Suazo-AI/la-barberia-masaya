@@ -129,6 +129,10 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
     'href',
     'tel:+50585482197',
   );
+  await expect(page.locator('.work-grid img')).toHaveCount(2);
+  await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
+  await expect(page.locator('.work-grid')).toContainText('Moises Diaz');
+  await expect(page.locator('.gallery-tools')).toBeHidden();
   await context.close();
   for (const width of [320, 390, 720]) {
     const zoom = await browser.newPage({
