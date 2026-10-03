@@ -105,7 +105,7 @@ for (const viewport of [
       JSON.stringify(
         {
           commit: process.env.SOURCE_COMMIT || 'local-uncommitted',
-          baselineCommit: 'c5dd0b9e1cc16f23ec00e0123ce91d4b291438cb',
+          baselineCommit: '0755fce62688e380a737db9e267bad22e35acf25',
           viewport,
           afterUrl: 'http://127.0.0.1:4173/',
           beforeUrl: process.env.UI_BASELINE_URL || null,

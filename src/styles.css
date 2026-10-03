@@ -1150,6 +1150,10 @@ h1 span {
 .booking-review-row dl {
   min-width: 0;
 }
+.booking-review-row .booking-text-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 .booking-review-note {
   margin-top: 1.5rem;
   line-height: 1.5;
