@@ -29,83 +29,87 @@ if (!reducedMotion.matches && 'IntersectionObserver' in window) {
 }
 
 const tools = document.querySelector('.gallery-tools');
-const toggle = document.querySelector('.gallery-toggle');
-const status = document.querySelector('.gallery-status');
-const interactive = document.querySelector('#interactive-gallery');
-const grid = document.querySelector('.space-grid');
-const surface = document.querySelector('.art-gallery');
-const descriptions = document.querySelector('#gallery-photo-descriptions');
-for (const image of grid.querySelectorAll('img')) {
-  const item = document.createElement('li');
-  item.textContent = image.alt;
-  descriptions.append(item);
-}
-let gallery;
-let generation = 0;
-
-function closeGallery(message = '') {
-  generation += 1;
-  const focusInside = interactive.contains(document.activeElement);
-  gallery?.dispose();
-  gallery = null;
-  interactive.hidden = true;
-  grid.hidden = false;
-  toggle.disabled = false;
-  toggle.textContent = 'Explorar galería';
-  toggle.setAttribute('aria-expanded', 'false');
-  status.textContent = message;
-  if (focusInside) toggle.focus({ preventScroll: true });
-}
-
-if (!reducedMotion.matches) tools.hidden = false;
-toggle.addEventListener('click', async () => {
-  if (gallery) {
-    closeGallery();
-    return;
+// The approved effect awaits authentic haircut photographs and reviews.
+// Do not expose the historical premises photographs as its final content.
+if (tools?.dataset.contentStatus === 'ready') {
+  const toggle = document.querySelector('.gallery-toggle');
+  const status = document.querySelector('.gallery-status');
+  const interactive = document.querySelector('#interactive-gallery');
+  const grid = document.querySelector('.space-grid');
+  const surface = document.querySelector('.art-gallery');
+  const descriptions = document.querySelector('#gallery-photo-descriptions');
+  for (const image of grid.querySelectorAll('img')) {
+    const item = document.createElement('li');
+    item.textContent = image.alt;
+    descriptions.append(item);
   }
-  const current = ++generation;
-  toggle.disabled = true;
-  status.textContent = 'Preparando la galería…';
-  try {
-    const { mountArtGallery } = await import('./art-gallery.js');
-    if (current !== generation || reducedMotion.matches) return;
-    const mounted = await mountArtGallery(surface, [...grid.querySelectorAll('img')], () => {
-      closeGallery(
-        'La galería interactiva no está disponible. Podés ver todas las fotos en la cuadrícula.',
-      );
-    });
-    if (current !== generation || reducedMotion.matches) {
-      mounted.dispose();
+  let gallery;
+  let generation = 0;
+
+  function closeGallery(message = '') {
+    generation += 1;
+    const focusInside = interactive.contains(document.activeElement);
+    gallery?.dispose();
+    gallery = null;
+    interactive.hidden = true;
+    grid.hidden = false;
+    toggle.disabled = false;
+    toggle.textContent = 'Explorar galería';
+    toggle.setAttribute('aria-expanded', 'false');
+    status.textContent = message;
+    if (focusInside) toggle.focus({ preventScroll: true });
+  }
+
+  if (!reducedMotion.matches) tools.hidden = false;
+  toggle.addEventListener('click', async () => {
+    if (gallery) {
+      closeGallery();
       return;
     }
-    gallery = mounted;
-    grid.hidden = true;
-    interactive.hidden = false;
-    toggle.textContent = 'Ver cuadrícula';
-    toggle.setAttribute('aria-expanded', 'true');
-    status.textContent = '';
-    surface.focus({ preventScroll: true });
-  } catch {
-    if (current === generation)
-      closeGallery(
-        'La galería interactiva no está disponible. Podés ver todas las fotos en la cuadrícula.',
-      );
-  } finally {
-    if (current === generation) toggle.disabled = false;
+    const current = ++generation;
+    toggle.disabled = true;
+    status.textContent = 'Preparando la galería…';
+    try {
+      const { mountArtGallery } = await import('./art-gallery.js');
+      if (current !== generation || reducedMotion.matches) return;
+      const mounted = await mountArtGallery(surface, [...grid.querySelectorAll('img')], () => {
+        closeGallery(
+          'La galería interactiva no está disponible. Podés ver todas las fotos en la cuadrícula.',
+        );
+      });
+      if (current !== generation || reducedMotion.matches) {
+        mounted.dispose();
+        return;
+      }
+      gallery = mounted;
+      grid.hidden = true;
+      interactive.hidden = false;
+      toggle.textContent = 'Ver cuadrícula';
+      toggle.setAttribute('aria-expanded', 'true');
+      status.textContent = '';
+      surface.focus({ preventScroll: true });
+    } catch {
+      if (current === generation)
+        closeGallery(
+          'La galería interactiva no está disponible. Podés ver todas las fotos en la cuadrícula.',
+        );
+    } finally {
+      if (current === generation) toggle.disabled = false;
+    }
+  });
+  for (const button of document.querySelectorAll('[data-pan]')) {
+    button.addEventListener('click', () =>
+      gallery?.pan(...button.dataset.pan.split(',').map(Number)),
+    );
   }
-});
-for (const button of document.querySelectorAll('[data-pan]')) {
-  button.addEventListener('click', () =>
-    gallery?.pan(...button.dataset.pan.split(',').map(Number)),
-  );
+  document.querySelector('[data-reset]').addEventListener('click', () => gallery?.reset());
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) {
+      const focusInControls =
+        tools.contains(document.activeElement) || interactive.contains(document.activeElement);
+      closeGallery('Movimiento reducido: se muestra la cuadrícula.');
+      if (focusInControls) document.querySelector('#space-heading').focus({ preventScroll: true });
+    }
+    tools.hidden = reducedMotion.matches;
+  });
 }
-document.querySelector('[data-reset]').addEventListener('click', () => gallery?.reset());
-reducedMotion.addEventListener('change', () => {
-  if (reducedMotion.matches) {
-    const focusInControls =
-      tools.contains(document.activeElement) || interactive.contains(document.activeElement);
-    closeGallery('Movimiento reducido: se muestra la cuadrícula.');
-    if (focusInControls) document.querySelector('#space-heading').focus({ preventScroll: true });
-  }
-  tools.hidden = reducedMotion.matches;
-});

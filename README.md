@@ -1,5 +1,7 @@
 # La Barbería Masaya
 
+The current private increment includes a verified visit panel with address, weekly hours and Maps directions. The approved Obsidian effect awaits authentic haircut/review content; its engine is retained, with local-photo controls disabled. The premises gallery remains static. See [visit evidence](docs/evidence/visit-review.md).
+
 The approved **round-two option 2, contundente** hero and subsequently selected monochrome **El local** grid are implemented as semantic HTML/CSS. This is the first private working increment of the website, not the full website or a public launch.
 
 Canonical repository: https://github.com/Suazo-AI/la-barberia-masaya.
@@ -8,7 +10,7 @@ Read [START-HERE](START-HERE.md), [AGENTS](AGENTS.md), [SPEC](SPEC.md), [decisio
 
 ## Run locally
 
-Requires Node **24.19.0** (see `.nvmrc`) and the locked dev dependencies. No runtime framework is shipped. A small local progressive-enhancement module adds motion; the optional Obsidian WebGL port loads only when the visitor selects Explorar galería.
+Requires Node **24.19.0** (see `.nvmrc`) and the locked dev dependencies. No runtime framework is shipped. A small local progressive-enhancement module adds motion; the retained Obsidian WebGL port is currently disabled pending authentic haircut/review content.
 
 ```sh
 npm ci --ignore-scripts
@@ -53,4 +55,4 @@ The HTML validator's `tel-non-breaking` rule is disabled because the approved an
 
 ## Selected UI components
 
-See [integration details and exact source attribution](docs/ui-components.md). The approved static layout is preserved. The interactive Obsidian trial has explicit entry/exit controls, uses only existing authorized photographs, and falls back to the semantic grid. No new dependency was installed.
+See [integration details and exact source attribution](docs/ui-components.md). The approved static layout is preserved. The historical interactive Obsidian trial had explicit entry/exit controls and semantic fallback. Its engine is retained but the current page keeps premises photographs static, per the latest content direction. No new dependency was installed.

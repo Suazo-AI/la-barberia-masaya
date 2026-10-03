@@ -77,3 +77,8 @@ Original CSS/SVG decoration must be labeled as original design, not a photograph
 ## Change rule
 
 Change a fact's status only with evidence. Record date, confirming role, public evidence/reference, affected requirement/task IDs, and whether site content changed. Do not turn an omission or unsuccessful search into proof that a feature/service does not exist.
+
+
+## Visit-link verification, 2026-10-03
+
+The exact outbound [place-ID URL](https://www.google.com/maps/search/?api=1&query=La+Barberia+Masaya&query_place_id=ChIJ5VCti5kHdI8RfdKEhOxWcr4) was opened in the cloud browser and its rendered listing inspected. It resolves to La Barberia, Supermercado Pali, 4 cuadras al oeste, Masaya 41000, Nicaragua; phone +505 8548 2197; coordinates 11.9723513,-86.101466. Expanded weekly hours match B-04. This is live listing verification, not independent owner confirmation. No photos downloaded or business contact made. The visit section dates this listing observation 2026-10-03 and qualifies holiday variations.

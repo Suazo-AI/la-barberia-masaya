@@ -21,3 +21,9 @@ Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-
 ## Current component trial
 
 Requested 2026-10-03: editorial entrance, blur reveal, wipe CTA and a real Obsidian Art Gallery trial. Integration is described in [docs/ui-components.md](docs/ui-components.md). The pre-component baseline is now the real app at `3dbff80204c72754959b39966620146704b5233b`; new before/after evidence must use it, not the initial README-only baseline.
+
+## Visit panel increment, 2026-10-03
+
+The next private increment adds the selected Stockers-inspired visit panel with the exact Maps place ID, observed address and seven-day weekly hours. The source is explicitly dated 2026-10-03; no live opening status or owner-confirmation claim. Local photographs remain a static grid. The approved Obsidian engine is retained but disabled in the page until authentic haircut photographs and reviews are available, per the user's latest content direction. No fabricated content is substituted.
+
+Current before/after baseline: `a2bf856af6d57775ee1750a58a8ff6a95b7f1745`. See [visit review](docs/evidence/visit-review.md) for checks and outstanding gates.

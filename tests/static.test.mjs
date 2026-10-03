@@ -10,7 +10,6 @@ test('semantic Spanish page and selected copy', () => {
     assert.equal((html.match(new RegExp(`<${tag}(?: |>)`, 'g')) || []).length, 1);
   for (const copy of [
     'LA BARBERÍA',
-    'MASAYA · CAILAGUA',
     'TU ESTILO.',
     'BIEN HECHO.',
     'Un espacio para tu próximo corte.',
@@ -23,7 +22,8 @@ test('semantic Spanish page and selected copy', () => {
 test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /name="robots" content="noindex, nofollow"/);
   assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp|Reservar|testimonio|estrellas/i);
-  assert.doesNotMatch(html, /(?:href|src)="https?:\/\//);
+  assert.doesNotMatch(html, /src="https?:\/\//);
+  assert.equal((html.match(/href="https?:\/\//g) || []).length, 1);
   assert.equal(html.includes('http-equiv="refresh"'), false);
 });
 test('all output image bytes exactly match optimized inputs, with no concept or source screenshots', async () => {
@@ -73,4 +73,14 @@ test('Obsidian atlas flips within each tile so photo labels retain their source 
   const source = await readFile('dist/art-gallery.js', 'utf8');
   assert.match(source, /atlasPos \+ vec2\(imageUV.x, 1.0 - imageUV.y\)/);
   assert.doesNotMatch(source, /atlasUV.y = 1.0 - atlasUV.y/);
+});
+
+test('visit facts retain exact place identity, weekly hours and dated source', () => {
+  assert.match(html, /query_place_id=ChIJ5VCti5kHdI8RfdKEhOxWcr4/);
+  assert.match(html, /Supermercado Pali, 4 cuadras al oeste/);
+  assert.match(html, /datetime="2026-10-03"/);
+  assert.match(html, /Puede variar en días festivos/);
+  assert.equal((html.match(/<dt>/g) || []).length, 7);
+  assert.doesNotMatch(html, /abierto ahora|horario confirmado/i);
+  assert.match(html, /data-content-status="pending"/);
 });

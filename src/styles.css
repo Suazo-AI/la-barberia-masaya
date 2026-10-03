@@ -492,3 +492,92 @@ h1 span {
   white-space: nowrap;
   border: 0;
 }
+
+/* Visit panel: original typography and verified facts; no embedded map or live status. */
+.visit-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(3rem, 8vw, 9rem);
+  margin-top: clamp(3rem, 6vw, 6rem);
+  padding: clamp(3rem, 6vw, 6rem) var(--gutter);
+  border-top: 1px solid #393832;
+}
+.visit-location,
+.visit-hours {
+  min-width: 0;
+}
+.section-label,
+.visit-hours h3 {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+}
+.visit-section h2 {
+  margin: 0 0 1.75rem;
+  font-family: Anton, Impact, sans-serif;
+  font-size: clamp(2.8rem, 5.4vw, 6rem);
+  line-height: 1.06;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.visit-section address {
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.65;
+  font-style: normal;
+}
+.directions-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: min(2rem, 4vw);
+  max-width: 100%;
+  min-height: 3.5rem;
+  margin-top: 2rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ivory);
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.directions-action:hover,
+.directions-action:focus-visible {
+  color: var(--ink);
+  background: var(--ivory);
+}
+.hours-list {
+  margin: 0;
+}
+.hours-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #393832;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+.hours-list dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.hours-note {
+  max-width: 34rem;
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+@media (max-width: 767px) {
+  .visit-section {
+    grid-template-columns: 1fr;
+  }
+}

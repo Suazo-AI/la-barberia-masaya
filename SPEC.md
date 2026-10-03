@@ -67,3 +67,9 @@ See [acceptance](docs/acceptance.md), [sources](docs/sources.md), [decisions](do
 ## 7. Requested component trial, 2026-10-03
 
 Apply the previously shown UI references, with the later explicit selection to try Obsidian Art Gallery. Preserve the approved hero and static-grid fallback. See [implementation map](docs/ui-components.md) for real upstream reuse versus visual inspiration. Human visual acceptance remains pending. The current increment permits implementation and draft-PR verification, not merge or public release.
+
+## 8. Visit and gallery content update, 2026-10-03
+
+This increment supersedes the pending-visit status above: build the selected Stockers-inspired location/hours panel below the existing local grid, using original Anton/Barlow styling, the preserved Maps place ID and all seven days. The schedule must say it was observed on Google Maps on 2026-10-03, uses Nicaragua time, and may vary on holidays. Do not claim “open now”, guaranteed availability or owner confirmation. There is one outbound Maps link and still exactly one hero/call CTA. No embedded map, tracking API or new dependencies.
+
+The user likes the Obsidian effect but now assigns it to genuine reviews and haircut photographs. Keep the engine source for that future integration; disable its local-photo controls while authentic content is pending. The existing premises grid remains static. This supersedes the active local-photo trial, not approval of the effect itself. Reviews/cuts require authentic sources and appropriate usage rights before integration; no invented testimonials or haircut results.

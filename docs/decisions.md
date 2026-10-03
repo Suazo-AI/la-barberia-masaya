@@ -76,3 +76,11 @@ If safe operation cannot be demonstrated, proceed with the same small task graph
 ## Current decision log
 
 2026-10-02: Initial proposal recorded. No implementation direction, production business content, final visuals, host, or pipeline execution has been approved in this planning package. Tests/build/deployment are not yet run.
+
+
+## Visit increment — 2026-10-03
+
+- Design owner: project approver selected Stockers visit reference; implementation adapts only split-panel rhythm and rules, not its branding or content. Dark Anton/Barlow typographic panel keeps navigation practical and the hero unchanged.
+- Content owner: public Google Maps business listing, re-verified 2026-10-03, not independent business confirmation. Exact weekly schedule and place ID are preserved; dated source/holiday qualification is visible.
+- Latest gallery direction: approved effect is for genuine haircut photographs and reviews. The local grid is static again; the retained engine is disabled pending authentic material. Historic WebGL tests are explicitly skipped while that feature is unavailable, not reported as current passing checks.
+- Implementation and draft PR update authorized; human visual review and public-release permission remain separate gates.
