@@ -15,6 +15,8 @@ Updated: 2026-10-03. Current decisions below supersede conflicting proposals in 
 
 Gate A is complete for the hero increment. Gate B is partial (business/contact confirmed; photo permission confirmed; official launch authority open). Gate C is still required for the actual responsive implementation, not the already-selected concept. Gate D is open. Directions and hours belong to the next selected visit-section treatment.
 
+D-17 · User selected 2026-10-03: Stockers-style tight B/W four-column grid, adapted truthfully as “El local” using two authorized enhanced interior views and two explicit detail crops. No fictional client work. Two columns on phones. Actual visual review remains pending.
+
 ## Historical proposal table (2026-10-02; not current instructions)
 
 | ID | Decision | Status | Reason / next action |

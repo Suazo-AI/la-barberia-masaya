@@ -4,9 +4,9 @@ Version 0.2 · 2026-10-03 · Business timezone: America/Managua
 
 ## 1. Outcome and current increment
 
-A Spanish-first, mobile-friendly website for La Barbería in Masaya. Help a visitor recognize the shop, contact it and, when the next section is approved, find it. This increment implements the user-selected round-two **option 2, contundente**, plus a testable static foundation. It is a private visual review, not a launched official site or a complete end-to-end MVP.
+A Spanish-first, mobile-friendly website for La Barbería in Masaya. Help a visitor recognize the shop, contact it and, when the next section is approved, find it. This increment implements the user-selected round-two **option 2, contundente**, the subsequently selected tight monochrome **El local** grid, and a testable static foundation. It is a private visual review, not a launched official site or a complete end-to-end MVP.
 
-The full website remains the goal. Subsequent sections are selected with the user using relevant Spanish/English website references. Do not invent a gallery, service menu, prices, staff biographies, claims, reviews or a booking system to fill space.
+The full website remains the goal. Subsequent sections are selected with the user using relevant Spanish/English website references. The gallery is explicitly selected and shows the premises only. Do not invent a service menu, prices, staff biographies, claims, reviews, haircut results or a booking system to fill space.
 
 ## 2. Approved hero
 
@@ -45,7 +45,12 @@ Build copies an explicit allowlist only. Private reference material, raw Maps sc
 - Core content works with JavaScript disabled. No autoplay, transitions, animation, smooth scrolling, or motion-dependent information
 - No forms, tracking, external embeds, location requests, cookies or initial third-party requests
 
-## 5. Full-site scope and remaining creative work
+## 5. Approved premises grid and remaining creative work
+
+On 2026-10-03 the user selected the Stockers tight monochrome work-grid reference. Adapt its visual rhythm as **EL LOCAL**, with four portrait tiles in one desktop row, thin 4px black gutters, and two columns on mobile. Use the two existing enhanced historical interior views plus two distinct, honestly labeled CSS detail crops. No fabricated customers, services, haircut results or new scene generation. Image grayscale and crops are presentational CSS only, with no hover animation, modal or new CTA. The provenance note covers all images. Keep the reference screenshot private and copy no Stockers photography, branding or text.
+
+This selection is a separate increment after the hero-only source baseline. User acceptance of actual rendered gallery and responsive layout remains required.
+
 
 Next: user-selected visit/contact treatment, with verified map destination, approved address, telephone and weekly hours. Directions belong below the hero, preserving its single action. Use the confirmed source ledger; omit any unverified service or price information. Unknown holiday hours must not become a live “open now” claim.
 

@@ -23,10 +23,15 @@ for (const viewport of viewports) {
       if (!r.url().startsWith('http://127.0.0.1:4173')) external.push(r.url());
     });
     page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(message.text());
+    });
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
     expect(await page.locator('h1').innerText()).toMatch(/TU ESTILO.\s+BIEN HECHO./);
     expect(await page.locator('.hero a').count()).toBe(1);
+    await expect(page.locator('.space-grid img')).toHaveCount(4);
+    await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeVisible();
     const action = page.getByRole('link', { name: 'Llamar para consultar' });
     await expect(action).toHaveAttribute('href', 'tel:+50585482197');
     const box = await action.boundingBox();
@@ -132,6 +137,21 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
     expect(await zoom.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
       '32px',
     );
+    const overflowing = await zoom.evaluate(() =>
+      [...document.querySelectorAll('body *')]
+        .filter((el) => {
+          if (el.closest('.space-tile')) return false; // Intentional, clipped photographic detail crops.
+          const box = el.getBoundingClientRect();
+          return getComputedStyle(el).display !== 'none' && box.right > innerWidth + 1;
+        })
+        .map((el) => ({
+          tag: el.tagName,
+          class: el.className,
+          right: el.getBoundingClientRect().right,
+          width: el.getBoundingClientRect().width,
+        })),
+    );
+    expect(overflowing, `Overflow at ${width}px / 200% text`).toEqual([]);
     expect(await zoom.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

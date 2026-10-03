@@ -20,6 +20,7 @@ export default defineConfig({
     },
     screenshot: 'only-on-failure',
     trace: 'off',
+    video: 'on',
   },
   webServer: {
     command: 'npm run preview',

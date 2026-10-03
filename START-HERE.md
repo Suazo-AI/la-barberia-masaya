@@ -13,6 +13,6 @@ Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-
 - That choice supersedes the old hero03/docs-only hold from draft PR #1
 - Baseline `main` is `e74e58622c715b1618c543496b5b680d1bd875f6`, independently read on 2026-10-03: README only, no prior app. There is no legitimate “before” app screenshot
 - Work is isolated on `feat/approved-contundent-hero`; previous uncommitted research and concepts are preserved and excluded from public Git
-- This increment is hero + static foundation. Remaining creative sections are not yet implemented
+- This increment includes the approved hero, the subsequently selected monochrome “El local” grid, and the static foundation. Visit/contact treatment remains pending
 - The user confirmed permission to use the photos and create referenced derivatives for this project on 2026-10-03; only the selected optimized scene is included
 - No merge, deployment, official-launch claim, CRM or booking backend. No Mistakes remains inactive

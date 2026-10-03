@@ -1,6 +1,6 @@
 # La Barbería Masaya
 
-The approved **round-two option 2, contundente** hero is implemented as semantic HTML/CSS. This is the first private working increment of the website, not the full website or a public launch.
+The approved **round-two option 2, contundente** hero and subsequently selected monochrome **El local** grid are implemented as semantic HTML/CSS. This is the first private working increment of the website, not the full website or a public launch.
 
 Canonical repository: https://github.com/Suazo-AI/la-barberia-masaya.
 
@@ -20,7 +20,7 @@ The preview serves `dist/` at `http://127.0.0.1:4173` by default. `HOST` and `PO
 
 ### Approved media
 
-On 2026-10-03 the user explicitly confirmed permission to use the photos and create referenced images of the premises for this project. The three optimized WebP versions of the selected historical-photo-derived scene are in `src/assets/images`, with provenance in [the asset ledger](docs/assets.md). Raw Maps screenshots, competitor references and raster concepts stay excluded from Git.
+On 2026-10-03 the user explicitly confirmed permission to use the photos and create referenced images of the premises for this project. The five optimized WebP files for the two selected historical-photo-derived scenes are in `src/assets/images`, with provenance in [the asset ledger](docs/assets.md). Raw Maps screenshots, competitor references and raster concepts stay excluded from Git.
 
 The build fails clearly if the approved assets are unavailable; it never replaces the selected room with fabricated content. `HERO_ASSET_DIR` can point to an authorized alternate local copy of the same assets. Permission to use images does not approve public website deployment.
 
@@ -43,7 +43,7 @@ The HTML validator's `tel-non-breaking` rule is disabled because the approved an
 
 ## Scope and release
 
-- One approved hero, responsive styles, accessible core links, a local 404, truthful draft metadata and source/license records
+- Approved hero and premises grid, responsive styles, accessible core links, a local 404, truthful draft metadata and source/license records
 - No speculative below-fold sections, pricing, booking backend, WhatsApp, forms, tracking or CRM
 - The page is `noindex`; this is not access control. The internal review host is not shared publicly
 - Human review of the actual desktop/mobile rendering is still required. Host/domain, final content, independent review and explicit release approval remain open

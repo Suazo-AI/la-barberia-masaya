@@ -23,3 +23,7 @@ The user explicitly confirmed permission on 2026-10-03 to use photos and create 
 ## Original source assets
 
 The simple letter-like favicon and all HTML/CSS are original implementation assets for this project. The text wordmark is plain type, not a reconstructed official logo. The full selected mockup is never used as the page image.
+
+## Gallery increment
+
+User selected the tight monochrome grid on 2026-10-03. Two new optimized files, `local-overview-720.webp` and `local-overview-1000.webp`, derive from the existing high-angle enhanced historical room image (1672×941). Optimization: original aspect ratio, Lanczos resize, WebP quality 78/method 6. No added scene content or new generation. Four tiles reuse the frontal and high-angle views, including two explicitly described CSS detail crops. CSS grayscale supplies the chosen monochrome treatment. The source remains colorful and unaltered. No Stockers photo, customer likeness or work-result claim is included.

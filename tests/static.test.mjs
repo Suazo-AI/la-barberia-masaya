@@ -28,7 +28,13 @@ test('preview privacy and no unsupported integrations', () => {
 });
 test('all output image bytes exactly match optimized inputs, with no concept or source screenshots', async () => {
   const files = await readdir('dist/assets/images');
-  assert.deepEqual(files.sort(), ['interior-1200.webp', 'interior-1672.webp', 'interior-720.webp']);
+  assert.deepEqual(files.sort(), [
+    'interior-1200.webp',
+    'interior-1672.webp',
+    'interior-720.webp',
+    'local-overview-1000.webp',
+    'local-overview-720.webp',
+  ]);
   const dir = process.env.HERO_ASSET_DIR || 'src/assets/images';
   for (const file of files) {
     const hash = (data) => createHash('sha256').update(data).digest('hex');
@@ -44,4 +50,11 @@ test('fonts carry redistributable license files', async () => {
       await readFile(`dist/assets/fonts/OFL-${name}.txt`, 'utf8'),
       /SIL OPEN FONT LICENSE Version 1\.1/,
     );
+});
+
+test('approved local gallery uses four interior crops without customer-work claims', () => {
+  assert.match(html, /id="space-heading">EL LOCAL<\/h2>/);
+  assert.equal((html.match(/class="space-tile /g) || []).length, 4);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 4);
+  assert.doesNotMatch(html, /TRABAJOS|CLIENTES|nuestros cortes|nuestros resultados/);
 });

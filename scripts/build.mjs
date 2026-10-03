@@ -2,7 +2,10 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const media = resolve(process.env.HERO_ASSET_DIR || 'src/assets/images');
-const requiredImages = [720, 1200, 1672].map((width) => `interior-${width}.webp`);
+const requiredImages = [
+  ...[720, 1200, 1672].map((width) => `interior-${width}.webp`),
+  ...[720, 1000].map((width) => `local-overview-${width}.webp`),
+];
 // Fail before replacing the current build. Never silently replace the approved scene.
 for (const name of requiredImages) {
   await readFile(resolve(media, name)).catch(() => {

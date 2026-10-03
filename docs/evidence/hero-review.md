@@ -54,3 +54,13 @@ This is useful implemented work with explicit verification limits. It is not a c
 ## Permission update
 
 2026-10-03: the user explicitly confirmed permission to use the photos and create referenced images for this project. Selected optimized WebP assets are now included; original source screenshots and competitor research remain excluded. The earlier rights hold is resolved for this project, while website deployment and visual acceptance remain open.
+
+## Actual remote browser verification, hero-only baseline
+
+Draft PR: https://github.com/Suazo-AI/la-barberia-masaya/pull/2. Head `a8c874232ed3b44bbbb96f34e68ec5690faad6ff`, tree identical to local reviewed `97e0ac4`. Real GitHub Actions run `37110859234` reached Chromium and executed all tests: **9 passed, 1 failed**. All six standard viewport tests, mobile/desktop axe scans, keyboard/repeated intercepted call links/history and 404 return passed. The enlarged-text case exposed overflow; the following increment constrains the offscreen skip link and adds diagnostic bounds checks. The original aggregate is not considered passed.
+
+Artifact collection initially excluded the dot-prefixed evidence directory; the workflow now enables hidden files only for explicit evidence paths, includes real test videos and failure screenshots, and checks out the exact PR head. No photo mockup is substituted for browser evidence.
+
+## Selected gallery increment
+
+The approved “El local” section uses four portrait monochrome tiles, two authentic-reference enhanced views and two explicitly described CSS details; no customer-work claims or new scene generation. It is a separate change after the hero-only baseline. Five static tests now pass locally. Conservative combined asset budget includes the largest hero image and additional gallery view; actual browser re-verification remains pending for this increment.

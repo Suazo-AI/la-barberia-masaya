@@ -31,7 +31,7 @@ La selección vigente del usuario (2026-10-03) es la **opción 2, contundente, d
 
 Composición: masthead negro, foto frontal del interior a la izquierda (~60%), texto marfil de gran peso a la derecha (~40%), un solo CTA “Llamar para consultar”. Copy y detalles en [SPEC.md](SPEC.md). Implementar con HTML/CSS semántico; nunca usar el mockup completo como página rasterizada.
 
-Continuar el website de punta a punta por etapas, explicando decisiones creativas y mostrando referencias para las secciones aún no resueltas. La selección del hero no autoriza decidir silenciosamente el resto de la dirección creativa ni publicar el sitio. No inventar secciones de servicios/precios/galerías mientras falta la selección humana.
+Continuar el website de punta a punta por etapas, explicando decisiones creativas y mostrando referencias para las secciones aún no resueltas. La selección del hero no autoriza decidir silenciosamente el resto de la dirección creativa ni publicar el sitio. El usuario seleccionó después la grilla compacta B/N de Stockers: adaptarla como “El local” con las dos vistas históricas reales mejoradas y dos recortes de detalle explícitos, sin inventar clientes/cortes. No añadir servicios o precios.
 
 El paquete canónico está en este checkout. [docs/reconciliation.md](docs/reconciliation.md) conserva su relación con el PR documental #1 y las decisiones históricas. Leer la spec vigente, no aplicar una propuesta histórica como instrucción actual.
 
