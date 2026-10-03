@@ -581,3 +581,125 @@ h1 span {
     grid-template-columns: 1fr;
   }
 }
+
+/* Genuine work and attributed excerpts: semantic cards remain the source of truth. */
+.work-section {
+  padding: clamp(3rem, 7vw, 7rem) 0 0;
+}
+.work-intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  padding: 0 var(--gutter) 2.5rem;
+  align-items: end;
+}
+.work-intro h2 {
+  font:
+    400 clamp(3rem, 6vw, 6rem)/1.05 Anton,
+    Impact,
+    sans-serif;
+  margin: 0;
+}
+.work-summary {
+  max-width: 34rem;
+  line-height: 1.5;
+}
+.work-summary > p:first-child {
+  font-size: 1.25rem;
+}
+.rating-summary strong {
+  font-size: 2rem;
+}
+.rating-summary strong span {
+  font-size: 1rem;
+  font-weight: 400;
+}
+.source-note,
+.work-note {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.work-note {
+  padding: 0 var(--gutter);
+  max-width: 70rem;
+}
+.work-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.work-card {
+  margin: 0;
+  background: #22211f;
+  min-width: 0;
+}
+.work-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: grayscale(1);
+}
+.work-card figcaption {
+  padding: 1.5rem;
+  display: grid;
+  gap: 0.5rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.work-card a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ivory);
+  text-underline-offset: 0.25em;
+}
+.work-card time,
+.review-date {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+.review-card {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  justify-content: space-between;
+}
+.review-card .section-label {
+  margin: 0;
+}
+.review-card blockquote {
+  margin: 2rem 0;
+}
+.review-card blockquote p {
+  font:
+    400 clamp(2rem, 3vw, 3.5rem)/1.15 'Barlow Condensed',
+    sans-serif;
+  margin: 0;
+}
+.review-card figcaption {
+  padding: 0;
+}
+.review-author {
+  font-weight: 700;
+}
+@media (max-width: 767px) {
+  .work-intro {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .work-grid {
+    grid-template-columns: 1fr;
+  }
+  .review-card {
+    min-height: 22rem;
+  }
+}
+.work-intro > *,
+.work-summary {
+  min-width: 0;
+}
+.work-intro h2,
+.review-card blockquote {
+  overflow-wrap: anywhere;
+}

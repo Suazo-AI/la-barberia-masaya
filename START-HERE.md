@@ -27,3 +27,7 @@ Requested 2026-10-03: editorial entrance, blur reveal, wipe CTA and a real Obsid
 The next private increment adds the selected Stockers-inspired visit panel with the exact Maps place ID, observed address and seven-day weekly hours. The source is explicitly dated 2026-10-03; no live opening status or owner-confirmation claim. Local photographs remain a static grid. The approved Obsidian engine is retained but disabled in the page until authentic haircut photographs and reviews are available, per the user's latest content direction. No fabricated content is substituted.
 
 Current before/after baseline: `a2bf856af6d57775ee1750a58a8ff6a95b7f1745`. See [visit review](docs/evidence/visit-review.md) for checks and outstanding gates.
+
+## Authentic content increment, 2026-10-03
+
+Latest working section: “Cortes y reseñas”, two original business Instagram photos and three short attributed Maps review excerpts. The approved Obsidian effect now uses those five sources, while the premises grid and visit panel are unchanged. Baseline is `c5dd0b9e1cc16f23ec00e0123ce91d4b291438cb`. See SPEC section 9 and the latest sources entry; these supersede the content-pending status above. Exact-head CI/render review is required; Lighthouse's existing environment blocker is not being debugged and must not be called green.

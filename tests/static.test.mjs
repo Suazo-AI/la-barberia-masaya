@@ -21,14 +21,16 @@ test('semantic Spanish page and selected copy', () => {
 });
 test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /name="robots" content="noindex, nofollow"/);
-  assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp|Reservar|testimonio|estrellas/i);
+  assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp|Reservar|Reservar/i);
   assert.doesNotMatch(html, /src="https?:\/\//);
-  assert.equal((html.match(/href="https?:\/\//g) || []).length, 1);
+  assert.equal((html.match(/href="https?:\/\//g) || []).length, 6);
   assert.equal(html.includes('http-equiv="refresh"'), false);
 });
 test('all output image bytes exactly match optimized inputs, with no concept or source screenshots', async () => {
   const files = await readdir('dist/assets/images');
   assert.deepEqual(files.sort(), [
+    'barber-at-work-2026-09-17.jpg',
+    'cut-rear-view-2026-09-05.jpg',
     'interior-1200.webp',
     'interior-1672.webp',
     'interior-720.webp',
@@ -55,7 +57,7 @@ test('fonts carry redistributable license files', async () => {
 test('approved local gallery uses four interior crops without customer-work claims', () => {
   assert.match(html, /id="space-heading" tabindex="-1">EL LOCAL<\/h2>/);
   assert.equal((html.match(/class="space-tile /g) || []).length, 4);
-  assert.equal((html.match(/loading="lazy"/g) || []).length, 4);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 6);
   assert.doesNotMatch(html, /TRABAJOS|CLIENTES|nuestros cortes|nuestros resultados/);
 });
 
@@ -82,5 +84,21 @@ test('visit facts retain exact place identity, weekly hours and dated source', (
   assert.match(html, /Puede variar en días festivos/);
   assert.equal((html.match(/<dt>/g) || []).length, 7);
   assert.doesNotMatch(html, /abierto ahora|horario confirmado/i);
-  assert.match(html, /data-content-status="pending"/);
+  assert.match(html, /data-content-status="ready"/);
+});
+
+test('authentic content has two original photos and exactly three short attributed reviews', () => {
+  assert.equal((html.match(/data-gallery-item/g) || []).length, 5);
+  assert.equal((html.match(/<blockquote>/g) || []).length, 3);
+  assert.match(html, /4.2/);
+  assert.match(html, /10 reseñas/);
+  assert.match(html, /cortes en proceso/);
+  assert.match(html, /no\s+representan todas/);
+  assert.match(html, /Jonatham Gabriel Suazo Martinez/);
+  assert.match(html, /MUNDO DARYL DEL MÁS ALLA/);
+  assert.match(html, /Moises Diaz/);
+  const words = [...html.matchAll(/<blockquote>\s*<p>(.*?)<\/p>/gs)].flatMap((match) =>
+    match[1].trim().split(/\s+/),
+  );
+  assert.ok(words.length <= 25);
 });

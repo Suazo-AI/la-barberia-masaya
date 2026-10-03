@@ -71,12 +71,12 @@ for (const viewport of [
     await page.keyboard.press('Enter');
     await directions.click();
     expect(await page.evaluate(() => window.directionsAttempts)).toBe(2);
-    await expect(page.locator('.gallery-tools')).toBeHidden();
+    await expect(page.locator('.gallery-tools')).toBeVisible();
     await expect(page.locator('.space-grid')).toBeVisible();
     expect(requests.some((url) => url.endsWith('/art-gallery.js'))).toBe(false);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await expect(page.locator('.gallery-tools')).toBeHidden();
+    await expect(page.locator('.gallery-tools')).toBeVisible();
     expect(errors).toEqual([]);
     await mkdir('.private-evidence', { recursive: true });
     await visit.screenshot({ path: `.private-evidence/ui-after-visit-${viewport.width}.png` });

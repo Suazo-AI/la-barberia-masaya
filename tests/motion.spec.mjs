@@ -10,9 +10,7 @@ for (const viewport of [
   { width: 390, height: 844 },
   { width: 1440, height: 900 },
 ]) {
-  test.skip(`historical Obsidian trial awaiting authentic content ${viewport.width}`, async ({
-    page,
-  }) => {
+  test(`authentic Obsidian interaction ${viewport.width}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     const errors = [];
     const requests = [];
@@ -47,13 +45,14 @@ for (const viewport of [
     const surface = page.locator('.art-gallery');
     await expect(surface.locator('canvas')).toBeVisible();
     await expect(surface).toBeFocused();
-    await expect(page.locator('.space-grid')).toBeHidden();
+    await expect(page.locator('.work-grid')).toBeVisible();
+    await expect(page.locator('.space-grid')).toBeVisible();
     await expect(
-      page.getByRole('list', { name: 'Fotos incluidas en la galería' }).getByRole('listitem'),
-    ).toHaveCount(4);
-    await expect(page.getByRole('list', { name: 'Fotos incluidas en la galería' })).toContainText(
-      'Detalle de una lámpara',
-    );
+      page.getByRole('list', { name: 'Contenido incluido en la galería' }).getByRole('listitem'),
+    ).toHaveCount(5);
+    await expect(
+      page.getByRole('list', { name: 'Contenido incluido en la galería' }),
+    ).toContainText('Excelente lugar');
     await expect
       .poll(() => surface.locator('canvas').evaluate((canvas) => canvas.width))
       .toBeGreaterThan(0);
@@ -81,14 +80,14 @@ for (const viewport of [
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
       .analyze();
     expect(audit.violations).toEqual([]);
-    await page.getByRole('button', { name: 'Ver cuadrícula' }).click();
+    await page.getByRole('button', { name: 'Cerrar exploración' }).click();
     await expect(page.locator('.space-grid')).toBeVisible();
     await expect(surface.locator('canvas')).toHaveCount(0);
     await page.getByRole('button', { name: 'Explorar galería' }).click();
     await expect(surface.locator('canvas')).toBeVisible();
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeFocused();
-    await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'CORTES Y RESEÑAS.' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'CORTES Y RESEÑAS.' })).toBeVisible();
     await expect(page.locator('.space-grid')).toBeVisible();
     await expect(surface.locator('canvas')).toHaveCount(0);
     expect(errors).toEqual([]);
@@ -98,7 +97,7 @@ for (const viewport of [
       JSON.stringify(
         {
           commit: process.env.SOURCE_COMMIT || 'local-uncommitted',
-          baselineCommit: 'a2bf856af6d57775ee1750a58a8ff6a95b7f1745',
+          baselineCommit: 'c5dd0b9e1cc16f23ec00e0123ce91d4b291438cb',
           viewport,
           afterUrl: 'http://127.0.0.1:4173/',
           beforeUrl: process.env.UI_BASELINE_URL || null,
@@ -141,7 +140,7 @@ for (const viewport of [
   });
 }
 
-test.skip('Historical WebGL denied and context loss restore semantic gallery', async ({ page }) => {
+test('WebGL denied restores semantic gallery', async ({ page }) => {
   await page.addInitScript(() => {
     const getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, ...args) {
@@ -155,7 +154,7 @@ test.skip('Historical WebGL denied and context loss restore semantic gallery', a
   await expect(page.getByRole('button', { name: 'Explorar galería' })).toBeEnabled();
 });
 
-test.skip('Historical real context loss and pointer cancellation recover', async ({ page }) => {
+test('real context loss and pointer cancellation recover', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Explorar galería' }).click();
   const surface = page.locator('.art-gallery');

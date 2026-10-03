@@ -82,3 +82,13 @@ Change a fact's status only with evidence. Record date, confirming role, public 
 ## Visit-link verification, 2026-10-03
 
 The exact outbound [place-ID URL](https://www.google.com/maps/search/?api=1&query=La+Barberia+Masaya&query_place_id=ChIJ5VCti5kHdI8RfdKEhOxWcr4) was opened in the cloud browser and its rendered listing inspected. It resolves to La Barberia, Supermercado Pali, 4 cuadras al oeste, Masaya 41000, Nicaragua; phone +505 8548 2197; coordinates 11.9723513,-86.101466. Expanded weekly hours match B-04. This is live listing verification, not independent owner confirmation. No photos downloaded or business contact made. The visit section dates this listing observation 2026-10-03 and qualifies holiday variations.
+
+## Authentic work and reviews, 2026-10-03
+
+The approver explicitly requested photos from the business social accounts and the approved effect with haircut photographs and reviews. Identity matched the exact business phone and address in the public [Instagram profile](https://www.instagram.com/labarberia.ni): Pali central, four blocks west, Masaya; +505 8548 2197.
+
+- `barber-at-work-2026-09-17.jpg`: [business Instagram post](https://www.instagram.com/labarberia.ni/p/DdaCjt_iS_M/), date from rendered Instagram alt text. 518×640 public-grid rendition, unchanged bytes. Adults apparently shown; work in progress, not a finished-result claim.
+- `cut-rear-view-2026-09-05.jpg`: [business Instagram post](https://www.instagram.com/labarberia.ni/p/Dc7PQJ3pSEf/), date from rendered Instagram alt text. 512×640 public-grid rendition, unchanged bytes. Work in progress. Full photo containment preserves original branding; CSS/shader monochrome presentation only.
+- Full post captions and original-resolution media were login-blocked. No caption, additional carousel slide or consent/release is inferred. The user's project-specific reuse instruction is recorded; public visibility is not an independent license or proof of likeness releases.
+- Google Maps live Reviews tab, same verified business: 4.2/5 from 10 reviews observed 2026-10-03. Three short positive excerpts, 11 words total, attributed with the original reviewer display name and relative date as seen on that date. They are explicitly a positive selection, not all reviews or independently verified experiences. Source links point to the verified listing's Reviews view because individual permalinks were not exposed. Reviewer identity is not associated with a photographed customer.
+- The profile supplies an official WhatsApp link, but this increment does not add a new contact action. Hero and visit remain unchanged.

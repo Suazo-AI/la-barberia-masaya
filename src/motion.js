@@ -29,18 +29,18 @@ if (!reducedMotion.matches && 'IntersectionObserver' in window) {
 }
 
 const tools = document.querySelector('.gallery-tools');
-// The approved effect awaits authentic haircut photographs and reviews.
-// Do not expose the historical premises photographs as its final content.
+// Authentic source cards stay readable and linked while the optional canvas is active.
 if (tools?.dataset.contentStatus === 'ready') {
   const toggle = document.querySelector('.gallery-toggle');
   const status = document.querySelector('.gallery-status');
   const interactive = document.querySelector('#interactive-gallery');
-  const grid = document.querySelector('.space-grid');
+  const grid = document.querySelector('.work-grid');
   const surface = document.querySelector('.art-gallery');
   const descriptions = document.querySelector('#gallery-photo-descriptions');
-  for (const image of grid.querySelectorAll('img')) {
+  const items = [...grid.querySelectorAll('[data-gallery-item]')];
+  for (const source of items) {
     const item = document.createElement('li');
-    item.textContent = image.alt;
+    item.textContent = source.querySelector('img')?.alt || source.textContent.trim();
     descriptions.append(item);
   }
   let gallery;
@@ -72,9 +72,9 @@ if (tools?.dataset.contentStatus === 'ready') {
     try {
       const { mountArtGallery } = await import('./art-gallery.js');
       if (current !== generation || reducedMotion.matches) return;
-      const mounted = await mountArtGallery(surface, [...grid.querySelectorAll('img')], () => {
+      const mounted = await mountArtGallery(surface, items, () => {
         closeGallery(
-          'La galería interactiva no está disponible. Podés ver todas las fotos en la cuadrícula.',
+          'La galería interactiva no está disponible. Podés ver las fotos y reseñas debajo.',
         );
       });
       if (current !== generation || reducedMotion.matches) {
@@ -82,16 +82,16 @@ if (tools?.dataset.contentStatus === 'ready') {
         return;
       }
       gallery = mounted;
-      grid.hidden = true;
+      // The authoritative source cards remain accessible below the canvas.
       interactive.hidden = false;
-      toggle.textContent = 'Ver cuadrícula';
+      toggle.textContent = 'Cerrar exploración';
       toggle.setAttribute('aria-expanded', 'true');
       status.textContent = '';
       surface.focus({ preventScroll: true });
     } catch {
       if (current === generation)
         closeGallery(
-          'La galería interactiva no está disponible. Podés ver todas las fotos en la cuadrícula.',
+          'La galería interactiva no está disponible. Podés ver las fotos y reseñas debajo.',
         );
     } finally {
       if (current === generation) toggle.disabled = false;
@@ -108,7 +108,7 @@ if (tools?.dataset.contentStatus === 'ready') {
       const focusInControls =
         tools.contains(document.activeElement) || interactive.contains(document.activeElement);
       closeGallery('Movimiento reducido: se muestra la cuadrícula.');
-      if (focusInControls) document.querySelector('#space-heading').focus({ preventScroll: true });
+      if (focusInControls) document.querySelector('#work-heading').focus({ preventScroll: true });
     }
     tools.hidden = reducedMotion.matches;
   });

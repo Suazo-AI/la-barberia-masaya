@@ -32,11 +32,11 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
-      - name: Checkout real pre-visit application for comparison
+      - name: Checkout real pre-authentic-content application for comparison
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-          ref: a2bf856af6d57775ee1750a58a8ff6a95b7f1745
+          ref: c5dd0b9e1cc16f23ec00e0123ce91d4b291438cb
           path: .baseline-source
       - name: Build pinned real baseline
         run: node scripts/build.mjs
@@ -53,6 +53,7 @@ jobs:
             .private-evidence/axe-results.json
             .private-evidence/budgets.json
             .private-evidence/network-budget-dpr*.json
+            .private-evidence/network-initial-dpr*.json
             .private-evidence/lighthouse/*.json
             .private-evidence/hero-*.png
             .private-evidence/ui-*.png

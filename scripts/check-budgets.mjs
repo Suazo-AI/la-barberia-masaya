@@ -18,17 +18,23 @@ const total =
   largestImage +
   galleryImage +
   (await gzip('favicon.svg'));
+const workPhotoBytes =
+  (await gzip('assets/images/barber-at-work-2026-09-17.jpg')) +
+  (await gzip('assets/images/cut-rear-view-2026-09-05.jpg'));
 const report = {
+  lazyWorkPhotoGzipBytes: workPhotoBytes,
+  fullPageAssetGzipBytes: total + workPhotoBytes,
+  fullPageBudget: 550 * 1024,
   method:
-    'Node gzipSync level 9; largest hero image + largest additional gallery view + all fonts + HTML/CSS/JS/favicon; repeated crops reuse cached images',
+    'Modeled core assets only, not observed initial requests: hero + local view + fonts + HTML/CSS/JS/favicon. JPGs separately included in full-page total. Browser tests measure actual initial requests.',
   node: process.version,
   markupGzipBytes: markup,
   fontGzipBytes: fontBytes,
   largestImageGzipBytes: largestImage,
   galleryImageGzipBytes: galleryImage,
-  initialAssetGzipBytes: total,
+  modeledCoreAssetGzipBytes: total,
   markupBudget: 75 * 1024,
-  initialBudget: 400 * 1024,
+  coreBudget: 400 * 1024,
   applicationJsBytes,
   applicationJsGzipBytes,
   applicationJsBudget: 6 * 1024,
@@ -41,7 +47,8 @@ await writeFile('.private-evidence/budgets.json', JSON.stringify(report, null, 2
 console.log(report);
 if (
   markup > report.markupBudget ||
-  total > report.initialBudget ||
+  report.fullPageAssetGzipBytes > report.fullPageBudget ||
+  total > report.coreBudget ||
   applicationJsBytes > report.applicationJsBudget ||
   report.optionalGalleryJsBytes > report.optionalGalleryBudget
 )

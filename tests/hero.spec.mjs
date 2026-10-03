@@ -195,6 +195,29 @@ for (const dpr of [1, 2]) {
     });
     await page.goto('http://127.0.0.1:4173/');
     await page.evaluate(() => document.fonts.ready);
+    await page.waitForLoadState('networkidle');
+    const initialCosts = [];
+    for (const path of resources)
+      initialCosts.push({
+        path,
+        gzipBytes: gzipSync(await readFile(`dist${path}`), { level: 9 }).length,
+      });
+    const initialGzipBytes = initialCosts.reduce((sum, item) => sum + item.gzipBytes, 0);
+    await mkdir('.private-evidence', { recursive: true });
+    await writeFile(
+      `.private-evidence/network-initial-dpr${dpr}.json`,
+      JSON.stringify(
+        {
+          initialCosts,
+          initialGzipBytes,
+          budget: 400 * 1024,
+          observation: 'Actual requests after initial network idle, before scrolling',
+        },
+        null,
+        2,
+      ),
+    );
+    expect.soft(initialGzipBytes, 'Actual initial request budget').toBeLessThanOrEqual(400 * 1024);
     await page.locator('.space-grid').scrollIntoViewIfNeeded();
     await expect
       .poll(() =>
@@ -207,6 +230,14 @@ for (const dpr of [1, 2]) {
       .locator('.hero-scene img, .space-tile-front img, .space-tile-lamp img')
       .evaluateAll((images) => images.map((img) => img.currentSrc));
     expect(new Set(frontSources).size).toBe(1);
+    await page.locator('.work-grid').scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        page
+          .locator('.work-grid img')
+          .evaluateAll((images) => images.every((img) => img.complete && img.naturalWidth > 0)),
+      )
+      .toBe(true);
     const imagePaths = [...resources].filter((path) => path.endsWith('.webp')).sort();
     expect(imagePaths).toEqual([
       '/assets/images/interior-1672.webp',
@@ -216,12 +247,12 @@ for (const dpr of [1, 2]) {
     for (const path of resources)
       costs.push({ path, gzipBytes: gzipSync(await readFile(`dist${path}`), { level: 9 }).length });
     const totalGzipBytes = costs.reduce((sum, resource) => sum + resource.gzipBytes, 0);
-    expect(totalGzipBytes).toBeLessThanOrEqual(400 * 1024);
+    expect(totalGzipBytes).toBeLessThanOrEqual(550 * 1024);
     await mkdir('.private-evidence', { recursive: true });
     await writeFile(
       `.private-evidence/network-budget-dpr${dpr}.json`,
       JSON.stringify(
-        { viewport: { width: 1920, height: 1080 }, dpr, costs, totalGzipBytes, budget: 400 * 1024 },
+        { viewport: { width: 1920, height: 1080 }, dpr, costs, totalGzipBytes, budget: 550 * 1024 },
         null,
         2,
       ),

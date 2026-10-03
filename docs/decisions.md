@@ -84,3 +84,10 @@ If safe operation cannot be demonstrated, proceed with the same small task graph
 - Content owner: public Google Maps business listing, re-verified 2026-10-03, not independent business confirmation. Exact weekly schedule and place ID are preserved; dated source/holiday qualification is visible.
 - Latest gallery direction: approved effect is for genuine haircut photographs and reviews. The local grid is static again; the retained engine is disabled pending authentic material. Historic WebGL tests are explicitly skipped while that feature is unavailable, not reported as current passing checks.
 - Implementation and draft PR update authorized; human visual review and public-release permission remain separate gates.
+
+## Authentic Obsidian section — 2026-10-03
+
+- Project approver owns content direction: actual cuts and reviews in the previously approved effect, sourced from the business social channels.
+- Implementation separates premises from work: original photos and short positive excerpts interleave in five source cards; optional canvas repeats those same items with explicit disclosure. Sources always remain visible and linked.
+- Canvas photo placement uses contain, never a square crop, to preserve original branding. Review cards carry exact author/relative date; aggregate and selection caveats stay outside the canvas. Existing hero and visit layout remain unchanged.
+- No new runtime dependency, contact flow, generated image, service or availability promise. The additional lazy photo transfer budget is explicit rather than hidden in existing local-image accounting.

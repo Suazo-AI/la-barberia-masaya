@@ -161,55 +161,67 @@ export async function mountArtGallery(container, sourceImages, onFailure) {
     gl.enableVertexAttribArray(position);
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
     const uniform = (name) => gl.getUniformLocation(program, name);
-    const sources = await Promise.all(
-      sourceImages.map(async (source) => {
-        const img = new Image();
-        img.src = source.currentSrc || source.src;
-        await img.decode();
-        return img;
-      }),
-    );
+    await document.fonts.ready;
+    const dimension = Math.ceil(Math.sqrt(sourceImages.length));
+    const tileSize = 512;
     const atlas = document.createElement('canvas');
-    atlas.width = atlas.height = 1024;
+    atlas.width = atlas.height = dimension * tileSize;
     const ctx = atlas.getContext('2d');
-    if (!ctx) throw new Error('Canvas unavailable');
-    // Four genuine local-photo views, including the same honest detail crops as the grid.
-    sources.forEach((img, index) => {
-      const scale = index === 2 ? 1.8 : index === 3 ? 1.6 : 1;
-      const crop = Math.min(img.width, img.height) / scale;
-      const cx = index === 2 ? 0.44 : 0.5;
-      const cy = index === 2 ? 0.1 : index === 3 ? 0.94 : 0.55;
-      const sx = Math.max(0, Math.min(img.width - crop, img.width * cx - crop / 2));
-      const sy = Math.max(0, Math.min(img.height - crop, img.height * cy - crop / 2));
-      ctx.drawImage(
-        img,
-        sx,
-        sy,
-        crop,
-        crop,
-        (index % 2) * 512,
-        Math.floor(index / 2) * 512,
-        512,
-        512,
-      );
-    });
     const textAtlas = document.createElement('canvas');
-    textAtlas.width = textAtlas.height = 1024;
+    textAtlas.width = textAtlas.height = dimension * tileSize;
     const text = textAtlas.getContext('2d');
-    if (!text) throw new Error('Canvas unavailable');
-    ['VISTA ALTA · 2023', 'VISTA FRONTAL · 2023', 'DETALLE: LÁMPARA', 'DETALLE: SILLA'].forEach(
-      (label, index) => {
-        text.save();
-        text.translate((index % 2) * 512, Math.floor(index / 2) * 512);
-        // The upstream shader compresses the square text tile into a shallow strip.
-        text.scale(1, 8);
-        text.font = '22px monospace';
-        text.textBaseline = 'middle';
-        text.fillStyle = '#bdb9af';
-        text.fillText(label, 12, 32);
-        text.restore();
-      },
-    );
+    if (!ctx || !text) throw new Error('Canvas unavailable');
+    function wrap(value, x, y, width, lineHeight) {
+      let line = '';
+      for (const word of value.split(/\s+/)) {
+        const next = line ? `${line} ${word}` : word;
+        if (ctx.measureText(next).width > width && line) {
+          ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        } else line = next;
+      }
+      ctx.fillText(line, x, y);
+      return y + lineHeight;
+    }
+    for (const [index, source] of sourceImages.entries()) {
+      const x = (index % dimension) * tileSize;
+      const y = Math.floor(index / dimension) * tileSize;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#1b1a18';
+      ctx.fillRect(0, 0, tileSize, tileSize);
+      const photo = source.querySelector('img');
+      if (photo) {
+        const img = new Image();
+        img.src = photo.currentSrc || photo.src;
+        await img.decode();
+        // Contain the full photograph: retain both original branding strips.
+        const scale = Math.min(tileSize / img.width, tileSize / img.height);
+        const width = img.width * scale;
+        const height = img.height * scale;
+        ctx.drawImage(img, (tileSize - width) / 2, (tileSize - height) / 2, width, height);
+      } else {
+        ctx.fillStyle = '#f4efe3';
+        ctx.font = '20px Barlow, sans-serif';
+        ctx.fillText('GOOGLE MAPS · 5/5', 34, 48);
+        ctx.font = '52px "Barlow Condensed", sans-serif';
+        wrap(source.querySelector('blockquote').textContent.trim(), 34, 120, 440, 58);
+        ctx.font = '28px Barlow, sans-serif';
+        const end = wrap(source.querySelector('.review-author').textContent, 34, 330, 440, 32);
+        ctx.font = '22px Barlow, sans-serif';
+        wrap(source.querySelector('.review-date').textContent, 34, end + 20, 440, 24);
+      }
+      ctx.restore();
+      text.save();
+      text.translate(x, y);
+      text.scale(1, 8);
+      text.font = '22px monospace';
+      text.textBaseline = 'middle';
+      text.fillStyle = '#bdb9af';
+      text.fillText(source.dataset.label, 12, 32);
+      text.restore();
+    }
     function texture(source, unit, name) {
       const item = gl.createTexture();
       textures.push(item);
@@ -228,8 +240,8 @@ export async function mountArtGallery(container, sourceImages, onFailure) {
     gl.uniform4f(uniform('uHoverColor'), 0, 0, 0, 0);
     gl.uniform4f(uniform('uBackgroundColor'), 0.067, 0.067, 0.063, 1);
     gl.uniform2f(uniform('uMousePos'), -1, -1);
-    gl.uniform1f(uniform('uTextureCount'), 4);
-    gl.uniform1f(uniform('uCellSize'), 0.9);
+    gl.uniform1f(uniform('uTextureCount'), sourceImages.length);
+    gl.uniform1f(uniform('uCellSize'), 1.5);
     canvas.setAttribute('aria-hidden', 'true');
     container.append(canvas);
     const offset = uniform('uOffset');
