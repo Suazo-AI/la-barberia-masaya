@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
@@ -28,10 +30,32 @@ try {
   if (!ready) throw new Error('Lighthouse local build server did not become ready.');
   for (let run = 1; run <= 3; run++) {
     // Fresh temporary profile per run; no credentials, external pages, or host security changes.
-    const chrome = await chromeLauncher.launch({
-      chromePath: chromium.executablePath(),
-      chromeFlags: ['--headless', '--disable-dev-shm-usage'],
-    });
+    const profile = await mkdtemp(join(tmpdir(), 'barber-lighthouse-'));
+    let chrome;
+    try {
+      chrome = await chromeLauncher.launch({
+        chromePath: chromium.executablePath(),
+        chromeFlags: ['--headless', '--disable-dev-shm-usage'],
+        userDataDir: profile,
+        port: 9222,
+        logLevel: 'verbose',
+      });
+    } catch (error) {
+      const stderr = await readFile(join(profile, 'chrome-err.log'), 'utf8').catch(
+        () => 'No browser stderr available',
+      );
+      await writeFile(
+        `.private-evidence/lighthouse/launch-error-${run}.json`,
+        JSON.stringify(
+          { message: error.message, stderr, sourceCommit: process.env.SOURCE_COMMIT },
+          null,
+          2,
+        ),
+      );
+      console.error(stderr);
+      await rm(profile, { recursive: true, force: true });
+      throw error;
+    }
     try {
       const result = await lighthouse(url, {
         port: chrome.port,
@@ -66,6 +90,7 @@ try {
       });
     } finally {
       await chrome.kill();
+      await rm(profile, { recursive: true, force: true });
     }
   }
   const median = (key) => [...runs].map((run) => run[key]).sort((a, b) => a - b)[1];
