@@ -19,6 +19,7 @@ jobs:
     env:
       # Public CI may run only after these assets have explicit publication clearance.
       HERO_ASSET_DIR: src/assets/images
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -31,6 +32,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm run check
+      - run: npm run test:performance
       - name: Upload test reports for this commit
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -41,6 +43,7 @@ jobs:
             .private-evidence/axe-results.json
             .private-evidence/budgets.json
             .private-evidence/network-budget-dpr*.json
+            .private-evidence/lighthouse/*.json
             .private-evidence/hero-*.png
             test-results/**/*.png
             test-results/**/*.webm

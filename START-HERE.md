@@ -15,4 +15,5 @@ Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-
 - Work is isolated on `feat/approved-contundent-hero`; previous uncommitted research and concepts are preserved and excluded from public Git
 - This increment includes the approved hero, the subsequently selected monochrome “El local” grid, and the static foundation. Visit/contact treatment remains pending
 - The user confirmed permission to use the photos and create referenced derivatives for this project on 2026-10-03; only the selected optimized scene is included
+- Hero + gallery application at remote `38fa3a0dd54b885aebb53437938ca1f67bfc356e` passed exact-head CI and independent source/visual review. Later changes are verification/documentation only unless explicitly recorded; user visual acceptance remains separate
 - No merge, deployment, official-launch claim, CRM or booking backend. No Mistakes remains inactive

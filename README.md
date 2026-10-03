@@ -34,10 +34,11 @@ The build fails clearly if the approved assets are unavailable; it never replace
 | `npm run check:budgets` | Gzip budgets, largest responsive image, zero app JS |
 | `npm run test:e2e` | Real Chromium responsive/navigation/no-JS/privacy checks |
 | `npm run test:a11y` | Axe WCAG A/AA scan at mobile + desktop |
-| `npm run check` | All above against the built output |
+| `npm run check` | Static + browser/axe checks against the built output |
+| `npm run test:performance` | Three cold-profile, pinned mobile Lighthouse lab runs (R-12) |
 | `npm run format` | Format source/config/test files |
 
-Tests intercept call activation and never place a call. Browser executable: `CHROMIUM_PATH` if set, otherwise installed `/usr/bin/chromium`, otherwise Playwright's installed browser. Browser installation is not assumed. This cloud executor currently blocks browser process sockets; [evidence](docs/evidence/hero-review.md) distinguishes passing static checks from unexecuted browser checks.
+Tests intercept call activation and never place a call. Browser executable: `CHROMIUM_PATH` if set, otherwise installed `/usr/bin/chromium`, otherwise Playwright's installed browser. Browser installation is not assumed. The authoring executor blocks browser process sockets; the same tests run in the authorized GitHub Actions runner. Exact-head CI has passed 12 browser tests including accessibility, enlarged text, gallery loading and actual DPR1/DPR2 requested-resource budgets. See [evidence](docs/evidence/hero-review.md) for provenance and remaining gates.
 
 The HTML validator's `tel-non-breaking` rule is disabled because the approved anchor label is a sentence, not a space-separated phone number. The exact `tel:` destination has a deterministic test. Lowercase doctype follows Prettier's HTML output.
 
@@ -48,4 +49,4 @@ The HTML validator's `tel-non-breaking` rule is disabled because the approved an
 - The page is `noindex`; this is not access control. The internal review host is not shared publicly
 - Human review of the actual desktop/mobile rendering is still required. Host/domain, final content, independent review and explicit release approval remain open
 - Baseline main `e74e58622c715b1618c543496b5b680d1bd875f6` contained only a README. There is no prior app screenshot to fabricate
-- The least-privilege GitHub check workflow is prepared but has not run. It uses the approved images at `src/assets/images`. No Mistakes remains inactive. No merge, automatic deployment or production workflow is enabled
+- The least-privilege GitHub check workflow has run successfully; the PR’s current exact-head status is authoritative. A separately pinned Lighthouse stage is now added to complete R-12. It uses the approved images at `src/assets/images`. No Mistakes remains inactive. No merge, automatic deployment or production workflow is enabled

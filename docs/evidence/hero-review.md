@@ -1,72 +1,55 @@
-# Hero implementation evidence
+# Implementation evidence: hero + El local
 
-Observation date: 2026-10-03 UTC. Current scope: selected round-two option 2 hero and static foundation only.
+Updated 2026-10-03 UTC. This is an implementation increment, not the completed website or an authorization to launch it.
 
-## Baseline and actual result
+## Current verified application
 
-- Remote `main` independently read through the GitHub connector: `e74e58622c715b1618c543496b5b680d1bd875f6`, README only
-- No previous application exists. No “before” implementation screenshot is available or fabricated
-- Existing concept mockup is a design reference, not an implementation baseline
-- Actual source is semantic HTML/CSS, not a screenshot used as a page
-- Source identity: see the isolated branch's latest commit; the private source manifest records SHA-256 for exact application and optimized media bytes
-- No public push, merge or deployment performed for this increment
+- Draft [PR #2](https://github.com/Suazo-AI/la-barberia-masaya/pull/2)
+- Application head `38fa3a0dd54b885aebb53437938ca1f67bfc356e`; exact tree `ee37803debb4803d2f3494e6e2e5fb851fc7d056` matches local reviewed source `e35f3d00b519e63a0a891e3eba66e776c66dbf4d`
+- [CI run 37111313294](https://github.com/Suazo-AI/la-barberia-masaya/actions/runs/37111313294): clean install, lint/HTML validation, build, **5 static tests and 12 browser tests passed**. No unexpected, skipped or flaky browser result
+- [Actual screenshots, videos and reports](https://github.com/Suazo-AI/la-barberia-masaya/actions/runs/37111313294/artifacts/11269957639), archive SHA-256 `2bec2a1790b6e6bd1db29fad5e4f9f8991a9f553b3f0e6dfd4a008013277f59d`. CI artifacts expire; retain approved review evidence before expiry
+- Screenshots were delivered for human review from this exact application head. Subsequent documentation/performance-test changes do not alter the pictured application; the latest PR head must still pass its own CI
 
-## Commands actually run
+## Baseline
 
-Working directory: project checkout unless noted. Node `v24.19.0`.
+Main `e74e58622c715b1618c543496b5b680d1bd875f6` was independently read and contains README only. There is no previous application or legitimate “before” screenshot. A design mockup is not an implementation baseline. The working result uses semantic HTML/CSS, not a rasterized page.
 
-| Command | Result | Details |
-| --- | --- | --- |
-| `npm ci --ignore-scripts --cache /tmp/barber-npm-cache --fetch-retries=0 --fetch-timeout=15000` | PASS, exit 0 | Clean temporary directory with exact package.json + lockfile; 19 packages installed. Does not claim a clean application build outside that temporary package-only install directory |
-| `npm run lint` | PASS, exit 0 | Prettier and html-validate, final source |
-| `npm run build` | PASS, exit 0 | Explicit allowlist; selected local media required and present |
-| `npm test` | PASS, exit 0 | 4 static tests: Spanish semantic/copy/tel fixture, no integration/privacy leaks, exact asset bytes, font licenses |
-| `npm run check:budgets` | PASS, exit 0 | HTML+CSS gzip 2,659 bytes; fonts 64,465; largest responsive image 223,558; initial worst-case 290,857 bytes vs 409,600 budget. Zero application client JavaScript |
-| `npm run test:e2e` | BLOCKED, exit 1 | All 10 tests unable to launch Chromium because AF_UNIX socket creation returns EPERM. No page opened, so these are not application failures or passing tests |
-| Approved escalated browser retry with writable temporary Chromium config/cache | BLOCKED, exit 1 | Same AF_UNIX restriction; no security bypass attempted |
-| Cloud-browser internal preview | BLOCKED | Documented `http://terminal.local:4173/` route returns 502 connection refused; preview server cannot be reached through that runtime route |
-| `npm run check` aggregate | NOT PASSED | Static stages passed; browser stage blocked |
-| GitHub workflow | NOT RUN | Workflow prepared with pinned official actions, read-only token permissions and no deployment. Selected media is now included after explicit user permission; remote execution is pending |
-| Lighthouse three-run mobile profile | NOT RUN | Not installed; browser runtime unavailable. R-12 remains open |
+## Evidence coverage
 
-Initial linter issues (doctype normalization and telephone-label false positive) and static-test metadata duplication were corrected and rerun. Independent review caught the exact research-directory ignore path and a CSP-incompatible test style injection; both are corrected. See current source diff, not these historical failure logs, for final behavior.
+| Check | Actual result |
+| --- | --- |
+| Locked clean install | Passed locally in a separate directory and in GitHub CI, Node 24.19.0 |
+| Prettier + html-validate | Passed |
+| Explicit-allowlist static build | Passed with selected authorized media and font licenses |
+| Static tests | 5 passed: Spanish semantics/copy/tel, privacy/unsupported integrations, exact images, font licenses, truthful four-tile gallery |
+| Responsive browser checks | Passed at 320×568, 390×844, 768×1024, 1024×768, 1440×900, 1920×1080 |
+| Core flows | Passed: skip link/focus, repeated intercepted tel activation, Back/Forward, no JS, 200% root text at 320/390/720, reduced motion, missing image and 404 return |
+| Gallery | All images load; 4 columns on desktop/tablet and 2 on phones; distinct interior/detail crops; no fictional client-work claims |
+| Accessibility | Axe returned zero violations at mobile and desktop. One mobile contrast item was incomplete: transformed-but-clipped imagery confused background overlap detection for the footer. Independent screenshot inspection found readable muted text on solid ink; measured contrast is 9.65:1. Main ivory/ink contrast is 16.47:1. This does not claim full WCAG conformance or a screen-reader manual audit |
+| Requested-resource budget | Actual 1920×1080 DPR1 and DPR2 resource lists both total **383,835 gzip bytes** (Node gzip level 9) against 409,600. Each requests one shared frontal image and one overview. HTML+CSS: 3,335 bytes; fonts: 64,465; frontal: 223,558; overview: 92,302; favicon: 175 |
+| Privacy | Browser checks found no initial third-party requests, cookies or storage; source has no forms, trackers, embeds or application JavaScript |
+| Visual review | Independent reviewer inspected actual desktop 1440 and mobile 390/320 captures and found no remaining source/visual blocker. User’s final visual acceptance is still required |
+| Video | Actual WEBM recordings of responsive and keyboard/history/call-link test flows retained. No animation exists; no synthetic animation video is fabricated |
+| Dialer | Correct telephone URI asserted and activation intercepted. No call was placed, and no answered call or appointment is claimed |
+| R-12 mobile lab performance | Pinned Lighthouse 13.5.0 stage added after browser infrastructure succeeded. Three fresh profiles, Chromium version tied to Playwright 1.63.0, 390×844/DPR1, simulated 150ms RTT, 1638.4 Kbps and 4× CPU slowdown. Medians must meet LCP ≤2500ms, CLS ≤0.1 and performance ≥90. Read the latest exact-head CI and saved JSON for the actual result; no unexecuted pass is asserted here |
 
-## Accessibility and interaction coverage
+## Source and permission
 
-- Calculated color contrast, using WCAG relative luminance: ivory/ink **16.47:1**, muted/ink **9.65:1**. This is a token calculation, not a browser/axe pass
-- Tests are implemented for 320×568, 390×844, 768×1024, 1024×768, 1440×900, 1920×1080; initial CTA visibility, heading overflow, image load, no cookies/storage/external requests, no page errors
-- Implemented test routes also cover skip link/focus, repeated intercepted telephone activations, Back/Forward, JavaScript disabled, 200% root text enlargement, reduced motion, missing image and 404 return
-- Axe scans at mobile and desktop are implemented but **not run successfully**
-- Real desktop/mobile screenshots and keyboard video are **not captured** because no working browser runtime has rendered this source yet. No synthetic mockups are passed off as screenshots
-- There is no animation; animation video is not applicable
-- No telephone call was placed; a real target-device dialer handoff remains a manual acceptance check
+The user confirmed permission on 2026-10-03 to use photos and create referenced images of these premises for this project. Only selected optimized derivatives and licensed local fonts are included. Raw Maps screenshots, competitor references and raster concepts remain excluded. Images remain historically grounded, AI-enhanced views from 2023; the site discloses this and does not claim current untouched documentation. The gallery reuses two room views with two explicitly described details.
+
+## Resolved verification history
+
+1. Authoring-executor Chromium launch was blocked by AF_UNIX restrictions, even after approved escalation. The documented internal preview gateway was unavailable. No security bypass or external tunnel was used
+2. Authorized GitHub CI provided a working browser without deploying the website. Hero-only run `37110859234` passed 9/10 browser checks and caught 200% text overflow. The skip link was constrained and reflow diagnostics added
+3. Gallery run `37111073014` passed 10 browser checks. Artifact collection was corrected to include only explicit hidden evidence paths
+4. Independent review caught a high-DPI undercount: two selected frontal variants could total 531,919 bytes. Matching picture breakpoints removed duplicate downloads; actual DPR1/DPR2 resource tests passed on run `37111313294`
+5. Three pinned mobile Lighthouse runs are added as a separate verification stage. UI source remains unchanged while this release gate is measured
 
 ## Remaining gates
 
-1. Reach this exact build in an authorized browser/owner-private review surface; run the prepared browser and axe tests and capture genuine desktop/mobile evidence
-2. Independent review of final source and evidence, then user acceptance of actual responsive rendering
-3. Photo permission is confirmed; verify source assets and exact-commit CI before accepting the draft PR
-4. Select the remaining website sections with the user, then implement/verify them
-5. Approve host/domain, final content and release route before merge/public deployment
+- Human acceptance of the delivered working desktop/mobile views
+- Latest exact-head checks, including the new Lighthouse stage, and investigation of any failure
+- Selection/implementation of remaining visit/contact content; no speculative services or prices
+- Host/domain and explicit release authorization, followed by deployed-artifact verification and rollback instructions
 
-This is useful implemented work with explicit verification limits. It is not a completed website, a full WCAG conformance assessment, or a passing remote CI run.
-
-## Permission update
-
-2026-10-03: the user explicitly confirmed permission to use the photos and create referenced images for this project. Selected optimized WebP assets are now included; original source screenshots and competitor research remain excluded. The earlier rights hold is resolved for this project, while website deployment and visual acceptance remain open.
-
-## Actual remote browser verification, hero-only baseline
-
-Draft PR: https://github.com/Suazo-AI/la-barberia-masaya/pull/2. Head `a8c874232ed3b44bbbb96f34e68ec5690faad6ff`, tree identical to local reviewed `97e0ac4`. Real GitHub Actions run `37110859234` reached Chromium and executed all tests: **9 passed, 1 failed**. All six standard viewport tests, mobile/desktop axe scans, keyboard/repeated intercepted call links/history and 404 return passed. The enlarged-text case exposed overflow; the following increment constrains the offscreen skip link and adds diagnostic bounds checks. The original aggregate is not considered passed.
-
-Artifact collection initially excluded the dot-prefixed evidence directory; the workflow now enables hidden files only for explicit evidence paths, includes real test videos and failure screenshots, and checks out the exact PR head. No photo mockup is substituted for browser evidence.
-
-## Selected gallery increment
-
-The approved “El local” section uses four portrait monochrome tiles, two authentic-reference enhanced views and two explicitly described CSS details; no customer-work claims or new scene generation. It is a separate change after the hero-only baseline. Five static tests now pass locally. Conservative combined asset budget includes the largest hero image and additional gallery view; actual browser re-verification remains pending for this increment.
-
-## Gallery CI and high-DPI follow-up
-
-Actual run `37111073014` on head `270eab5037dcd403555f9577b1b32e8819d2e5a3` passed 5 static and 10 browser tests, including axe at desktop/mobile. Real PNG screenshots and WEBM videos were downloaded and visually inspected. Independent review identified a budget-accounting defect: differing hero/gallery srcsets could select two frontal-image URLs at DPR2, making the real worst case 531,919 bytes. The earlier 383,785-byte worst-case claim was therefore incomplete and is superseded.
-
-The follow-up uses matching explicit picture sources per breakpoint for the hero and all frontal detail tiles, downloading one image variant per view. It adds actual 1920×1080 resource accounting at DPR1 and DPR2, verifies all gallery images load, and checks the 4/2-column layout. Final acceptance depends on that new exact-head CI, not the prior green run.
+No merge, auto-merge or public website deployment has occurred. No Mistakes remains inactive. This record and PR narrative supplement actual CI logs; they do not replace them or establish “zero bugs”.

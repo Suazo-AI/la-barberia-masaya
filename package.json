@@ -9,7 +9,9 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
+    "chrome-launcher": "1.2.2",
     "html-validate": "11.16.1",
+    "lighthouse": "13.5.0",
     "prettier": "3.9.9"
   },
   "scripts": {
@@ -21,6 +23,7 @@
     "test:e2e": "playwright test",
     "test:a11y": "playwright test --grep accessibility",
     "check:budgets": "node scripts/check-budgets.mjs",
-    "check": "npm run lint && npm run build && npm test && npm run check:budgets && npm run test:e2e"
+    "check": "npm run lint && npm run build && npm test && npm run check:budgets && npm run test:e2e",
+    "test:performance": "node scripts/lighthouse.mjs"
   }
 }
