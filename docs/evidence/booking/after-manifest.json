@@ -1,0 +1,156 @@
+{
+  "sourceCommit": "5fdedba2500cda2227a087f74c57138f37c9d010",
+  "baselineCommit": "0755fce62688e380a737db9e267bad22e35acf25",
+  "runnerCommit": "5fdedba2500cda2227a087f74c57138f37c9d010",
+  "url": "http://127.0.0.1:4173/",
+  "date": "2026-10-03",
+  "timezone": "America/Managua",
+  "clock": "2026-10-03T15:00:00Z",
+  "procedure": "Build pinned real source, wait for local fonts/photos, use Playwright Chrome on actual page. No reconstruction, generation or compositing.",
+  "files": [
+    {
+      "file": "ui-after-booking-page-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "df6307a2ab2ba57263587e9f05e4fb294222aa172875297ade652536f1b286aa"
+    },
+    {
+      "file": "ui-after-booking-service-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "574db980dead1ef5b955f336e19dfe5462b8d2877499971ddcf06cad59ae030f"
+    },
+    {
+      "file": "ui-after-booking-time-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "f69ea1a241d77a77c20653afcefee45678c2e4a1bb52c19ec338d070b24dc269"
+    },
+    {
+      "file": "ui-after-booking-review-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "d39764344a48b93f2348bb4b8c8f881809776668dad0b28962987a69378c0df3"
+    },
+    {
+      "file": "ui-after-booking-closed-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "201ef6f111611f09f04a26fc8193eb4499749f774fb5665cdef49fc8b2e95324"
+    },
+    {
+      "file": "ui-after-booking-empty-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "6cbc37e91c9f9baa4502a56cf11e53f2a91431f23aa1a4a45f0e05ceda455a61"
+    },
+    {
+      "file": "ui-after-booking-complete-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "06ed347cd2001a1942f280c152d5d60e0ed5954f3df555683c29cff7fd284619"
+    },
+    {
+      "file": "ui-after-booking-390.webm",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real Playwright WebM; native recorder may scale viewport",
+      "sha256": "d121b060caade4e5d2321dac3cd43eeef2685caf8e2849c04470986d6cafdbfa"
+    },
+    {
+      "file": "ui-after-booking-page-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "335469b0b8de84d61b5849dbd753096dc83c9210bfec53c7ffb0090a099742b2"
+    },
+    {
+      "file": "ui-after-booking-service-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "c325df5c3b87678e78d56f3998ad5a7384ea057dc6bb7a58fef6207b9de6c5a7"
+    },
+    {
+      "file": "ui-after-booking-time-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "501ba93cb6222f3022c5cc39cefba67bd5d1bb050db992a990020f6cefc2e047"
+    },
+    {
+      "file": "ui-after-booking-review-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "b39f43bae008d6f5127753dd794976550a24b35d99c0a425264e97f150a7ac2a"
+    },
+    {
+      "file": "ui-after-booking-closed-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "a6be894ec01c5a50cbf582ad451f6580472441e2e81fbf2d8d29dd9fe576b0da"
+    },
+    {
+      "file": "ui-after-booking-empty-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "4f16bc92a4814234c2563ac72e94cca3f6512666a102f50858d2db73d1c80b04"
+    },
+    {
+      "file": "ui-after-booking-complete-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "d5ddb12c00a75d4c4bd66aba9fa895d22570f1443f7fa93d31bbd926e618a0b0"
+    },
+    {
+      "file": "ui-after-booking-1440.webm",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real Playwright WebM; native recorder may scale viewport",
+      "sha256": "cae603cbc2c75401ae534c162aec80e8a7a18f5e47af95c398f95da473024891"
+    }
+  ]
+}
