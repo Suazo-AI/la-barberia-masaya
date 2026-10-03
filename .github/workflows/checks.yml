@@ -1,0 +1,44 @@
+name: Website checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # Public CI may run only after these assets have explicit publication clearance.
+      HERO_ASSET_DIR: src/assets/images
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - name: Upload test reports for this commit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: website-checks-${{ github.sha }}
+          path: |
+            .private-evidence/playwright-results.json
+            .private-evidence/axe-results.json
+            .private-evidence/budgets.json
+            .private-evidence/hero-*.png
+          if-no-files-found: ignore
+          retention-days: 7

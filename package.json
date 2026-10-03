@@ -1,0 +1,26 @@
+{
+  "name": "la-barberia-masaya",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "html-validate": "11.16.1",
+    "prettier": "3.9.9"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/preview.mjs",
+    "lint": "prettier --check src scripts tests playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json && html-validate src/*.html",
+    "format": "prettier --write src scripts tests playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json",
+    "test": "node --test tests/static.test.mjs",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test --grep accessibility",
+    "check:budgets": "node scripts/check-budgets.mjs",
+    "check": "npm run lint && npm run build && npm test && npm run check:budgets && npm run test:e2e"
+  }
+}
