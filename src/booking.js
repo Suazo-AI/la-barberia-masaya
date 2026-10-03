@@ -142,6 +142,10 @@ function showStep(step) {
       : `Paso ${step} de 3 · Demo de reserva · ${originalTitle}`;
   dialog.scrollTop = 0;
   heading.focus({ preventScroll: true });
+  const headingBox = heading.getBoundingClientRect();
+  const dialogBox = dialog.getBoundingClientRect();
+  if (headingBox.top < dialogBox.top || headingBox.bottom > dialogBox.bottom)
+    heading.scrollIntoView({ block: 'center', behavior: 'auto' });
 }
 
 function renderDates() {
@@ -253,7 +257,7 @@ nextDate.addEventListener('click', () => {
   const next = nextAvailableDate(state);
   if (!next) return;
   setDate(next);
-  dateInput.focus({ preventScroll: true });
+  dateInput.focus();
 });
 progress.addEventListener('click', (event) => {
   const button = event.target.closest('[data-step]');

@@ -217,6 +217,7 @@ test('booking reflow at 320px and 200% text with reduced motion', async ({ page 
     await page.evaluate((size) => {
       document.documentElement.style.fontSize = size;
     }, textSize);
+    await dialog.locator('#booking-reset').click();
     for (const step of [1, 2, 3, 4]) {
       if (step === 2) await chooseService(dialog);
       if (step === 3) {
@@ -224,6 +225,14 @@ test('booking reflow at 320px and 200% text with reduced motion', async ({ page 
         await continueIn(dialog).click();
       }
       if (step === 4) await continueIn(dialog).click();
+      const focusBox = await dialog.locator(`[data-panel="${step}"] h3`).boundingBox();
+      expect(focusBox.y, `Focused heading top at ${textSize}, step ${step}`).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(
+        focusBox.y + focusBox.height,
+        `Focused heading bottom at ${textSize}, step ${step}`,
+      ).toBeLessThanOrEqual(568);
       const reflow = await dialog.evaluate((el) => ({
         width: el.clientWidth,
         scrollWidth: el.scrollWidth,
