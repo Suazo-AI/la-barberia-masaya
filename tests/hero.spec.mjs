@@ -32,7 +32,7 @@ for (const viewport of viewports) {
     expect(await page.locator('h1').innerText()).toMatch(/TU ESTILO.\s+BIEN HECHO./);
     expect(await page.locator('.hero a').count()).toBe(1);
     await expect(page.locator('.space-grid img')).toHaveCount(4);
-    await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EL LOCAL', exact: true })).toBeVisible();
     const columns = await page
       .locator('.space-grid')
       .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
