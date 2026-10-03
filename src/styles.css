@@ -704,9 +704,13 @@ h1 span {
   overflow-wrap: anywhere;
 }
 
-.work-image-template {
+.work-photos-enabled .work-image-template {
   display: block;
   width: 100%;
   aspect-ratio: 4 / 5;
   background: #22211f;
+}
+
+.work-photos-enabled .work-photo:first-child .work-image-template {
+  aspect-ratio: 518 / 640;
 }

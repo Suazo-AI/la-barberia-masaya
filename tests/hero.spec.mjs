@@ -133,6 +133,13 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
   await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
   await expect(page.locator('.work-grid')).toContainText('Moises Diaz');
   await expect(page.locator('.gallery-tools')).toBeHidden();
+  for (const card of await page.locator('.work-photo').all()) {
+    const cardBox = await card.boundingBox();
+    const imageBox = await card.locator('img').boundingBox();
+    expect(imageBox.y).toBeCloseTo(cardBox.y, 0);
+  }
+  await mkdir('.private-evidence', { recursive: true });
+  await page.screenshot({ path: '.private-evidence/ui-no-js-390.png', fullPage: true });
   await context.close();
   for (const width of [320, 390, 720]) {
     const zoom = await browser.newPage({

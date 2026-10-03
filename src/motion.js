@@ -34,6 +34,7 @@ function revealWorkPhoto(card) {
   const template = card.querySelector('.work-image-template');
   if (template) template.replaceWith(template.content.cloneNode(true));
 }
+document.documentElement.classList.add('work-photos-enabled');
 const photoCards = document.querySelectorAll('.work-photo');
 if ('IntersectionObserver' in window) {
   const photoObserver = new IntersectionObserver(
