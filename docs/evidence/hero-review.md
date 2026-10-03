@@ -64,3 +64,9 @@ Artifact collection initially excluded the dot-prefixed evidence directory; the 
 ## Selected gallery increment
 
 The approved “El local” section uses four portrait monochrome tiles, two authentic-reference enhanced views and two explicitly described CSS details; no customer-work claims or new scene generation. It is a separate change after the hero-only baseline. Five static tests now pass locally. Conservative combined asset budget includes the largest hero image and additional gallery view; actual browser re-verification remains pending for this increment.
+
+## Gallery CI and high-DPI follow-up
+
+Actual run `37111073014` on head `270eab5037dcd403555f9577b1b32e8819d2e5a3` passed 5 static and 10 browser tests, including axe at desktop/mobile. Real PNG screenshots and WEBM videos were downloaded and visually inspected. Independent review identified a budget-accounting defect: differing hero/gallery srcsets could select two frontal-image URLs at DPR2, making the real worst case 531,919 bytes. The earlier 383,785-byte worst-case claim was therefore incomplete and is superseded.
+
+The follow-up uses matching explicit picture sources per breakpoint for the hero and all frontal detail tiles, downloading one image variant per view. It adds actual 1920×1080 resource accounting at DPR1 and DPR2, verifies all gallery images load, and checks the 4/2-column layout. Final acceptance depends on that new exact-head CI, not the prior green run.

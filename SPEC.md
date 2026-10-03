@@ -1,6 +1,6 @@
 # Website specification
 
-Version 0.2 · 2026-10-03 · Business timezone: America/Managua
+Version 0.3 · 2026-10-03 · Business timezone: America/Managua
 
 ## 1. Outcome and current increment
 
@@ -47,7 +47,7 @@ Build copies an explicit allowlist only. Private reference material, raw Maps sc
 
 ## 5. Approved premises grid and remaining creative work
 
-On 2026-10-03 the user selected the Stockers tight monochrome work-grid reference. Adapt its visual rhythm as **EL LOCAL**, with four portrait tiles in one desktop row, thin 4px black gutters, and two columns on mobile. Use the two existing enhanced historical interior views plus two distinct, honestly labeled CSS detail crops. No fabricated customers, services, haircut results or new scene generation. Image grayscale and crops are presentational CSS only, with no hover animation, modal or new CTA. The provenance note covers all images. Keep the reference screenshot private and copy no Stockers photography, branding or text.
+On 2026-10-03 the user selected the Stockers tight monochrome work-grid reference. Adapt its visual rhythm as **EL LOCAL**, with four portrait tiles in one desktop row, thin 4px black gutters, and two columns on mobile. Use the two existing enhanced historical interior views plus two distinct, honestly labeled CSS detail crops. No fabricated customers, services, haircut results or new scene generation. Hero and gallery use matching picture sources per breakpoint (1672 desktop, 1200 tablet, 720 mobile) so the frontal image is downloaded once per view. Gallery overview is 1000 desktop/tablet or 720 mobile. Actual DPR1/DPR2 request budgets are tested. Image grayscale and crops are presentational CSS only, with no hover animation, modal or new CTA. The provenance note covers all images. Keep the reference screenshot private and copy no Stockers photography, branding or text.
 
 This selection is a separate increment after the hero-only source baseline. User acceptance of actual rendered gallery and responsive layout remains required.
 

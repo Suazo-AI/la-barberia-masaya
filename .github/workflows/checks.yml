@@ -40,6 +40,7 @@ jobs:
             .private-evidence/playwright-results.json
             .private-evidence/axe-results.json
             .private-evidence/budgets.json
+            .private-evidence/network-budget-dpr*.json
             .private-evidence/hero-*.png
             test-results/**/*.png
             test-results/**/*.webm

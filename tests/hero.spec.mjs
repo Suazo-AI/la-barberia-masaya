@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { gzipSync } from 'node:zlib';
 
 const viewports = [
   { width: 320, height: 568 },
@@ -32,6 +33,10 @@ for (const viewport of viewports) {
     expect(await page.locator('.hero a').count()).toBe(1);
     await expect(page.locator('.space-grid img')).toHaveCount(4);
     await expect(page.getByRole('heading', { name: 'EL LOCAL' })).toBeVisible();
+    const columns = await page
+      .locator('.space-grid')
+      .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(columns).toBe(viewport.width >= 768 ? 4 : 2);
     const action = page.getByRole('link', { name: 'Llamar para consultar' });
     await expect(action).toHaveAttribute('href', 'tel:+50585482197');
     const box = await action.boundingBox();
@@ -172,3 +177,55 @@ test('404 navigation returns to real home without an overlay', async ({ page }) 
   await page.getByRole('link', { name: 'Volver al inicio' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/TU ESTILO.\s+BIEN HECHO./);
 });
+
+for (const dpr of [1, 2]) {
+  test(`gallery loads every tile and shares bounded image requests at DPR ${dpr}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+      deviceScaleFactor: dpr,
+    });
+    const page = await context.newPage();
+    const resources = new Set();
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (url.origin === 'http://127.0.0.1:4173')
+        resources.add(url.pathname === '/' ? '/index.html' : url.pathname);
+    });
+    await page.goto('http://127.0.0.1:4173/');
+    await page.evaluate(() => document.fonts.ready);
+    await page.locator('.space-grid').scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        page
+          .locator('.space-grid img')
+          .evaluateAll((images) => images.every((img) => img.complete && img.naturalWidth > 0)),
+      )
+      .toBe(true);
+    const frontSources = await page
+      .locator('.hero-scene img, .space-tile-front img, .space-tile-lamp img')
+      .evaluateAll((images) => images.map((img) => img.currentSrc));
+    expect(new Set(frontSources).size).toBe(1);
+    const imagePaths = [...resources].filter((path) => path.endsWith('.webp')).sort();
+    expect(imagePaths).toEqual([
+      '/assets/images/interior-1672.webp',
+      '/assets/images/local-overview-1000.webp',
+    ]);
+    const costs = [];
+    for (const path of resources)
+      costs.push({ path, gzipBytes: gzipSync(await readFile(`dist${path}`), { level: 9 }).length });
+    const totalGzipBytes = costs.reduce((sum, resource) => sum + resource.gzipBytes, 0);
+    expect(totalGzipBytes).toBeLessThanOrEqual(400 * 1024);
+    await mkdir('.private-evidence', { recursive: true });
+    await writeFile(
+      `.private-evidence/network-budget-dpr${dpr}.json`,
+      JSON.stringify(
+        { viewport: { width: 1920, height: 1080 }, dpr, costs, totalGzipBytes, budget: 400 * 1024 },
+        null,
+        2,
+      ),
+    );
+    await context.close();
+  });
+}

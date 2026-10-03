@@ -3,7 +3,7 @@
 Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
 
 1. Read [AGENTS.md](AGENTS.md) for scope and publication boundaries
-2. Read [SPEC.md](SPEC.md) v0.2 for the approved round-two option 2 hero
+2. Read [SPEC.md](SPEC.md) v0.3 for the approved round-two option 2 hero
 3. Read [docs/decisions.md](docs/decisions.md) and [docs/sources.md](docs/sources.md) for decisions and asset rights
 4. See [README.md](README.md) for current commands and [docs/evidence/hero-review.md](docs/evidence/hero-review.md) for actual verification status
 

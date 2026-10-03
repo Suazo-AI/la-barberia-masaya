@@ -337,3 +337,11 @@ h1 span {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Match hero and detail sources at each breakpoint so the same image downloads only once. */
+.hero-scene picture,
+.space-tile picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

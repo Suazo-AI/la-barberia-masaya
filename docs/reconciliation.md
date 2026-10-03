@@ -22,6 +22,6 @@ Pre-update local files are retained in an ignored local history snapshot; no sou
 | Business | Name/location/phone confirmed. Maps destination and observed hours confirmed by user; validate their source when implementing the next section |
 | Assets | Selected derivative remains historical and AI-enhanced. User confirmed permission on 2026-10-03 to use photos and generate referenced images for this project; selected optimized scene may be included. Raw Maps screenshots and competitor references remain excluded |
 | Evidence | Baseline main remains README-only at `e74e58622c715b1618c543496b5b680d1bd875f6`; no fabricated before. Real after screenshots and safe link/keyboard evidence required |
-| Release | Human acceptance of actual responsive implementation, rights and release authorization remain open. No merge/deploy |
+| Release | Photo permission is confirmed. Human acceptance of actual responsive implementation and release authorization remain open. No merge/deploy |
 
-`SPEC.md` v0.2 and current `AGENTS.md`/`START-HERE.md` express these decisions consistently. Old proposals are history, not active instructions. No Mistakes stays inactive; deterministic CI remains authoritative for checks it actually executes.
+`SPEC.md` v0.3 and current `AGENTS.md`/`START-HERE.md` express these decisions consistently. Old proposals are history, not active instructions. No Mistakes stays inactive; deterministic CI remains authoritative for checks it actually executes.
