@@ -75,6 +75,14 @@ for (const viewport of [
       path: `.private-evidence/ui-after-obsidian-${viewport.width}.png`,
       fullPage: true,
     });
+    await surface.focus();
+    await page.keyboard.press('Home');
+    for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowRight');
+    for (let step = 0; step < 2; step++) await page.keyboard.press('ArrowUp');
+    await page.waitForTimeout(800);
+    await surface.screenshot({
+      path: `.private-evidence/ui-review-centered-${viewport.width}.png`,
+    });
     expect(await surface.evaluate((el) => getComputedStyle(el).touchAction)).toBe('pan-y');
     const audit = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
