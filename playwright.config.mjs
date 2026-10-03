@@ -14,7 +14,6 @@ export default defineConfig({
     timezoneId: 'America/Managua',
     reducedMotion: 'reduce',
     launchOptions: {
-      args: process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [],
       executablePath:
         process.env.CHROMIUM_PATH ||
         (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
