@@ -8,7 +8,7 @@ Read [START-HERE](START-HERE.md), [AGENTS](AGENTS.md), [SPEC](SPEC.md), [decisio
 
 ## Run locally
 
-Requires Node **24.19.0** (see `.nvmrc`) and the locked dev dependencies. No runtime framework or application JavaScript is shipped.
+Requires Node **24.19.0** (see `.nvmrc`) and the locked dev dependencies. No runtime framework is shipped. A small local progressive-enhancement module adds motion; the optional Obsidian WebGL port loads only when the visitor selects Explorar galería.
 
 ```sh
 npm ci --ignore-scripts
@@ -31,7 +31,7 @@ The build fails clearly if the approved assets are unavailable; it never replace
 | `npm run lint` | Prettier + semantic HTML validation |
 | `npm test` | Static built-page content/privacy/provenance/license assertions |
 | `npm run build` | Explicit-allowlist build; requires authorized local scene |
-| `npm run check:budgets` | Gzip budgets, largest responsive image, zero app JS |
+| `npm run check:budgets` | Gzip budgets, largest responsive image, separate initial and opt-in JavaScript budgets |
 | `npm run test:e2e` | Real Chromium responsive/navigation/no-JS/privacy checks |
 | `npm run test:a11y` | Axe WCAG A/AA scan at mobile + desktop |
 | `npm run check` | Static + browser/axe checks against the built output |
@@ -50,3 +50,7 @@ The HTML validator's `tel-non-breaking` rule is disabled because the approved an
 - Human review of the actual desktop/mobile rendering is still required. Host/domain, final content, independent review and explicit release approval remain open
 - Baseline main `e74e58622c715b1618c543496b5b680d1bd875f6` contained only a README. There is no prior app screenshot to fabricate
 - The least-privilege GitHub check workflow has run successfully; the PR’s current exact-head status is authoritative. A separately pinned Lighthouse stage is now added to complete R-12. It uses the approved images at `src/assets/images`. No Mistakes remains inactive. No merge, automatic deployment or production workflow is enabled
+
+## Selected UI components
+
+See [integration details and exact source attribution](docs/ui-components.md). The approved static layout is preserved. The interactive Obsidian trial has explicit entry/exit controls, uses only existing authorized photographs, and falls back to the semantic grid. No new dependency was installed.

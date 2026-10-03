@@ -1,0 +1,22 @@
+# Selected UI component trial
+
+Date: 2026-10-03. Owner: website implementation. User requested applying the previously shown UI components, then explicitly chose to try Obsidian's draggable gallery. This supersedes the earlier static-only animation constraint, not the approved hero or factual-content boundaries.
+
+## Exact integration map
+
+- **Kokonut / 21st Minimalist Hero Fashion:** visual inspiration, not imported React code. Existing approved 60/40 editorial photograph/type composition remains; two headline lines receive a brief staged entrance. CTA is never hidden or delayed. [Official component](https://21st.dev/@kokonutd/components/hero-fashion), MIT label inspected 2026-10-03. No upstream photograph/content reused.
+- **Magic UI Blur Fade:** original native IntersectionObserver/CSS adaptation of its one-time blur/offset reveal, not the upstream React/Motion component. Four figures animate for 400ms with a 6px offset and capped 4px blur. Immediate visible default, no infinite loop; reduced motion cancels/reveals immediately. [Official docs](https://magicui.design/docs/components/blur-fade) and [MIT license](https://github.com/magicuidesign/magicui/blob/main/LICENSE.md) inspected 2026-10-03. No upstream source/media copied.
+- **Uiverse BHARGAVPATEL1244 great-catfish-18:** actual MIT CSS reuse/adaptation of the skewed pseudo-element and 0.4s wipe transition. Retained square approved CTA; changed neon to a warm light fill, kept stable dark text throughout, added keyboard equivalent and reduced-motion behavior. [Official source and copyright notice](https://uiverse.io/BHARGAVPATEL1244/great-catfish-18), inspected 2026-10-03. Full notice ships in `THIRD-PARTY-NOTICES.txt`.
+- **ObsidianUI Art Gallery:** real upstream shader and tiled drag/zoom interaction, ported to native WebGL. This is explicitly a port, not the unchanged React/Three wrapper. [Official registry source](https://www.obsidianui.dev/r/art-gallery.json), [docs](https://www.obsidianui.dev/docs/art-gallery), [MIT license](https://github.com/Atharvsinh-codez/ObsidianUI/blob/main/LICENSE), fetched 2026-10-03. Upstream barrel distortion, tile addressing and atlas sampling retained; monochrome output matches the selected direction. No demo assets copied. Full MIT notice ships with the site.
+
+## Obsidian adaptation boundaries
+
+The framework-specific lifecycle was replaced by a small native module. The fragment shader is upstream-source reuse; lifecycle, bounded texture creation, on-demand rendering, safe interaction, failure handling and controls are project adaptations. The two approved historical enhanced photos supply four clearly named views/details in a repeating wall, not four independent documentary photographs. Tiles include the historical year/detail labels; the existing visible AI/historical disclosure remains.
+
+The engine loads **only after selecting “Explorar galería”**. The visitor can return with “Ver cuadrícula”. Two bounded 1024×1024 atlases, max DPR 1.5, no new image URLs, no animation loop while settled, hidden or out of view. Mouse drag supports both axes. Touch is horizontal-only and `touch-action: pan-y` preserves normal vertical page scrolling. Arrow keys, Home and visible direction/reset buttons offer an equivalent non-drag interaction. The semantic grid is the default without JavaScript, with reduced motion, after initialization failure, or after WebGL context loss. No WebGL/browser security settings are changed by the site.
+
+## Verification and review
+
+Baseline: real application commit `3dbff80204c72754959b39966620146704b5233b`, not a concept image. CI builds that exact baseline in a separate checkout and captures both real versions at 390×844 and 1440×900. Playwright records WebM for all tests, including headline entrance, CTA hover, gallery reveal, actual changing canvas pixels after keyboard/drag, exit/re-entry, reduced-motion changes, failure and context loss. Test manifests identify commit, route, viewport and procedure. CI uses its Chromium software WebGL renderer for reproducibility; this is not a hardware/GPU benchmark.
+
+Local source validation/build/static checks and byte budgets are available. Local browser startup is blocked by the executor's `socket() Operation not permitted` policy; browser results must come from exact-head GitHub CI. Lighthouse's separately known runner restriction is not a pass and is not being debugged in this increment. Automated review does not replace visual acceptance by the user. No merge or public release authorized here.

@@ -19,6 +19,7 @@
       crossorigin
     />
     <link rel="stylesheet" href="./styles.css" />
+    <script src="./motion.js" type="module"></script>
   </head>
   <body>
     <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -32,7 +33,7 @@
         <div class="hero-copy">
           <h1 id="hero-heading"><span>TU ESTILO.</span> <span>BIEN HECHO.</span></h1>
           <p class="hero-description">Un espacio para tu próximo corte.</p>
-          <a class="call-action" href="tel:+50585482197">Llamar para consultar</a>
+          <a class="call-action" href="tel:+50585482197"><span>Llamar para consultar</span></a>
         </div>
         <figure class="hero-scene">
           <picture
@@ -49,6 +50,37 @@
       </section>
       <section class="space-section" aria-labelledby="space-heading">
         <h2 id="space-heading">EL LOCAL</h2>
+        <div class="gallery-tools" hidden>
+          <button
+            class="gallery-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="interactive-gallery"
+          >
+            Explorar galería
+          </button>
+          <p class="gallery-status" role="status"></p>
+        </div>
+        <div id="interactive-gallery" hidden>
+          <p id="gallery-instructions">
+            Arrastrá para explorar. En el móvil, deslizá de lado a lado. Con teclado, usá las
+            flechas; Inicio vuelve al centro.
+          </p>
+          <div
+            class="art-gallery"
+            tabindex="0"
+            role="group"
+            aria-label="Galería del local: dos vistas históricas mejoradas y dos detalles"
+            aria-describedby="gallery-instructions"
+          ></div>
+          <div class="gallery-pan-controls" role="group" aria-label="Mover galería">
+            <button type="button" data-pan="-0.4,0" aria-label="Mover a la izquierda">←</button>
+            <button type="button" data-pan="0,0.4" aria-label="Mover hacia arriba">↑</button>
+            <button type="button" data-pan="0,-0.4" aria-label="Mover hacia abajo">↓</button>
+            <button type="button" data-pan="0.4,0" aria-label="Mover a la derecha">→</button>
+            <button type="button" data-reset>Volver al centro</button>
+          </div>
+        </div>
         <div class="space-grid">
           <figure class="space-tile space-tile-overview">
             <picture

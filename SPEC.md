@@ -1,6 +1,6 @@
 # Website specification
 
-Version 0.3 · 2026-10-03 · Business timezone: America/Managua
+Version 0.4 · 2026-10-03 · Business timezone: America/Managua
 
 ## 1. Outcome and current increment
 
@@ -32,7 +32,7 @@ The scene is the existing enhanced frontal interior, based on historical 2023 ph
 | Body | Barlow, local OFL font | Readable supporting text |
 | Utility display | Barlow Condensed Bold, local OFL font | Call label and location |
 
-Use plain static HTML/CSS with a small Node build/preview script and locked test dependencies already installed. A single-page brochure does not need Astro/React, a backend, database, hydration or a client JavaScript bundle. This resolves the earlier stack proposal using its explicitly permitted simpler alternative. No new runtime dependency is required.
+Use plain static HTML/CSS with a small Node build/preview script and locked test dependencies already installed. A single-page brochure does not need Astro/React, a backend, database, hydration or a framework bundle. The subsequently requested microinteractions and optional Obsidian trial use small, local native JavaScript modules. This resolves the earlier stack proposal using its explicitly permitted simpler alternative. No new runtime dependency is required.
 
 Build copies an explicit allowlist only. Private reference material, raw Maps screenshots, generated concepts and private review evidence stay excluded from Git and build inputs unless intentionally selected. After the user’s explicit photo permission on 2026-10-03, the selected optimized scene is included in `src/assets/images` for reproducible builds. Raw source screenshots, concept mockups and competitor references remain excluded. No fake business-photo fixture is used.
 
@@ -42,12 +42,12 @@ Build copies an explicit allowlist only. Private reference material, raw Maps sc
 - Keyboard: visible skip link → main content → call action; no focus trap. A 404 page returns to the hero
 - Touch targets at least 44×44 CSS px, readable at 320–1920 px and enlarged text; no horizontal overflow
 - Spanish language metadata, semantic header/main/footer/figure, one H1, meaningful image alternative text
-- Core content works with JavaScript disabled. No autoplay, transitions, animation, smooth scrolling, or motion-dependent information
+- Core content works with JavaScript disabled. No autoplay or motion-dependent information. Short optional entrance/reveal/wipe effects honor reduced motion; the requested Obsidian trial activates explicitly and can return to the static grid
 - No forms, tracking, external embeds, location requests, cookies or initial third-party requests
 
 ## 5. Approved premises grid and remaining creative work
 
-On 2026-10-03 the user selected the Stockers tight monochrome work-grid reference. Adapt its visual rhythm as **EL LOCAL**, with four portrait tiles in one desktop row, thin 4px black gutters, and two columns on mobile. Use the two existing enhanced historical interior views plus two distinct, honestly labeled CSS detail crops. No fabricated customers, services, haircut results or new scene generation. Hero and gallery use matching picture sources per breakpoint (1672 desktop, 1200 tablet, 720 mobile) so the frontal image is downloaded once per view. Gallery overview is 1000 desktop/tablet or 720 mobile. Actual DPR1/DPR2 request budgets are tested. Image grayscale and crops are presentational CSS only, with no hover animation, modal or new CTA. The provenance note covers all images. Keep the reference screenshot private and copy no Stockers photography, branding or text.
+On 2026-10-03 the user selected the Stockers tight monochrome work-grid reference. Adapt its visual rhythm as **EL LOCAL**, with four portrait tiles in one desktop row, thin 4px black gutters, and two columns on mobile. Use the two existing enhanced historical interior views plus two distinct, honestly labeled CSS detail crops. No fabricated customers, services, haircut results or new scene generation. Hero and gallery use matching picture sources per breakpoint (1672 desktop, 1200 tablet, 720 mobile) so the frontal image is downloaded once per view. Gallery overview is 1000 desktop/tablet or 720 mobile. Actual DPR1/DPR2 request budgets are tested. Image grayscale and crops are presentational CSS only, with no modal or added business CTA. A separate optional gallery-mode control enables the subsequently requested Obsidian trial. The provenance note covers all images. Keep the reference screenshot private and copy no Stockers photography, branding or text.
 
 This selection is a separate increment after the hero-only source baseline. User acceptance of actual rendered gallery and responsive layout remains required.
 
@@ -63,3 +63,7 @@ Excluded: CRM, Forja, WhatsApp, payments, accounts, calendars, appointment confi
 Concept selection and implementation authorization are complete for this hero only. The exact working desktop/mobile result still needs human visual acceptance. Photo permission is recorded; remaining section selections, independent review, exact-commit CI and host/release authorization remain separate gates. No merge or public deploy until all applicable gates pass.
 
 See [acceptance](docs/acceptance.md), [sources](docs/sources.md), [decisions](docs/decisions.md), [tasks](docs/tasks.md) and [reconciliation](docs/reconciliation.md).
+
+## 7. Requested component trial, 2026-10-03
+
+Apply the previously shown UI references, with the later explicit selection to try Obsidian Art Gallery. Preserve the approved hero and static-grid fallback. See [implementation map](docs/ui-components.md) for real upstream reuse versus visual inspiration. Human visual acceptance remains pending. The current increment permits implementation and draft-PR verification, not merge or public release.

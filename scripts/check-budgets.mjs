@@ -9,10 +9,18 @@ const fontBytes = (await Promise.all(fonts.map((name) => gzip(`assets/fonts/${na
 );
 const largestImage = await gzip('assets/images/interior-1672.webp');
 const galleryImage = await gzip('assets/images/local-overview-1000.webp');
-const total = markup + fontBytes + largestImage + galleryImage + (await gzip('favicon.svg'));
+const applicationJsBytes = (await readFile('dist/motion.js')).length;
+const applicationJsGzipBytes = await gzip('motion.js');
+const total =
+  applicationJsGzipBytes +
+  markup +
+  fontBytes +
+  largestImage +
+  galleryImage +
+  (await gzip('favicon.svg'));
 const report = {
   method:
-    'Node gzipSync level 9; largest hero image + largest additional gallery view + all fonts + HTML/CSS/favicon; repeated crops reuse cached images',
+    'Node gzipSync level 9; largest hero image + largest additional gallery view + all fonts + HTML/CSS/JS/favicon; repeated crops reuse cached images',
   node: process.version,
   markupGzipBytes: markup,
   fontGzipBytes: fontBytes,
@@ -21,9 +29,20 @@ const report = {
   initialAssetGzipBytes: total,
   markupBudget: 75 * 1024,
   initialBudget: 400 * 1024,
-  applicationJsBytes: 0,
+  applicationJsBytes,
+  applicationJsGzipBytes,
+  applicationJsBudget: 6 * 1024,
+  optionalGalleryJsBytes: (await readFile('dist/art-gallery.js')).length,
+  optionalGalleryJsGzipBytes: await gzip('art-gallery.js'),
+  optionalGalleryBudget: 20 * 1024,
 };
 await mkdir('.private-evidence', { recursive: true });
 await writeFile('.private-evidence/budgets.json', JSON.stringify(report, null, 2));
 console.log(report);
-if (markup > report.markupBudget || total > report.initialBudget) process.exitCode = 1;
+if (
+  markup > report.markupBudget ||
+  total > report.initialBudget ||
+  applicationJsBytes > report.applicationJsBudget ||
+  report.optionalGalleryJsBytes > report.optionalGalleryBudget
+)
+  process.exitCode = 1;

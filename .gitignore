@@ -17,3 +17,6 @@ playwright-report/
 /.section-references/
 /section-references/
 /selected-section-reference/
+
+.baseline-source/
+node_modules

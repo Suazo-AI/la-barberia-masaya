@@ -14,6 +14,7 @@ export default defineConfig({
     timezoneId: 'America/Managua',
     reducedMotion: 'reduce',
     launchOptions: {
+      args: process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [],
       executablePath:
         process.env.CHROMIUM_PATH ||
         (existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
@@ -22,9 +23,22 @@ export default defineConfig({
     trace: 'off',
     video: 'on',
   },
-  webServer: {
-    command: 'npm run preview',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: 'npm run preview',
+      url: 'http://127.0.0.1:4173',
+      reuseExistingServer: !process.env.CI,
+    },
+    ...(process.env.UI_BASELINE_URL
+      ? [
+          {
+            command: 'node scripts/preview.mjs',
+            cwd: '.baseline-source',
+            env: { PORT: '4174' },
+            url: process.env.UI_BASELINE_URL,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
+  ],
 });

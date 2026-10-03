@@ -16,7 +16,15 @@ for (const name of requiredImages) {
 }
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist/assets/images', { recursive: true });
-for (const name of ['index.html', '404.html', 'styles.css', 'favicon.svg']) {
+for (const name of [
+  'index.html',
+  '404.html',
+  'styles.css',
+  'motion.js',
+  'art-gallery.js',
+  'THIRD-PARTY-NOTICES.txt',
+  'favicon.svg',
+]) {
   await cp(`src/${name}`, `dist/${name}`);
 }
 await cp('src/assets/fonts', 'dist/assets/fonts', { recursive: true });

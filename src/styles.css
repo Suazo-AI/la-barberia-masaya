@@ -150,13 +150,41 @@ h1 span {
   text-align: center;
   text-decoration: none;
 }
-.call-action:hover {
-  background: #ded7c8;
-  border-color: #ded7c8;
+/* Adapted from BHARGAVPATEL1244 / Uiverse great-catfish-18 (MIT).
+   The skewed cover/wipe is upstream; square shape, safe palette and keyboard states are ours.
+   See THIRD-PARTY-NOTICES.txt. Both fill colors retain dark, high-contrast text. */
+.hero .call-action {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #c8bba2;
 }
-.call-action:active {
-  background: #c6bead;
-  border-color: #c6bead;
+.hero .call-action span {
+  position: relative;
+  z-index: 1;
+}
+.hero .call-action::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10%;
+  width: 120%;
+  height: 100%;
+  z-index: 0;
+  background: var(--ivory);
+  transform: skew(30deg);
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+}
+.hero .call-action:focus-visible::before {
+  transform: translate3d(100%, 0, 0);
+}
+@media (hover: hover) {
+  .hero .call-action:hover::before {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+.hero .call-action:active::before {
+  transform: translate3d(100%, 0, 0);
 }
 .hero-scene {
   grid-column: 1;
@@ -344,4 +372,111 @@ h1 span {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Progressive visual adaptations: editorial entry inspired by Kokonut / 21st,
+   one-time blur/translate reveal inspired by Magic UI. No upstream React runtime.
+   Content is visible by default; the call action never waits for an entrance. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero h1 span {
+    animation: editorial-entry 480ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .hero h1 span:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  .space-tile.is-revealing {
+    animation: photo-reveal 400ms ease-out both;
+  }
+  .space-tile.is-revealing:nth-child(2n) {
+    animation-delay: 60ms;
+  }
+}
+@keyframes editorial-entry {
+  from {
+    opacity: 0.55;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes photo-reveal {
+  from {
+    opacity: 0.35;
+    filter: blur(4px);
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero .call-action::before {
+    transition: none;
+  }
+}
+
+[hidden] {
+  display: none !important;
+}
+.gallery-tools {
+  padding: 0 var(--gutter) 1.5rem;
+}
+.gallery-toggle,
+.gallery-pan-controls button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--muted);
+  background: transparent;
+  color: var(--ivory);
+  font: inherit;
+  cursor: pointer;
+}
+.gallery-toggle:hover,
+.gallery-pan-controls button:hover {
+  background: #393832;
+}
+.gallery-toggle:disabled {
+  cursor: wait;
+}
+.gallery-status {
+  max-width: 40rem;
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}
+.gallery-status:empty {
+  display: none;
+}
+#gallery-instructions {
+  padding: 0 var(--gutter);
+  max-width: 65rem;
+  line-height: 1.5;
+}
+.art-gallery {
+  position: relative;
+  height: clamp(420px, 45vw, 640px);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.art-gallery:focus-visible {
+  outline-offset: -4px;
+}
+.art-gallery.is-dragging {
+  cursor: grabbing;
+}
+.art-gallery canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gallery-pan-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 1rem var(--gutter) 1.5rem;
 }

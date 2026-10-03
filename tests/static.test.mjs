@@ -22,7 +22,7 @@ test('semantic Spanish page and selected copy', () => {
 });
 test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /name="robots" content="noindex, nofollow"/);
-  assert.doesNotMatch(html, /<script|<iframe|<form|wa\.me|whatsapp|Reservar|testimonio|estrellas/i);
+  assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp|Reservar|testimonio|estrellas/i);
   assert.doesNotMatch(html, /(?:href|src)="https?:\/\//);
   assert.equal(html.includes('http-equiv="refresh"'), false);
 });
@@ -57,4 +57,14 @@ test('approved local gallery uses four interior crops without customer-work clai
   assert.equal((html.match(/class="space-tile /g) || []).length, 4);
   assert.equal((html.match(/loading="lazy"/g) || []).length, 4);
   assert.doesNotMatch(html, /TRABAJOS|CLIENTES|nuestros cortes|nuestros resultados/);
+});
+
+test('progressive motion ships only one local script and retained upstream notice', async () => {
+  assert.equal((html.match(/<script /g) || []).length, 1);
+  assert.match(html, /<script src=".\/motion.js" type="module"><\/script>/);
+  assert.match(
+    await readFile('dist/THIRD-PARTY-NOTICES.txt', 'utf8'),
+    /Copyright - 2026 BHARGAVPATEL1244/,
+  );
+  assert.match(await readFile('dist/styles.css', 'utf8'), /prefers-reduced-motion: no-preference/);
 });

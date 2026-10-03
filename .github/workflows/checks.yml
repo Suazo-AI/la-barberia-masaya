@@ -19,6 +19,7 @@ jobs:
     env:
       # Public CI may run only after these assets have explicit publication clearance.
       HERO_ASSET_DIR: src/assets/images
+      UI_BASELINE_URL: http://127.0.0.1:4174
       SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -31,6 +32,15 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
+      - name: Checkout real pre-component application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 3dbff80204c72754959b39966620146704b5233b
+          path: .baseline-source
+      - name: Build pinned real baseline
+        run: node scripts/build.mjs
+        working-directory: .baseline-source
       - run: npm run check
       - run: npm run test:performance
       - name: Upload test reports for this commit
@@ -45,6 +55,8 @@ jobs:
             .private-evidence/network-budget-dpr*.json
             .private-evidence/lighthouse/*.json
             .private-evidence/hero-*.png
+            .private-evidence/ui-*.png
+            .private-evidence/ui-*.json
             test-results/**/*.png
             test-results/**/*.webm
             test-results/**/error-context.md
