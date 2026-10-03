@@ -13,7 +13,7 @@ test('semantic Spanish page and selected copy', () => {
     'TU ESTILO.',
     'BIEN HECHO.',
     'Un espacio para tu próximo corte.',
-    'Llamar para consultar',
+    'Reservar cita',
   ])
     assert.equal(html.split('<body>')[1].split(copy).length - 1, 1);
   assert.equal((html.match(/href="tel:/g) || []).length, 1);
@@ -21,7 +21,9 @@ test('semantic Spanish page and selected copy', () => {
 });
 test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /name="robots" content="noindex, nofollow"/);
-  assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp|Reservar|Reservar/i);
+  assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp/i);
+  assert.match(html, /Servicios, profesionales, precios y horarios de ejemplo/);
+  assert.match(html, /No se ha creado ni enviado una cita/);
   assert.doesNotMatch(html, /src="https?:\/\//);
   assert.equal((html.match(/href="https?:\/\//g) || []).length, 6);
   assert.equal(html.includes('http-equiv="refresh"'), false);

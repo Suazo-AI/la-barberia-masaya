@@ -3,11 +3,13 @@
 Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
 
 1. Read [AGENTS.md](AGENTS.md) for scope and publication boundaries
-2. Read [SPEC.md](SPEC.md) v0.4 for the approved round-two option 2 hero
+2. Read [SPEC.md](SPEC.md) v0.5, especially section 10 for the authorized reservation demo
 3. Read [docs/decisions.md](docs/decisions.md) and [docs/sources.md](docs/sources.md) for decisions and asset rights
 4. See [README.md](README.md) for current commands and [docs/evidence/hero-review.md](docs/evidence/hero-review.md) for actual verification status
 
 ## State, 2026-10-03
+
+Latest increment: [reservation demo](docs/booking-demo.md), implemented from the exact approved app at `0755fce62688e380a737db9e267bad22e35acf25`, rather than README-only main. Hero **Reservar cita** opens three accessible steps with fictional services/prices/professionals/slots and an unequivocal simulation outcome. Real contact stays secondary. No personal data, backend, payment, storage or actual reservation. [Booking evidence](docs/evidence/booking-review.md) records checks and review limits. PR #2 remains draft; the parent controls private preview updates. Historical states below describe previous increments.
 
 - The user selected the contundente hero and authorized continuing the website end to end with creative explanations and human-guided references for unresolved sections
 - That choice supersedes the old hero03/docs-only hold from draft PR #1

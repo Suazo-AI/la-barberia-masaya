@@ -23,6 +23,8 @@ for (const name of [
   '404.html',
   'styles.css',
   'motion.js',
+  'booking.js',
+  'booking-model.js',
   'art-gallery.js',
   'THIRD-PARTY-NOTICES.txt',
   'favicon.svg',

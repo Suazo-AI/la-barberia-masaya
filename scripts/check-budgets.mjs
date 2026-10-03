@@ -11,6 +11,9 @@ const largestImage = await gzip('assets/images/interior-1672.webp');
 const galleryImage = await gzip('assets/images/local-overview-1000.webp');
 const applicationJsBytes = (await readFile('dist/motion.js')).length;
 const applicationJsGzipBytes = await gzip('motion.js');
+const bookingJsBytes =
+  (await readFile('dist/booking.js')).length + (await readFile('dist/booking-model.js')).length;
+const bookingJsGzipBytes = (await gzip('booking.js')) + (await gzip('booking-model.js'));
 const total =
   applicationJsGzipBytes +
   markup +
@@ -23,7 +26,7 @@ const workPhotoBytes =
   (await gzip('assets/images/cut-rear-view-2026-09-05.jpg'));
 const report = {
   lazyWorkPhotoGzipBytes: workPhotoBytes,
-  fullPageAssetGzipBytes: total + workPhotoBytes,
+  fullPageAssetGzipBytes: total + workPhotoBytes + bookingJsGzipBytes,
   fullPageBudget: 550 * 1024,
   method:
     'Modeled core assets only, not observed initial requests: hero + local view + fonts + HTML/CSS/JS/favicon. JPGs separately included in full-page total. Browser tests measure actual initial requests.',
@@ -38,6 +41,9 @@ const report = {
   applicationJsBytes,
   applicationJsGzipBytes,
   applicationJsBudget: 6 * 1024,
+  optionalBookingJsBytes: bookingJsBytes,
+  optionalBookingJsGzipBytes: bookingJsGzipBytes,
+  optionalBookingBudget: 24 * 1024,
   optionalGalleryJsBytes: (await readFile('dist/art-gallery.js')).length,
   optionalGalleryJsGzipBytes: await gzip('art-gallery.js'),
   optionalGalleryBudget: 20 * 1024,
@@ -50,6 +56,7 @@ if (
   report.fullPageAssetGzipBytes > report.fullPageBudget ||
   total > report.coreBudget ||
   applicationJsBytes > report.applicationJsBudget ||
+  bookingJsBytes > report.optionalBookingBudget ||
   report.optionalGalleryJsBytes > report.optionalGalleryBudget
 )
   process.exitCode = 1;

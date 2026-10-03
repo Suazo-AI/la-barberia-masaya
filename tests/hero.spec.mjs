@@ -37,8 +37,8 @@ for (const viewport of viewports) {
       .locator('.space-grid')
       .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
     expect(columns).toBe(viewport.width >= 768 ? 4 : 2);
-    const action = page.getByRole('link', { name: 'Llamar para consultar' });
-    await expect(action).toHaveAttribute('href', 'tel:+50585482197');
+    const action = page.getByRole('link', { name: 'Reservar cita' });
+    await expect(action).toHaveAttribute('href', '#reserva');
     const box = await action.boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
@@ -93,7 +93,7 @@ test('accessibility: no WCAG A/AA violations at mobile and desktop', async ({ pa
   await writeFile('.private-evidence/axe-results.json', JSON.stringify(reports, null, 2));
 });
 
-test('keyboard, repeated call activation intercepted, and history', async ({ page }) => {
+test('keyboard, repeated demo opening, and history', async ({ page }) => {
   await page.goto('/');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
@@ -102,20 +102,16 @@ test('keyboard, repeated call activation intercepted, and history', async ({ pag
   await page.keyboard.press('Enter');
   await expect(page.locator('main')).toBeFocused();
   await page.keyboard.press('Tab');
-  const action = page.getByRole('link', { name: 'Llamar para consultar' });
+  const action = page.getByRole('link', { name: 'Reservar cita' });
   await expect(action).toBeFocused();
   expect(await action.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
-  await page.evaluate(() => {
-    window.callAttempts = [];
-    document.querySelector('.call-action').addEventListener('click', (e) => {
-      e.preventDefault();
-      window.callAttempts.push(e.currentTarget.getAttribute('href'));
-    });
-  });
-  await page.keyboard.press('Enter');
-  await action.click();
-  await action.click();
-  expect(await page.evaluate(() => window.callAttempts)).toEqual(Array(3).fill('tel:+50585482197'));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(action).toBeFocused();
+  }
   await expect(page.locator('h1')).toBeVisible();
   await page.goBack();
   expect(new URL(page.url()).hash).toBe('');
@@ -133,10 +129,16 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
   });
   const page = await context.newPage();
   await page.goto('http://127.0.0.1:4173/');
-  await expect(page.getByRole('link', { name: 'Llamar para consultar' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /Consultar una cita real/ })).toHaveAttribute(
     'href',
     'tel:+50585482197',
   );
+  await expect(page.getByRole('link', { name: 'Reservar cita' })).toHaveAttribute(
+    'href',
+    '#reserva',
+  );
+  await page.getByRole('link', { name: 'Reservar cita' }).click();
+  await expect(page.getByRole('heading', { name: 'Demo de reservas', exact: true })).toBeVisible();
   await expect(page.locator('.work-grid img')).toHaveCount(2);
   await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
   await expect(page.locator('.work-grid')).toContainText('Moises Diaz');
@@ -180,13 +182,13 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
       true,
     );
     expect(await zoom.locator('h1').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
-    await expect(zoom.getByRole('link', { name: 'Llamar para consultar' })).toBeVisible();
+    await expect(zoom.getByRole('link', { name: 'Reservar cita' })).toBeVisible();
     await zoom.close();
   }
   const missing = await browser.newPage();
   await missing.route('**/assets/images/**', (route) => route.abort());
   await missing.goto('http://127.0.0.1:4173/');
-  await expect(missing.getByRole('link', { name: 'Llamar para consultar' })).toBeVisible();
+  await expect(missing.getByRole('link', { name: 'Reservar cita' })).toBeVisible();
   await missing.close();
 });
 

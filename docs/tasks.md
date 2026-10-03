@@ -1,5 +1,7 @@
 # Issue-ready task graph
 
+Current authorized booking increment (2026-10-03): implementation owner handles the exact approved baseline `0755fce`, mock agenda/service flow, responsive/accessibility checks and real before/after evidence. See [requirements](booking-demo.md). Independent reviewer verifies the delivered commit read-only after integration. Parent owns private preview updates. PR #2 publication is authorized; merge/public deployment are excluded. These latest tasks supersede historical pending-booking/call-first assumptions below.
+
 Updated 2026-10-03: current increment is approved round-two option 2 hero + selected monochrome El local grid + static foundation. T-01 direction is resolved for this increment; T-02/T-03/T-04/T-05 are active with one implementation owner to avoid overlap. T-06 and independent review follow on the exact source state. T-07 human responsive review remains open; T-08 release is blocked pending final approval/host. The task descriptions below preserve the original full-MVP roadmap; abstract graphics and Astro were proposals superseded by SPEC v0.3.
 
 Current owned paths: implementer owns `src/`, `scripts/`, package/config/CI and reconciled docs. Reviewer is read-only and reports findings. Parent handles reference research for remaining sections outside the implementation paths. No speculative below-fold content is added.

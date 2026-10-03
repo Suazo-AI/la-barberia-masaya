@@ -33,7 +33,12 @@
         <div class="hero-copy">
           <h1 id="hero-heading"><span>TU ESTILO.</span> <span>BIEN HECHO.</span></h1>
           <p class="hero-description">Un espacio para tu próximo corte.</p>
-          <a class="call-action" href="tel:+50585482197"><span>Llamar para consultar</span></a>
+          <a class="call-action" href="#reserva" data-booking-open aria-haspopup="dialog"
+            ><span>Reservar cita</span></a
+          >
+          <p class="booking-preview-note" id="booking-load-status" aria-live="polite">
+            Demo · servicios, precios y horarios ficticios.
+          </p>
         </div>
         <figure class="hero-scene">
           <picture
@@ -314,7 +319,154 @@
           </p>
         </div>
       </section>
+      <div class="real-contact">
+        <p>Para consultar una cita real, hablá con el negocio.</p>
+        <a class="contact-action" href="tel:+50585482197"
+          >Consultar una cita real <span>+505 8548 2197</span></a
+        >
+      </div>
+      <noscript>
+        <section id="reserva" class="booking-fallback" aria-labelledby="booking-fallback-title">
+          <h2 id="booking-fallback-title">Demo de reservas</h2>
+          <p>
+            Activá JavaScript para elegir un servicio y horario de ejemplo. Esta demo no crea una
+            cita. Podés consultar una cita real por teléfono en la sección de contacto.
+          </p>
+        </section>
+      </noscript>
     </main>
+    <dialog
+      class="booking-dialog"
+      id="booking-dialog"
+      aria-labelledby="booking-title"
+      aria-describedby="booking-disclaimer"
+    >
+      <div class="booking-header">
+        <div>
+          <p class="section-label">DEMO DE RESERVA</p>
+          <h2 id="booking-title">RESERVÁ TU TIEMPO.</h2>
+        </div>
+        <button
+          class="booking-close"
+          type="button"
+          aria-label="Cerrar y descartar demo"
+          data-booking-close
+        >
+          Cerrar <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <p class="booking-disclaimer" id="booking-disclaimer">
+        <strong>Solo una demo.</strong> Servicios, profesionales, precios y horarios de ejemplo. No
+        crea ni envía una cita.
+      </p>
+      <nav class="booking-progress" aria-label="Pasos de la demo">
+        <ol>
+          <li>
+            <button type="button" data-step="1"><span>1</span> Servicio</button>
+          </li>
+          <li>
+            <button type="button" data-step="2" disabled><span>2</span> Fecha y hora</button>
+          </li>
+          <li>
+            <button type="button" data-step="3" disabled><span>3</span> Revisar</button>
+          </li>
+        </ol>
+      </nav>
+      <div class="booking-body">
+        <div class="booking-main">
+          <section class="booking-step" data-panel="1" aria-labelledby="service-heading">
+            <p class="booking-step-label">PASO 1 DE 3</p>
+            <h3 id="service-heading" tabindex="-1">Elegí tu servicio</h3>
+            <p class="booking-help">Un buen corte empieza con lo que vos querés.</p>
+            <fieldset class="booking-options">
+              <legend class="sr-only">Servicio de ejemplo</legend>
+              <div id="booking-services" class="booking-services"></div>
+            </fieldset>
+            <p class="booking-help">Duraciones y precios ficticios en córdobas (NIO).</p>
+          </section>
+          <section class="booking-step" data-panel="2" aria-labelledby="schedule-heading" hidden>
+            <p class="booking-step-label">PASO 2 DE 3</p>
+            <h3 id="schedule-heading" tabindex="-1">Encontrá tu horario</h3>
+            <fieldset class="booking-options">
+              <legend>¿Con quién? <span>Profesionales ficticios</span></legend>
+              <div class="booking-barbers" id="booking-barbers"></div>
+            </fieldset>
+            <div class="booking-date-field">
+              <label for="booking-date">Fecha</label>
+              <input type="date" id="booking-date" aria-describedby="booking-date-help" />
+            </div>
+            <p id="booking-date-help" class="booking-help">
+              Próximos 21 días · Hora de Nicaragua (America/Managua).
+            </p>
+            <div
+              class="booking-dates"
+              id="booking-dates"
+              role="group"
+              aria-label="Elegir entre los próximos siete días"
+            ></div>
+            <fieldset class="booking-options booking-time-options">
+              <legend>Horarios de ejemplo</legend>
+              <p id="booking-slot-help" class="booking-help"></p>
+              <div class="booking-slots" id="booking-slots"></div>
+            </fieldset>
+            <div class="booking-empty" id="booking-empty" hidden>
+              <p id="booking-empty-message"></p>
+              <button class="booking-text-button" type="button" id="booking-next-date">
+                Ver próxima fecha con turnos demo
+              </button>
+            </div>
+          </section>
+          <section class="booking-step" data-panel="3" aria-labelledby="review-heading" hidden>
+            <p class="booking-step-label">PASO 3 DE 3</p>
+            <h3 id="review-heading" tabindex="-1">Revisá tu selección</h3>
+            <p class="booking-help">Podés editarla antes de completar la simulación.</p>
+            <div id="booking-review" class="booking-review"></div>
+            <p class="booking-review-note">
+              No necesitamos tu nombre ni tu contacto para esta demo. No se realiza ningún pago.
+            </p>
+          </section>
+          <section
+            class="booking-step booking-complete"
+            data-panel="4"
+            aria-labelledby="complete-heading"
+            hidden
+          >
+            <span class="booking-complete-mark" aria-hidden="true">✓</span>
+            <p class="booking-step-label">DEMO FINALIZADA</p>
+            <h3 id="complete-heading" tabindex="-1">Simulación completada.</h3>
+            <p class="booking-complete-message">No se ha creado ni enviado una cita.</p>
+            <p class="booking-help">
+              Probaste el recorrido con datos ficticios. Para consultar una cita real, llamá al
+              negocio desde contacto.
+            </p>
+          </section>
+          <p
+            class="booking-status sr-only"
+            id="booking-status"
+            role="status"
+            aria-atomic="true"
+          ></p>
+        </div>
+        <aside class="booking-summary" aria-labelledby="selection-heading">
+          <p class="section-label" id="selection-heading">TU SELECCIÓN</p>
+          <dl id="booking-summary"></dl>
+          <p class="booking-summary-note">
+            Precios y disponibilidad ficticios.<br />Sin datos personales. Sin pagos.
+          </p>
+        </aside>
+      </div>
+      <div class="booking-footer">
+        <div class="booking-footer-links">
+          <button class="booking-text-button" type="button" id="booking-back" hidden>Volver</button>
+          <button class="booking-text-button" type="button" id="booking-reset">
+            Reiniciar demo
+          </button>
+        </div>
+        <button class="booking-primary" type="button" id="booking-continue" disabled>
+          Continuar
+        </button>
+      </div>
+    </dialog>
     <footer class="draft-note">
       <p>
         Vista de diseño · Las imágenes del interior en el hero y “El local” fueron mejoradas con IA

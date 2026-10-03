@@ -1,6 +1,8 @@
 # La Barbería Masaya: instrucciones del piloto
 
 Leer [START-HERE.md](START-HERE.md) antes de trabajar.
+
+Actualización de alcance, 2026-10-03: el usuario autorizó implementar y publicar en el PR DRAFT una demo de reservas con información ficticia. [SPEC.md](SPEC.md), sección 10, es la instrucción vigente para este incremento y sustituye el CTA de llamada del hero y la prohibición de UI de agenda/servicios ficticios. Conservá las decisiones visuales y contenido real existentes. No confundir la demo con disponibilidad, precios, personal ni confirmaciones reales. Sin datos personales, API, pagos, WhatsApp, persistencia, merge ni despliegue público. El padre actualiza el preview privado; esta implementación no opera Sites.
 Repo canónico público: https://github.com/Suazo-AI/la-barberia-masaya.
 El alcance actual es únicamente el website de La Barbería Masaya.
 

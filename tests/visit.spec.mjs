@@ -14,7 +14,7 @@ for (const viewport of [
     page.on('request', (request) => requests.push(request.url()));
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
-    const action = page.getByRole('link', { name: 'Llamar para consultar' });
+    const action = page.getByRole('link', { name: 'Reservar cita' });
     await expect(action).toBeVisible();
     await expect
       .poll(() =>

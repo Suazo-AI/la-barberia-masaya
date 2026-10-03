@@ -18,7 +18,7 @@ for (const viewport of [
     page.on('request', (request) => requests.push(request.url()));
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
-    const action = page.getByRole('link', { name: 'Llamar para consultar' });
+    const action = page.getByRole('link', { name: 'Reservar cita' });
     await expect(action).toBeVisible();
     await expect
       .poll(() =>
@@ -133,6 +133,13 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await page.goto(process.env.UI_BASELINE_URL);
     await page.evaluate(() => document.fonts.ready);
+    for (const card of await page.locator('.work-photo').all()) {
+      await card.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() => card.locator('img').evaluate((img) => img.complete && img.naturalWidth > 0))
+        .toBe(true);
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
     await mkdir('.private-evidence', { recursive: true });
     await page.screenshot({
       path: `.private-evidence/ui-before-${viewport.width}.png`,

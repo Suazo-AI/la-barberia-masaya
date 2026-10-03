@@ -1,5 +1,7 @@
 # Website specification
 
+Current increment: v0.5, reservation demo, authorized 2026-10-03. Section 10 supersedes the previous call-only hero and restrictions on fictional services/calendar UI. Earlier sections retain the approved visual/content history; no mock value is a fact about the business.
+
 Version 0.4 · 2026-10-03 · Business timezone: America/Managua
 
 ## 1. Outcome and current increment
@@ -14,7 +16,7 @@ The full website remains the goal. Subsequent sections are selected with the use
 - Desktop: frontal interior image left (~60%); ink surface and ivory text right (~40%)
 - One H1, two visual lines: **TU ESTILO. / BIEN HECHO.**
 - Supporting text: **Un espacio para tu próximo corte.**
-- Exactly one hero action: **Llamar para consultar**, ordinary anchor with `tel:+50585482197`
+- Exactly one hero action: **Reservar cita**, enhanced anchor opening the reservation demo; the real telephone action is secondary in contact
 - No extra hero navigation, badges, number chips, secondary directions action or social icons
 - Real HTML text; the selected mockup is a composition reference, never a full-page image
 - On a narrow viewport, headline and action precede the interior image, retaining comfortable type and touch size; the CTA is visible in the initial 320×568 and 390×844 viewports
@@ -79,3 +81,19 @@ The user likes the Obsidian effect but now assigns it to genuine reviews and hai
 The user approved the effect and requested business-social photos and genuine reviews. This supersedes the content-pending state in section 8. A distinct “Cortes y reseñas” section contains exactly two unchanged business-post photos of work in progress and three attributed positive review fragments. Show the dated overall rating (4.2/5, 10 reviews), source links, relative review dates and selection qualifier. No claim that photographed customers wrote the reviews. Disclose that the optional repeating wall repeats those five items. Source cards remain accessible while the canvas is open. Full photo containment preserves original overlaid branding; no generated results or crops.
 
 The native upstream WebGL port remains opt-in, with keyboard, touch, motion preference and context-loss handling. No new dependencies or weaker browser security. Local grid and visit panel retain their approved treatment. New lazy photos have a separate 550 KiB full-page gzip budget; the existing 400 KiB above-fold/local-image budget is unchanged. Private preview still requires independent review and human visual acceptance; no merge or public launch.
+
+## 10. Authorized reservation demo, 2026-10-03
+
+The user explicitly requested implementing a customer-selected service and available-time journey using mock information. Preserve the dark Anton/Barlow hero, static premises photographs, authentic two-photo/three-review Obsidian section, address and dated weekly hours. The hero's single action becomes **Reservar cita**. Its adjacent note identifies services, prices and slots as fictional; the telephone action moves to secondary contact as **Consultar una cita real**.
+
+Use three visible stages: **Servicio / Fecha y hora / Revisar**. Professional selection is integrated into the second stage and defaults to **Sin preferencia**. Only **Profesional A/B**, explicitly fictional, may appear. Example catalog: Corte clásico, 30 min, C$ 200; Barba, 20 min, C$ 150; Corte + barba, 50 min, C$ 300. All prices are examples in NIO, never advertised as the shop's rates.
+
+The mock schedule follows America/Managua and the existing weekly bounds: Monday/Wednesday/Thursday 13:00–19:00; Tuesday closed; Friday/Saturday 10:00–19:00; Sunday 10:00–17:00. Offer a rolling 21-day window, 15-minute start grid, no past starts, no overlap with the chosen professional's fictional occupied intervals, and no service ending after closing. With no professional preference, offer the deduplicated union and show the assigned mock professional in review. Revalidate the slot before review/completion. Never imply this schedule is current real availability.
+
+Changing service, professional or date discards the selected slot. Back/edit preserves selections that remain applicable. Distinguish a closed Tuesday from a day with no mock slots; offer the next date with suitable mock slots. Thursday is fully occupied in the fixture, solely to make that state reproducible. Closing/Escape and reopening starts a fresh demo; **Reiniciar demo** and **Nueva simulación** clear selections.
+
+Persistent dialog disclosure: **Solo una demo. Servicios, profesionales, precios y horarios de ejemplo. No crea ni envía una cita.** Final action: **Completar simulación**. Outcome: **Simulación completada. No se ha creado ni enviado una cita.** No reservation codes, personal fields, WhatsApp, booking API, payment, cookies or browser storage. Completing the simulation does not add an appointment or consume a slot.
+
+A native modal dialog confines keyboard focus while open, makes the underlying page inert, supports Escape and returns focus to its opener. Focus each stage heading, mark the current step, use native labeled radios/fieldsets and announce changes/errors. Maintain 44px controls, narrow-screen and 200% text reflow, scrollable content, visible close/back/reset controls and reduced motion. No-JavaScript visitors receive an honest demo explanation plus the real secondary phone link. The two booking modules load on demand with no new runtime dependencies.
+
+See [booking research and requirements](docs/booking-demo.md) and [verification evidence](docs/evidence/booking-review.md). Implementation and draft PR publication are authorized. The parent owns the existing private preview. No merge, public deployment or real reservations are authorized by this increment.

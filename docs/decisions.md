@@ -75,6 +75,8 @@ If safe operation cannot be demonstrated, proceed with the same small task graph
 
 ## Current decision log
 
+2026-10-03, reservation demo (latest): the user authorized implementation with mock information and publication in draft PR #2. [SPEC section 10](../SPEC.md) and [booking requirements](booking-demo.md) supersede the old call-only/no-calendar UI scope. Hero becomes Reservar cita; real contact stays secondary. Fictional service durations/prices and anonymous professionals drive a three-stage native-dialog demo. No personal data, integration, real confirmation, merge or public release. Implementer owns `src/`, tests and reconciled documentation; parent owns private preview updates; independent reviewer remains read-only.
+
 2026-10-02: Initial proposal recorded. No implementation direction, production business content, final visuals, host, or pipeline execution has been approved in this planning package. Tests/build/deployment are not yet run.
 
 
