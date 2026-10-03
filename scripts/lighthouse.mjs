@@ -1,25 +1,28 @@
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { mkdir, writeFile, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
-import { chromium } from '@playwright/test';
+import { createHash } from 'node:crypto';
 
-// Use the preinstalled official sandbox helper, never change host security policy or permissions.
-const sandboxHelper = '/opt/google/chrome/chrome-sandbox';
-const sandboxStat = await stat(sandboxHelper);
-if (
-  !sandboxStat.isFile() ||
-  sandboxStat.uid !== 0 ||
-  !(sandboxStat.mode & 0o4000) ||
-  sandboxStat.mode & 0o022
-) {
-  throw new Error(
-    'The existing official Chrome sandbox helper is missing or not securely configured. No security settings were changed.',
-  );
+// Use Ubuntu's existing Chrome AppArmor allowance; never change host security policy.
+// Version is pinned from the exact GitHub runner image manifest, and drift fails closed.
+const chromePath = '/opt/google/chrome/chrome';
+const expectedChromeVersion = '154.0.8037.57';
+const policyPath = '/etc/apparmor.d/chrome';
+for (const path of [chromePath, policyPath]) {
+  const info = await stat(path);
+  if (!info.isFile() || info.uid !== 0 || info.mode & 0o022)
+    throw new Error(`Expected root-owned, non-writable official Chrome file: ${path}`);
 }
+const chromeVersion = execFileSync(chromePath, ['--version'], { encoding: 'utf8' }).trim();
+if (chromeVersion !== `Google Chrome ${expectedChromeVersion}`)
+  throw new Error(`Pinned Chrome version mismatch: ${chromeVersion}`);
+const appArmorPolicy = await readFile(policyPath, 'utf8');
+if (!appArmorPolicy.includes(chromePath) || !/\buserns\s*,/.test(appArmorPolicy))
+  throw new Error('Existing official Chrome AppArmor userns allowance is unavailable.');
 const url = 'http://127.0.0.1:4174/';
 const server = spawn(process.execPath, ['scripts/preview.mjs'], {
   env: { ...process.env, PORT: '4174', HOST: '127.0.0.1' },
@@ -47,16 +50,15 @@ try {
     let chrome;
     try {
       chrome = await chromeLauncher.launch({
-        chromePath: chromium.executablePath(),
+        chromePath,
         // Keep normal Lighthouse measurement flags but omit launcher's automatic
-        // --disable-setuid-sandbox, allowing Chrome's existing sandbox to operate.
+        // --disable-setuid-sandbox; the installed Chrome uses its existing AppArmor policy.
         ignoreDefaultFlags: true,
         chromeFlags: [
           ...chromeLauncher.Launcher.defaultFlags(),
           '--headless',
           '--disable-dev-shm-usage',
         ],
-        envVars: { ...process.env, CHROME_DEVEL_SANDBOX: sandboxHelper },
         userDataDir: profile,
         port: 9222,
         logLevel: 'verbose',
@@ -114,6 +116,10 @@ try {
       await rm(profile, { recursive: true, force: true });
     }
   }
+  if (
+    !runs.every((run) => ['lcpMs', 'cls', 'performance'].every((key) => Number.isFinite(run[key])))
+  )
+    throw new Error('Lighthouse returned a missing or non-finite required metric.');
   const median = (key) => [...runs].map((run) => run[key]).sort((a, b) => a - b)[1];
   const summary = {
     observedAt: new Date().toISOString(),
@@ -122,9 +128,12 @@ try {
     node: process.version,
     coldProfilePerRun: true,
     sandbox: {
-      helper: sandboxHelper,
-      ownerUid: sandboxStat.uid,
-      mode: (sandboxStat.mode & 0o7777).toString(8),
+      browserPath: chromePath,
+      browserVersion: chromeVersion,
+      appArmorPolicy: policyPath,
+      policySha256: createHash('sha256').update(appArmorPolicy).digest('hex'),
+      imageVersion: process.env.ImageVersion || null,
+      sandboxDisablingFlags: [],
       hostPolicyChanged: false,
     },
     runs,
