@@ -171,6 +171,10 @@ export class PersistentAgenda implements AgendaService {
     };
   }
 
+  get configurationMode(): AgendaConfig['mode'] {
+    return this.config.mode;
+  }
+
   private now(): number {
     const value = this.deps.now();
     if (!(value instanceof Date) || !Number.isFinite(value.getTime()))
@@ -189,8 +193,7 @@ export class PersistentAgenda implements AgendaService {
     return this.config.mode;
   }
 
-  private assertContext(context: MutationContext): void {
-    assertContext(context);
+  private assertConfigVersion(context: MutationContext): void {
     if (context.configVersion !== this.config.version) {
       throw new AgendaError(
         'CONFIGURATION_CHANGED',
@@ -237,7 +240,10 @@ export class PersistentAgenda implements AgendaService {
     try {
       await this.store.batch([
         {
-          sql: 'INSERT INTO agenda_configuration(business_id, version, config_hash, config_json) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM agenda_configuration)',
+          // Configuration cannot be reconstructed over orphaned private data.
+          // Keep the ownership and empty-data checks in the same transaction;
+          // rate buckets and ephemeral guards may legitimately precede setup.
+          sql: 'INSERT INTO agenda_configuration(business_id, version, config_hash, config_json) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM agenda_configuration) AND NOT EXISTS (SELECT 1 FROM agenda_entries) AND NOT EXISTS (SELECT 1 FROM agenda_idempotency) AND NOT EXISTS (SELECT 1 FROM agenda_audit) AND NOT EXISTS (SELECT 1 FROM agenda_outbox)',
           params: [
             this.config.businessId,
             this.config.version,
@@ -611,7 +617,7 @@ export class PersistentAgenda implements AgendaService {
     context: MutationContext,
     kind: 'booking' | 'walk-in',
   ): Promise<BookingReceipt> {
-    this.assertContext(context);
+    assertContext(context);
     if (kind === 'walk-in') assertAdmin(context.actor);
     else if (context.actor.kind === 'customer')
       throw new AgendaError('FORBIDDEN', 403, 'Acceso no autorizado.');
@@ -621,6 +627,7 @@ export class PersistentAgenda implements AgendaService {
     const hash = await this.requestHash(normal, context);
     const replay = await this.replay<BookingReceipt>(scope, context, hash);
     if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
     this.assertBookableDate(normal.date);
     if (kind === 'booking' && normal.startMinute % this.config.slotStepMinutes !== 0)
       throw new AgendaError(
@@ -795,13 +802,14 @@ export class PersistentAgenda implements AgendaService {
   ): Promise<BookingReceipt> {
     assertId(id);
     assertVersion(expectedVersion);
-    this.assertContext(context);
+    assertContext(context);
     assertManagement(id, context.actor);
     await this.configured();
     const scope = `booking:cancel:${id}:${actorScope(context.actor)}`;
     const hash = await this.requestHash({ id, expectedVersion }, context);
     const replay = await this.replay<BookingReceipt>(scope, context, hash);
     if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
     const original = await this.entry(id);
     if (original.kind === 'block')
       throw new AgendaError('NOT_FOUND', 404, 'Reserva no encontrada.');
@@ -836,7 +844,7 @@ export class PersistentAgenda implements AgendaService {
   ): Promise<BookingReceipt> {
     assertId(id);
     assertVersion(expectedVersion);
-    this.assertContext(context);
+    assertContext(context);
     assertManagement(id, context.actor);
     await this.configured();
     assertObject(input, ['date', 'startMinute', 'professionalId']);
@@ -847,6 +855,7 @@ export class PersistentAgenda implements AgendaService {
     const hash = await this.requestHash({ id, expectedVersion, input }, context);
     const replay = await this.replay<BookingReceipt>(scope, context, hash);
     if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
     this.assertBookableDate(input.date);
     if (input.startMinute % this.config.slotStepMinutes !== 0)
       throw new AgendaError(
@@ -912,7 +921,7 @@ export class PersistentAgenda implements AgendaService {
   }
 
   async createBlock(input: CreateBlockInput, context: MutationContext): Promise<ScheduleBlock> {
-    this.assertContext(context);
+    assertContext(context);
     assertAdmin(context.actor);
     await this.configured();
     assertObject(input, ['professionalId', 'date', 'startMinute', 'endMinute', 'label']);
@@ -922,12 +931,14 @@ export class PersistentAgenda implements AgendaService {
     if (input.endMinute <= input.startMinute)
       throw new AgendaError('INVALID_INPUT', 400, 'Intervalo inválido.');
     const label = cleanText(input.label, 120)!;
-    const professional = this.professional(input.professionalId);
+    assertId(input.professionalId);
     const normal = { ...input, label };
     const scope = `block:create:${actorScope(context.actor)}`;
     const hash = await this.requestHash(normal, context);
     const replay = await this.replay<ScheduleBlock>(scope, context, hash);
     if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
+    const professional = this.professional(input.professionalId);
     this.assertBookableDate(input.date);
     const now = this.now();
     const start = toUtcSeconds(input.date, input.startMinute);
@@ -971,13 +982,14 @@ export class PersistentAgenda implements AgendaService {
   ): Promise<ScheduleBlock> {
     assertId(id);
     assertVersion(expectedVersion);
-    this.assertContext(context);
+    assertContext(context);
     assertAdmin(context.actor);
     await this.configured();
     const scope = `block:cancel:${id}:${actorScope(context.actor)}`;
     const hash = await this.requestHash({ id, expectedVersion }, context);
     const replay = await this.replay<ScheduleBlock>(scope, context, hash);
     if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
     const original = await this.entry(id);
     if (original.kind !== 'block')
       throw new AgendaError('NOT_FOUND', 404, 'Bloqueo no encontrado.');

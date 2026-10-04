@@ -10,7 +10,13 @@ import { join, resolve, sep } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { SqliteStore, migrateSqlite } from '../adapters/sqlite.ts';
 import { createAgendaService } from '../core/index.ts';
-import type { AgendaService, MutationContext } from '../core/contracts.ts';
+import type {
+  AgendaBackup,
+  AgendaService,
+  BookingReceipt,
+  MutationContext,
+} from '../core/contracts.ts';
+import { canonicalStringify, hashConfiguration } from '../core/hash.ts';
 import { localFixtureConfig } from '../fixtures/local.ts';
 import { BackupError, exportBackup, restoreBackup } from '../tools/backup.ts';
 import { processOutbox } from '../tools/outbox.ts';
@@ -171,6 +177,227 @@ test('restore rejects forged configuration, active overlaps, or orphan events an
     );
   }
   assert.deepEqual((await service.exportData()).tables, backup.tables);
+});
+
+test('restore rejects malformed cached replies, invalid scope/hash and incompatible reservation references', async (t) => {
+  const { service, directory } = await setup(t);
+  const context = publicContext('backup-semantic-cache-fixture');
+  const receipt = await service.createBooking(fixtureBooking, context);
+  await service.createBooking(
+    { ...fixtureBooking, startMinute: 900 },
+    publicContext('backup-semantic-other-fixture'),
+  );
+  const backup = await service.exportData();
+  const cache = (candidate: AgendaBackup) =>
+    candidate.tables
+      .find((table) => table.name === 'agenda_idempotency')!
+      .rows.find((row) => row.key === context.idempotencyKey)!;
+  const reply = (candidate: AgendaBackup, alter: (value: BookingReceipt) => void) => {
+    const value = structuredClone(receipt);
+    alter(value);
+    cache(candidate).response_json = JSON.stringify(value);
+  };
+  const corruptions: Array<(candidate: AgendaBackup) => void> = [
+    (candidate) => {
+      cache(candidate).response_json = '{}';
+    },
+    (candidate) => {
+      cache(candidate).response_json = '[]';
+    },
+    (candidate) => {
+      cache(candidate).response_json = 'null';
+    },
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.id = 'missing-booking-fixture';
+      }),
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.version = 2;
+      }),
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.status = 'cancelled';
+      }),
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.priceMinorUnits += 1;
+      }),
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.durationMinutes += 15;
+      }),
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.startAt = '2026-10-14T20:00:00.000Z';
+      }),
+    (candidate) => {
+      cache(candidate).scope = 'booking:create:admin:unrelated-fixture';
+    },
+    (candidate) => {
+      cache(candidate).scope = `booking:cancel:${receipt.booking.id}:public`;
+    },
+    (candidate) => {
+      cache(candidate).request_hash = 'not-a-sha256-digest';
+    },
+    (candidate) => {
+      cache(candidate).request_hash = 'A'.repeat(64);
+    },
+    (candidate) => {
+      cache(candidate).key = 'invalid key with spaces';
+    },
+  ];
+  for (const [index, alter] of corruptions.entries()) {
+    const candidate = structuredClone(backup);
+    alter(candidate);
+    const target = join(directory, `invalid-cache-${index}.sqlite`);
+    await assert.rejects(restoreBackup(candidate, target), BackupError);
+    await assert.rejects(
+      stat(target),
+      (error: unknown) =>
+        typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT',
+    );
+  }
+  assert.deepEqual((await service.exportData()).tables, backup.tables);
+  assert.deepEqual(await service.createBooking(fixtureBooking, context), receipt);
+});
+
+test('restore rejects notification payloads incompatible with the event and cached receipt', async (t) => {
+  const { service, directory } = await setup(t);
+  const receipt = await service.createBooking(
+    fixtureBooking,
+    publicContext('backup-semantic-outbox-fixture'),
+  );
+  const backup = await service.exportData();
+  const event = (candidate: AgendaBackup) =>
+    candidate.tables.find((table) => table.name === 'agenda_outbox')!.rows[0]!;
+  const reply = (candidate: AgendaBackup, alter: (value: BookingReceipt) => void) => {
+    const value = structuredClone(receipt);
+    alter(value);
+    event(candidate).payload_json = JSON.stringify(value);
+  };
+  const corruptions: Array<(candidate: AgendaBackup) => void> = [
+    (candidate) => {
+      event(candidate).payload_json = '{}';
+    },
+    (candidate) => {
+      event(candidate).payload_json = '[]';
+    },
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.id = 'missing-outbox-booking-fixture';
+      }),
+    (candidate) => {
+      event(candidate).entry_version = 2;
+    },
+    (candidate) => {
+      event(candidate).event_type = 'booking.cancelled';
+    },
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.booking.status = 'cancelled';
+      }),
+    (candidate) =>
+      reply(candidate, (value) => {
+        value.mode = 'production';
+      }),
+    (candidate) => {
+      event(candidate).recipient = 'other-fixture@example.invalid';
+    },
+    (candidate) => {
+      event(candidate).payload_json = JSON.stringify({ ...receipt, mode: ['fixture'] });
+    },
+  ];
+  for (const [index, alter] of corruptions.entries()) {
+    const candidate = structuredClone(backup);
+    alter(candidate);
+    await assert.rejects(
+      restoreBackup(candidate, join(directory, `invalid-outbox-${index}.sqlite`)),
+      BackupError,
+    );
+  }
+  assert.deepEqual((await service.exportData()).tables, backup.tables);
+});
+
+test('restore validates block cache identity, scope and historical active/cancelled state', async (t) => {
+  const { service, directory, stores } = await setup(t);
+  const input = {
+    professionalId: 'a',
+    date: '2026-10-14',
+    startMinute: 900,
+    endMinute: 930,
+    label: 'Bloqueo fixture cache',
+  };
+  const context = adminContext('backup-semantic-block-fixture');
+  const original = await service.createBlock(input, context);
+  await service.cancelBlock(original.id, 1, adminContext('backup-semantic-unblock-fixture'));
+  const backup = await service.exportData();
+  for (const [index, response] of [
+    {},
+    [],
+    { ...original, id: 'missing-block-fixture' },
+    { ...original, version: 3 },
+    { ...original, label: 'Etiqueta equivocada fixture' },
+  ].entries()) {
+    const candidate = structuredClone(backup);
+    candidate.tables
+      .find((table) => table.name === 'agenda_idempotency')!
+      .rows.find((row) => row.key === context.idempotencyKey)!.response_json =
+      JSON.stringify(response);
+    await assert.rejects(
+      restoreBackup(candidate, join(directory, `invalid-block-cache-${index}.sqlite`)),
+      BackupError,
+    );
+  }
+  const restored = await restoreBackup(backup, join(directory, 'historical-block.sqlite'));
+  stores.push(restored.store);
+  const restoredService = createAgendaService(restored.store, restored.config, {
+    now: () => new Date(fixtureNow),
+  });
+  assert.deepEqual(await restoredService.createBlock(input, context), original);
+});
+
+test('restored idempotency retains valid historical replies after moves, cancellation and catalog/policy changes', async (t) => {
+  const { store, service, directory, stores } = await setup(t);
+  const createContext = publicContext('backup-history-create-fixture');
+  const created = await service.createBooking(fixtureBooking, createContext);
+  const moveContext = adminContext('backup-history-move-fixture');
+  const moveInput = { professionalId: 'b', date: '2026-10-14', startMinute: 840 };
+  const moved = await service.rescheduleBooking(created.booking.id, moveInput, 1, moveContext);
+  const cancelContext = adminContext('backup-history-cancel-fixture');
+  const cancelled = await service.cancelBooking(created.booking.id, 2, cancelContext);
+  const changedConfig = structuredClone(localFixtureConfig);
+  changedConfig.version = 2;
+  changedConfig.cancellationLeadMinutes = 10080;
+  changedConfig.maxAdvanceDays = 1;
+  changedConfig.services[0]!.name = 'Servicio actualizado de prueba';
+  changedConfig.services[0]!.durationMinutes = 45;
+  changedConfig.services[0]!.priceMinorUnits = 35000;
+  changedConfig.professionals[0]!.name = 'Nombre actualizado de prueba';
+  await store.run('UPDATE agenda_configuration SET version = ?, config_hash = ?, config_json = ?', [
+    changedConfig.version,
+    await hashConfiguration(changedConfig),
+    canonicalStringify(changedConfig),
+  ]);
+  const changedService = createAgendaService(store, changedConfig, {
+    now: () => new Date('2026-10-25T18:00:00Z'),
+  });
+  const backup = await changedService.exportData();
+  const restored = await restoreBackup(backup, join(directory, 'historical-changed-config.sqlite'));
+  stores.push(restored.store);
+  const restoredService = createAgendaService(restored.store, restored.config, {
+    now: () => new Date('2026-10-25T18:00:00Z'),
+  });
+  assert.deepEqual(await restoredService.createBooking(fixtureBooking, createContext), created);
+  assert.deepEqual(
+    await restoredService.rescheduleBooking(created.booking.id, moveInput, 1, moveContext),
+    moved,
+  );
+  assert.deepEqual(
+    await restoredService.cancelBooking(created.booking.id, 2, cancelContext),
+    cancelled,
+  );
+  assert.deepEqual((await restoredService.exportData()).tables, backup.tables);
 });
 
 test(

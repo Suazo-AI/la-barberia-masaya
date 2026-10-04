@@ -2,6 +2,10 @@
 
 Current authorized increment: a [persistent portable agenda](agenda/README.md), with local SQLite, a candidate Workers/D1 adapter, customer management and an administrator panel. Business configuration and verified host identity remain prerequisites for activation. The default site fails closed instead of substituting fictional availability. No backend deployment or notification has occurred. Earlier paragraphs below are historical website increments; the authentic Obsidian content is now active on explicit request.
 
+For the current agenda, use `npm run agenda:local` after building. Fixture mode is an explicit local opt-in. `npm run check` now includes TypeScript, real SQLite domain/storage/API tests and both site and agenda browser suites. The [hosting handoff](docs/agenda/hosting-handoff.md) describes the remaining Worker/assets/migration integration; the static build alone cannot run the API.
+
+## Historical website increments
+
 The current private increment includes a verified visit panel with address, weekly hours and Maps directions. The approved Obsidian effect awaits authentic haircut/review content; its engine is retained, with local-photo controls disabled. The premises gallery remains static. See [visit evidence](docs/evidence/visit-review.md).
 
 The approved **round-two option 2, contundente** hero and subsequently selected monochrome **El local** grid are implemented as semantic HTML/CSS. This is the first private working increment of the website, not the full website or a public launch.
@@ -30,17 +34,17 @@ The build fails clearly if the approved assets are unavailable; it never replace
 
 ## Checks
 
-| Command | Purpose |
-| --- | --- |
-| `npm run lint` | Prettier + semantic HTML validation |
-| `npm test` | Static built-page content/privacy/provenance/license assertions |
-| `npm run build` | Explicit-allowlist build; requires authorized local scene |
-| `npm run check:budgets` | Gzip budgets, largest responsive image, separate initial and opt-in JavaScript budgets |
-| `npm run test:e2e` | Real Chromium responsive/navigation/no-JS/privacy checks |
-| `npm run test:a11y` | Axe WCAG A/AA scan at mobile + desktop |
-| `npm run check` | Static + browser/axe checks against the built output |
-| `npm run test:performance` | Three cold-profile, pinned mobile Lighthouse lab runs (R-12) |
-| `npm run format` | Format source/config/test files |
+| Command                    | Purpose                                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| `npm run lint`             | Prettier + semantic HTML validation                                                    |
+| `npm test`                 | Static built-page content/privacy/provenance/license assertions                        |
+| `npm run build`            | Explicit-allowlist build; requires authorized local scene                              |
+| `npm run check:budgets`    | Gzip budgets, largest responsive image, separate initial and opt-in JavaScript budgets |
+| `npm run test:e2e`         | Real Chromium responsive/navigation/no-JS/privacy checks                               |
+| `npm run test:a11y`        | Axe WCAG A/AA scan at mobile + desktop                                                 |
+| `npm run check`            | Static + browser/axe checks against the built output                                   |
+| `npm run test:performance` | Three cold-profile, pinned mobile Lighthouse lab runs (R-12)                           |
+| `npm run format`           | Format source/config/test files                                                        |
 
 Tests intercept call activation and never place a call. Browser executable: `CHROMIUM_PATH` if set, otherwise installed `/usr/bin/chromium`, otherwise Playwright's installed browser. Browser installation is not assumed. The authoring executor blocks browser process sockets; the same tests run in the authorized GitHub Actions runner. Exact-head CI has passed 12 browser tests including accessibility, enlarged text, gallery loading and actual DPR1/DPR2 requested-resource budgets. See [evidence](docs/evidence/hero-review.md) for provenance and remaining gates.
 

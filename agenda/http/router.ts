@@ -254,6 +254,7 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
 
   function productionReady(): void {
     if (
+      service.configurationMode !== mode ||
       mode === 'unconfigured' ||
       (mode === 'production' && (!identityResolver || subjects.size === 0))
     ) {

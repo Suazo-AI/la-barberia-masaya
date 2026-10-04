@@ -33,6 +33,9 @@ export function createAgendaWorker<Environment extends object>(
       return async () => agendaUnavailableResponse();
     }
     const service = await options.createService(environment);
+    if (service.configurationMode !== mode) {
+      return async () => agendaUnavailableResponse();
+    }
     const rateLimiter = await options.createRateLimiter?.(environment);
     return createAgendaRouter({
       service,

@@ -14,6 +14,7 @@ import { addDays, fromUtcSeconds, localDate, toUtcSeconds } from '../core/time.t
 import type {
   Actor,
   AgendaConfig,
+  AgendaService,
   MutationContext,
   SqlStatement,
   SqlStore,
@@ -489,4 +490,225 @@ test('repeated catalog and availability reads do not write after initial configu
   await agenda.catalog();
   await agenda.availability({ serviceId: 'cut', date: day });
   assert.equal(batches, 1);
+});
+
+for (const operation of ['create', 'walk-in', 'move', 'cancel', 'block', 'unblock'] as const) {
+  test(`idempotent ${operation} replays its original response after a valid configuration migration and deadline`, async (t) => {
+    let clock = fixedNow();
+    const { agenda, store, config } = await fixture(t, undefined, () => clock);
+    const mutationContext = context(
+      `migration-${operation}-0001`,
+      operation === 'create' ? publicActor : admin,
+    );
+    let execute: (service: AgendaService, ctx: MutationContext) => Promise<unknown>;
+    let changedPayload: (service: AgendaService, ctx: MutationContext) => Promise<unknown>;
+    if (operation === 'create' || operation === 'walk-in') {
+      const bookingInput = { ...input(780, 'a'), managementHash: digest };
+      execute = (service, ctx) =>
+        operation === 'create'
+          ? service.createBooking(bookingInput, ctx)
+          : service.createWalkIn(bookingInput, ctx);
+      changedPayload = (service, ctx) =>
+        operation === 'create'
+          ? service.createBooking({ ...bookingInput, startMinute: 795 }, ctx)
+          : service.createWalkIn({ ...bookingInput, startMinute: 795 }, ctx);
+    } else if (operation === 'block' || operation === 'unblock') {
+      const blockInput = {
+        professionalId: 'a',
+        date: day,
+        startMinute: 780,
+        endMinute: 810,
+        label: 'Fixture migration',
+      };
+      if (operation === 'block') {
+        execute = (service, ctx) => service.createBlock(blockInput, ctx);
+        changedPayload = (service, ctx) =>
+          service.createBlock({ ...blockInput, label: 'Different request' }, ctx);
+      } else {
+        const block = await agenda.createBlock(
+          blockInput,
+          context('migration-seed-block-0001', admin),
+        );
+        execute = (service, ctx) => service.cancelBlock(block.id, 1, ctx);
+        changedPayload = (service, ctx) => service.cancelBlock(block.id, 2, ctx);
+      }
+    } else {
+      const created = await agenda.createBooking(
+        { ...input(780, 'a'), managementHash: digest },
+        context('migration-seed-booking-0001'),
+      );
+      const customer: Actor = { kind: 'customer', reservationId: created.booking.id };
+      mutationContext.actor = customer;
+      if (operation === 'cancel') {
+        execute = (service, ctx) => service.cancelBooking(created.booking.id, 1, ctx);
+        changedPayload = (service, ctx) => service.cancelBooking(created.booking.id, 2, ctx);
+      } else {
+        const move = { date: day, startMinute: 810, professionalId: 'b' };
+        execute = (service, ctx) => service.rescheduleBooking(created.booking.id, move, 1, ctx);
+        changedPayload = (service, ctx) =>
+          service.rescheduleBooking(created.booking.id, { ...move, startMinute: 825 }, 1, ctx);
+      }
+    }
+    const original = await execute(agenda, mutationContext);
+    if (operation === 'move') {
+      const booking = (original as { booking: { id: string; version: number } }).booking;
+      await agenda.cancelBooking(
+        booking.id,
+        booking.version,
+        context('migration-later-cancel-0001', admin),
+      );
+    }
+    const before = await counts(store);
+    const versionTwo = structuredClone(config);
+    versionTwo.version = 2;
+    versionTwo.services[0].durationMinutes = 45;
+    versionTwo.services[0].priceMinorUnits = 27500;
+    versionTwo.professionals[0].name = 'Updated fixture name';
+    versionTwo.cancellationLeadMinutes = 120;
+    const update = await store.run(
+      'UPDATE agenda_configuration SET version = ?, config_hash = ?, config_json = ? WHERE business_id = ?',
+      [2, await hashConfiguration(versionTwo), canonicalStringify(versionTwo), config.businessId],
+    );
+    assert.equal(update.changes, 1);
+    clock = new Date('2026-10-08T18:00:00Z');
+    const migrated = createAgendaService(store, versionTwo, { now: () => clock });
+    assert.equal((await migrated.catalog()).configVersion, 2);
+    assert.deepEqual(await execute(migrated, mutationContext), original);
+    await assert.rejects(
+      execute(migrated, {
+        ...mutationContext,
+        actor: { kind: 'customer', reservationId: 'not-the-owner' },
+      }),
+      errorCode('FORBIDDEN'),
+    );
+    await assert.rejects(
+      changedPayload(migrated, mutationContext),
+      errorCode('IDEMPOTENCY_CONFLICT'),
+    );
+    await assert.rejects(
+      execute(migrated, { ...mutationContext, configVersion: 2 }),
+      errorCode('IDEMPOTENCY_CONFLICT'),
+    );
+    await assert.rejects(
+      execute(migrated, { ...mutationContext, idempotencyKey: `migration-${operation}-new-key` }),
+      errorCode('CONFIGURATION_CHANGED'),
+    );
+    assert.deepEqual(await counts(store), before);
+  });
+}
+
+test('another business cannot initialize over an existing calendar or read/replay its private data', async (t) => {
+  const { agenda, store, config } = await fixture(t);
+  const bookingInput = {
+    ...input(780, 'a'),
+    customer: { displayName: 'Private fixture' },
+    managementHash: digest,
+  };
+  const ctx = context('business-original-0001');
+  const receipt = await agenda.createBooking(bookingInput, ctx);
+  const secondConfig = {
+    ...config,
+    businessId: 'different-business',
+    businessName: 'Different fixture business',
+  };
+  const second = createAgendaService(store, secondConfig, { now: fixedNow });
+  const before = await counts(store);
+  for (const request of [
+    () => second.catalog(),
+    () => second.listBookings({ date: day }),
+    () => second.getBooking(receipt.booking.id, admin),
+    () => second.authorizeCustomer(receipt.booking.id, digest),
+    () => second.createBooking(bookingInput, ctx),
+    () => second.exportData(),
+  ])
+    await assert.rejects(request(), errorCode('CONFIGURATION_CHANGED'));
+  assert.deepEqual(await counts(store), before);
+  assert.deepEqual(
+    (await store.all<{ business_id: string }>('SELECT business_id FROM agenda_configuration')).map(
+      (row) => row.business_id,
+    ),
+    [config.businessId],
+  );
+});
+
+test('fixture-to-production mode change requires explicit stored configuration and preserves original replay mode', async (t) => {
+  const { agenda, store, config } = await fixture(t);
+  const bookingInput = { ...input(780, 'a'), managementHash: digest };
+  const ctx = context('mode-transition-0001');
+  const original = await agenda.createBooking(bookingInput, ctx);
+  const production: AgendaConfig = {
+    ...config,
+    mode: 'production',
+    verified: true,
+    verifiedAt: fixedNow().toISOString(),
+    version: 2,
+  };
+  const productionService = createAgendaService(store, production, { now: fixedNow });
+  await assert.rejects(productionService.catalog(), errorCode('CONFIGURATION_CHANGED'));
+  await assert.rejects(
+    productionService.createBooking(bookingInput, ctx),
+    errorCode('CONFIGURATION_CHANGED'),
+  );
+  assert.equal(
+    (await store.all<{ version: number }>('SELECT version FROM agenda_configuration'))[0].version,
+    1,
+  );
+  await store.run(
+    'UPDATE agenda_configuration SET version = ?, config_hash = ?, config_json = ? WHERE business_id = ?',
+    [2, await hashConfiguration(production), canonicalStringify(production), config.businessId],
+  );
+  assert.equal((await productionService.catalog()).mode, 'production');
+  assert.deepEqual(await productionService.createBooking(bookingInput, ctx), original);
+  assert.equal(original.mode, 'fixture');
+  assert.deepEqual(await counts(store), { entries: 1, idempotency: 1, audit: 1, outbox: 1 });
+});
+
+test('missing configuration with existing private data fails closed without reconstructing ownership', async (t) => {
+  const { agenda, store, config } = await fixture(t);
+  const bookingInput = {
+    ...input(780, 'a'),
+    customer: { displayName: 'Private orphaned fixture' },
+    managementHash: digest,
+  };
+  const receipt = await agenda.createBooking(bookingInput, context('orphan-original-0001'));
+  await store.run('DELETE FROM agenda_configuration');
+  const before = await counts(store);
+  for (const businessId of [config.businessId, 'different-business']) {
+    const orphaned = createAgendaService(store, { ...config, businessId }, { now: fixedNow });
+    for (const request of [
+      () => orphaned.catalog(),
+      () => orphaned.listBookings({ date: day }),
+      () => orphaned.getBooking(receipt.booking.id, admin),
+      () => orphaned.authorizeCustomer(receipt.booking.id, digest),
+      () => orphaned.createBooking(input(840, 'b'), context('orphan-attempt-0001')),
+      () => orphaned.cancelBooking(receipt.booking.id, 1, context('orphan-cancel-0001', admin)),
+      () => orphaned.exportData(),
+    ])
+      await assert.rejects(request(), errorCode('CONFIGURATION_CHANGED'));
+  }
+  assert.deepEqual(await counts(store), before);
+  assert.equal((await store.all('SELECT * FROM agenda_configuration')).length, 0);
+});
+
+test('a legitimate empty calendar can configure on its first POST after a rate-limit bucket is written', async (t) => {
+  const { agenda, store, config } = await fixture(t);
+  await store.run('INSERT INTO agenda_rate_limits(scope, bucket, count) VALUES(?, ?, ?)', [
+    'fixture-first-post',
+    1,
+    1,
+  ]);
+  await store.run('INSERT INTO agenda_write_guard(id, affected) VALUES(1, 1)');
+  const created = await agenda.createBooking(input(), context('first-post-0001'));
+  assert.equal(created.booking.status, 'confirmed');
+  assert.deepEqual(
+    (await store.all<{ business_id: string }>('SELECT business_id FROM agenda_configuration')).map(
+      (row) => row.business_id,
+    ),
+    [config.businessId],
+  );
+  assert.deepEqual(await counts(store), { entries: 1, idempotency: 1, audit: 1, outbox: 1 });
+  assert.equal(
+    (await store.all<{ count: number }>('SELECT count FROM agenda_rate_limits'))[0].count,
+    1,
+  );
 });

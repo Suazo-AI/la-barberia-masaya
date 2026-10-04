@@ -50,6 +50,7 @@ jobs:
           name: website-checks-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             .private-evidence/playwright-results.json
+            agenda/.private-evidence/agenda-browser-results.json
             .private-evidence/axe-results.json
             .private-evidence/budgets.json
             .private-evidence/network-budget-dpr*.json

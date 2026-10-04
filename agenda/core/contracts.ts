@@ -160,6 +160,8 @@ export interface AgendaBackup {
   tables: BackupTable[];
 }
 export interface AgendaService {
+  /** Actual immutable domain mode; host adapters must match it before any operation. */
+  readonly configurationMode: AgendaMode;
   catalog(): Promise<Catalog>;
   availability(query: AvailabilityQuery): Promise<Availability>;
   createBooking(input: CreateBookingInput, context: MutationContext): Promise<BookingReceipt>;

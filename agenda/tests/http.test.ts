@@ -87,6 +87,7 @@ const ALLOW_RATE: MutationRateLimiter = {
 
 function service(overrides: Partial<AgendaService> = {}): AgendaService {
   return {
+    configurationMode: 'fixture',
     async catalog() {
       return CATALOG;
     },
@@ -229,13 +230,14 @@ test('production and unconfigured activation fail closed before any domain call'
     },
   });
   for (const mode of ['production', 'unconfigured'] as const) {
-    const result = await router({ service: fake, mode })(request('/bookings', { body: INPUT }));
+    const matching = service({ ...fake, configurationMode: mode });
+    const result = await router({ service: matching, mode })(request('/bookings', { body: INPUT }));
     assert.equal(result.status, 503);
     assert.equal(await code(result), 'CONFIGURATION_REQUIRED');
-    const catalog = await router({ service: fake, mode })(request('/catalog'));
+    const catalog = await router({ service: matching, mode })(request('/catalog'));
     assert.equal(catalog.status, 503);
     assert.equal(await code(catalog), 'CONFIGURATION_REQUIRED');
-    const availability = await router({ service: fake, mode })(
+    const availability = await router({ service: matching, mode })(
       request('/availability?serviceId=cut&date=2026-10-05'),
     );
     assert.equal(availability.status, 503);
@@ -571,7 +573,7 @@ test('Worker adapter never activates fixtures and keeps production creation clos
     mode: (environment) => environment.mode,
     async createService() {
       initialized += 1;
-      return service();
+      return service({ configurationMode: 'production' });
     },
     allowedOrigins: () => [ORIGIN],
     adminSubjects: () => [],
@@ -588,6 +590,170 @@ test('Worker adapter never activates fixtures and keeps production creation clos
   );
   assert.equal((await worker.fetch(request('/catalog'), environment)).status, 503);
   assert.equal(initialized, 0);
+});
+
+test('router rejects a mismatched or missing service mode before any public or private domain call', async () => {
+  let calls = 0;
+  const fake = service({
+    async catalog() {
+      calls += 1;
+      return CATALOG;
+    },
+    async availability(input) {
+      calls += 1;
+      return {
+        date: input.date,
+        timeZone: 'America/Managua',
+        mode: 'fixture',
+        slots: [],
+        reason: 'closed',
+      };
+    },
+    async createBooking() {
+      calls += 1;
+      return RECEIPT;
+    },
+    async listBookings() {
+      calls += 1;
+      return [];
+    },
+    async exportData() {
+      calls += 1;
+      throw new Error('Must not reach export.');
+    },
+    async authorizeCustomer() {
+      calls += 1;
+      return true;
+    },
+  });
+  const resolver = {
+    async resolve() {
+      return { subject: 'test-owner' };
+    },
+  };
+  for (const actualMode of ['fixture', 'unconfigured', undefined] as const) {
+    const actual =
+      actualMode === undefined
+        ? (Object.fromEntries(
+            Object.entries(fake).filter(([name]) => name !== 'configurationMode'),
+          ) as unknown as AgendaService)
+        : service({ ...fake, configurationMode: actualMode });
+    const handle = router({
+      service: actual,
+      mode: 'production',
+      identityResolver: resolver,
+      adminSubjects: ['test-owner'],
+    });
+    for (const operation of [
+      request('/catalog'),
+      request('/availability?serviceId=cut&date=2026-10-05'),
+      request('/bookings', { body: INPUT }),
+      request('/admin/schedule?date=2026-10-05'),
+      request('/admin/export'),
+      request('/bookings/reservation-1', { headers: { Authorization: `Bearer ${TOKEN}` } }),
+    ]) {
+      const result = await handle(operation);
+      assert.equal(result.status, 503);
+      assert.equal(await code(result), 'CONFIGURATION_REQUIRED');
+    }
+  }
+  const reversed = router({
+    service: service({ ...fake, configurationMode: 'production' }),
+    mode: 'fixture',
+    identityResolver: resolver,
+    adminSubjects: ['test-owner'],
+  });
+  assert.equal((await reversed(request('/admin/export'))).status, 503);
+  assert.equal(calls, 0);
+});
+
+test('production Worker with a real fixture backend remains unavailable and creates no allocation', async () => {
+  const store = new SqliteStore(':memory:');
+  try {
+    await migrateSqlite(store);
+    const domain = await createAgendaService(store, structuredClone(localFixtureConfig), {
+      now: () => new Date('2026-10-04T15:00:00.000Z'),
+    });
+    let rateInitializations = 0;
+    const worker = createAgendaWorker<object>({
+      mode: () => 'production',
+      async createService() {
+        return domain;
+      },
+      allowedOrigins: () => [ORIGIN],
+      adminSubjects: () => ['test-owner'],
+      identityResolver: () => ({
+        async resolve() {
+          return { subject: 'test-owner' };
+        },
+      }),
+      createRateLimiter() {
+        rateInitializations += 1;
+        return ALLOW_RATE;
+      },
+    });
+    const environment = {};
+    for (const operation of [
+      request('/catalog'),
+      request('/availability?serviceId=cut&date=2026-10-05'),
+      request('/bookings', { body: INPUT }),
+      request('/admin/export'),
+    ]) {
+      const result = await worker.fetch(operation, environment);
+      assert.equal(result.status, 503);
+      assert.equal(await code(result), 'CONFIGURATION_REQUIRED');
+    }
+    assert.equal(rateInitializations, 0);
+    assert.equal((await store.all('SELECT id FROM agenda_entries')).length, 0);
+  } finally {
+    store.close();
+  }
+});
+
+test('loopback fixture administrator cannot read or mutate a real production domain', async () => {
+  const store = new SqliteStore(':memory:');
+  await migrateSqlite(store);
+  const config = {
+    ...structuredClone(localFixtureConfig),
+    mode: 'production' as const,
+    verified: true,
+    verifiedAt: '2026-10-04T15:00:00.000Z',
+  };
+  const domain = await createAgendaService(store, config, {
+    now: () => new Date('2026-10-04T15:00:00.000Z'),
+  });
+  const running = await startAgendaNodeServer({
+    service: domain,
+    mode: 'fixture',
+    fixtureAdmin: true,
+    rateLimiter: ALLOW_RATE,
+  });
+  try {
+    for (const path of ['/catalog', '/admin/schedule?date=2026-10-05', '/admin/export']) {
+      const result = await fetch(`${running.origin}${AGENDA_API_PREFIX}${path}`);
+      assert.equal(result.status, 503);
+      assert.equal(await code(result), 'CONFIGURATION_REQUIRED');
+    }
+    const result = await fetch(`${running.origin}${AGENDA_API_PREFIX}/admin/walk-ins`, {
+      method: 'POST',
+      headers: {
+        Origin: running.origin,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'fixture-cannot-write',
+      },
+      body: JSON.stringify({
+        serviceId: 'cut',
+        date: INPUT.date,
+        startMinute: 840,
+        configVersion: 1,
+      }),
+    });
+    assert.equal(result.status, 503);
+    assert.equal((await store.all('SELECT id FROM agenda_entries')).length, 0);
+  } finally {
+    await running.close();
+    store.close();
+  }
 });
 
 test('real SQLite HTTP flow persists retries, owner-authorized changes and admin allocations atomically', async () => {

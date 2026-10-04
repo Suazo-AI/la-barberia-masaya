@@ -4,9 +4,13 @@ import { SqliteStore, migrateSqlite } from '../adapters/sqlite.ts';
 import { validateAgendaConfig } from '../core/config.ts';
 import { canonicalStringify, hashConfiguration } from '../core/hash.ts';
 import { BACKUP_TABLES, SCHEMA_VERSION } from '../core/schema.ts';
+import { isoInstant, toUtcSeconds, validDate } from '../core/time.ts';
+import { digestPattern, identifierPattern } from '../core/validation.ts';
 import type {
   AgendaBackup,
   AgendaConfig,
+  BookingReceipt,
+  ScheduleBlock,
   SqlStatement,
   SqlStore,
   SqlValue,
@@ -31,6 +35,357 @@ function fail(): never {
   );
 }
 const quote = (identifier: string): string => `"${identifier.replaceAll('"', '""')}"`;
+
+type BackupRow = Record<string, SqlValue>;
+const integer = (value: unknown, min: number, max = Number.MAX_SAFE_INTEGER): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
+const identifier = (value: unknown): value is string =>
+  typeof value === 'string' && identifierPattern.test(value);
+const text = (value: unknown, max: number): value is string =>
+  typeof value === 'string' &&
+  value.trim().length > 0 &&
+  value.length <= max &&
+  !/[\u0000-\u001f\u007f]/.test(value);
+const versionKey = (id: string, version: number): string => `${id}:${version}`;
+
+function shape(
+  value: unknown,
+  required: string[],
+  optional: string[] = [],
+): value is Record<string, unknown> {
+  return (
+    record(value) &&
+    required.every((key) => Object.hasOwn(value, key)) &&
+    Object.keys(value).every((key) => required.includes(key) || optional.includes(key))
+  );
+}
+
+function parseJson(value: SqlValue | undefined): unknown {
+  if (typeof value !== 'string') fail();
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    fail();
+  }
+}
+
+function snapshotTimes(value: Record<string, unknown>): { start: number; end: number } {
+  if (
+    !validDate(value.date) ||
+    !integer(value.startMinute, 0, 1439) ||
+    !integer(value.endMinute, 1, 1440) ||
+    value.endMinute <= value.startMinute
+  )
+    fail();
+  try {
+    return {
+      start: toUtcSeconds(value.date, value.startMinute),
+      end: toUtcSeconds(value.date, value.endMinute),
+    };
+  } catch {
+    fail();
+  }
+}
+
+/** Prices/duration/customer are immutable snapshots; historical moves can have different times/staff. */
+function receiptSnapshot(value: unknown, entry: BackupRow): BookingReceipt {
+  if (
+    !shape(value, ['booking', 'mode', 'notification', 'customerManagement']) ||
+    typeof value.mode !== 'string' ||
+    !['fixture', 'production'].includes(value.mode) ||
+    value.notification !== 'disabled' ||
+    value.customerManagement !== (entry.management_hash === null ? 'admin-only' : 'token') ||
+    !shape(
+      value.booking,
+      [
+        'id',
+        'kind',
+        'serviceId',
+        'serviceName',
+        'professionalId',
+        'professionalName',
+        'date',
+        'startMinute',
+        'endMinute',
+        'startAt',
+        'endAt',
+        'durationMinutes',
+        'priceMinorUnits',
+        'currency',
+        'status',
+        'version',
+      ],
+      ['customerDisplayName'],
+    )
+  )
+    fail();
+  const booking = value.booking;
+  if (
+    entry.kind === 'block' ||
+    !identifier(booking.id) ||
+    booking.id !== entry.id ||
+    booking.kind !== entry.kind ||
+    !identifier(booking.serviceId) ||
+    booking.serviceId !== entry.service_id ||
+    !text(booking.serviceName, 120) ||
+    booking.serviceName !== entry.service_name ||
+    !identifier(booking.professionalId) ||
+    !text(booking.professionalName, 120) ||
+    !integer(booking.durationMinutes, 5, 480) ||
+    booking.durationMinutes !== entry.duration_minutes ||
+    !integer(booking.priceMinorUnits, 0, 10000000) ||
+    booking.priceMinorUnits !== entry.price_minor_units ||
+    booking.currency !== 'NIO' ||
+    booking.currency !== entry.currency ||
+    !['confirmed', 'cancelled'].includes(String(booking.status)) ||
+    !integer(booking.version, 1, 2147483647) ||
+    booking.version > Number(entry.version) ||
+    (entry.customer_display_name === null
+      ? Object.hasOwn(booking, 'customerDisplayName')
+      : !text(booking.customerDisplayName, 80) ||
+        booking.customerDisplayName !== entry.customer_display_name)
+  )
+    fail();
+  const times = snapshotTimes(booking);
+  if (
+    (booking.endMinute as number) - (booking.startMinute as number) !== booking.durationMinutes ||
+    booking.startAt !== isoInstant(times.start) ||
+    booking.endAt !== isoInstant(times.end) ||
+    (booking.status === 'cancelled' &&
+      (entry.status !== 'cancelled' || booking.version !== entry.version))
+  )
+    fail();
+  if (
+    booking.version === entry.version &&
+    (booking.professionalId !== entry.professional_id ||
+      booking.professionalName !== entry.professional_name ||
+      times.start !== entry.start_utc ||
+      times.end !== entry.end_utc ||
+      booking.status !== entry.status)
+  )
+    fail();
+  return value as unknown as BookingReceipt;
+}
+
+function blockSnapshot(value: unknown, entry: BackupRow): ScheduleBlock {
+  if (
+    !shape(value, [
+      'id',
+      'professionalId',
+      'date',
+      'startMinute',
+      'endMinute',
+      'label',
+      'status',
+      'version',
+    ]) ||
+    entry.kind !== 'block' ||
+    !identifier(value.id) ||
+    value.id !== entry.id ||
+    !identifier(value.professionalId) ||
+    value.professionalId !== entry.professional_id ||
+    !text(value.label, 120) ||
+    value.label !== entry.block_label ||
+    !integer(value.version, 1, 2) ||
+    value.version > Number(entry.version) ||
+    !['active', 'cancelled'].includes(String(value.status)) ||
+    (value.status === 'cancelled' &&
+      (entry.status !== 'cancelled' || value.version !== entry.version))
+  )
+    fail();
+  const times = snapshotTimes(value);
+  if (
+    times.start !== entry.start_utc ||
+    times.end !== entry.end_utc ||
+    (value.version === entry.version &&
+      value.status !== (entry.status === 'confirmed' ? 'active' : 'cancelled'))
+  )
+    fail();
+  return value as unknown as ScheduleBlock;
+}
+
+function actorScope(audit: BackupRow, entry: BackupRow): string {
+  if (audit.actor_kind === 'public') {
+    if (audit.actor_id !== null || audit.action !== 'created' || entry.kind !== 'booking') fail();
+    return 'public';
+  }
+  if (
+    audit.actor_kind === 'admin' &&
+    typeof audit.actor_id === 'string' &&
+    audit.actor_id.length > 0 &&
+    audit.actor_id.length <= 254 &&
+    !/[\u0000-\u001f\u007f]/.test(audit.actor_id)
+  )
+    return `admin:${audit.actor_id}`;
+  if (
+    audit.actor_kind === 'customer' &&
+    identifier(audit.actor_id) &&
+    audit.actor_id === entry.id &&
+    ['cancelled', 'rescheduled'].includes(String(audit.action)) &&
+    entry.kind !== 'block'
+  )
+    return `customer:${audit.actor_id}`;
+  fail();
+}
+
+function expectedScope(audit: BackupRow, entry: BackupRow): string {
+  const actor = actorScope(audit, entry);
+  if (audit.action === 'created') return `${entry.kind}:create:${actor}`;
+  if (audit.action === 'blocked') return `block:create:${actor}`;
+  if (audit.action === 'unblocked') return `block:cancel:${String(entry.id)}:${actor}`;
+  if (audit.action === 'cancelled') return `booking:cancel:${String(entry.id)}:${actor}`;
+  if (audit.action === 'rescheduled') return `booking:reschedule:${String(entry.id)}:${actor}`;
+  fail();
+}
+
+/** Cached replies and notifications are typed event snapshots, not arbitrary valid JSON. */
+function validateEventSnapshots(backup: AgendaBackup): void {
+  const table = (name: string): BackupRow[] => {
+    const rows = backup.tables.find((candidate) => candidate.name === name)?.rows;
+    if (!rows) fail();
+    return rows;
+  };
+  const entries = new Map<string, BackupRow>();
+  for (const entry of table('agenda_entries')) {
+    if (
+      !identifier(entry.id) ||
+      entries.has(entry.id) ||
+      !['booking', 'walk-in', 'block'].includes(String(entry.kind)) ||
+      !['confirmed', 'cancelled'].includes(String(entry.status)) ||
+      !integer(entry.version, 1, 2147483647)
+    )
+      fail();
+    entries.set(entry.id, entry);
+  }
+  const audits = new Map<string, BackupRow>();
+  const histories = new Map<string, BackupRow[]>();
+  for (const audit of table('agenda_audit')) {
+    if (
+      !identifier(audit.id) ||
+      !identifier(audit.entry_id) ||
+      !integer(audit.entry_version, 1, 2147483647) ||
+      !integer(audit.created_at, 0)
+    )
+      fail();
+    const entry = entries.get(audit.entry_id);
+    const key = versionKey(audit.entry_id, audit.entry_version);
+    if (!entry || audit.entry_version > Number(entry.version) || audits.has(key)) fail();
+    actorScope(audit, entry);
+    audits.set(key, audit);
+    const history = histories.get(audit.entry_id) ?? [];
+    history.push(audit);
+    histories.set(audit.entry_id, history);
+  }
+  for (const [id, entry] of entries) {
+    const history = (histories.get(id) ?? []).sort(
+      (a, b) => Number(a.entry_version) - Number(b.entry_version),
+    );
+    if (
+      history.length !== entry.version ||
+      (entry.kind === 'block' && history.length !== (entry.status === 'cancelled' ? 2 : 1))
+    )
+      fail();
+    for (const [index, audit] of history.entries()) {
+      const final = index === history.length - 1;
+      const action =
+        index === 0
+          ? entry.kind === 'block'
+            ? 'blocked'
+            : 'created'
+          : final && entry.status === 'cancelled'
+            ? entry.kind === 'block'
+              ? 'unblocked'
+              : 'cancelled'
+            : 'rescheduled';
+      if (
+        audit.entry_version !== index + 1 ||
+        audit.action !== action ||
+        (index === 0 && final && entry.status !== 'confirmed')
+      )
+        fail();
+    }
+  }
+  const outbox = new Map<string, BookingReceipt>();
+  for (const event of table('agenda_outbox')) {
+    if (
+      !identifier(event.id) ||
+      !identifier(event.entry_id) ||
+      !integer(event.entry_version, 1, 2147483647) ||
+      !integer(event.created_at, 0)
+    )
+      fail();
+    const entry = entries.get(event.entry_id);
+    const key = versionKey(event.entry_id, event.entry_version);
+    const audit = audits.get(key);
+    if (
+      !entry ||
+      entry.kind === 'block' ||
+      !audit ||
+      outbox.has(key) ||
+      event.recipient !== entry.customer_email ||
+      event.created_at !== audit.created_at
+    )
+      fail();
+    const receipt = receiptSnapshot(parseJson(event.payload_json), entry);
+    const expectedEvent =
+      audit.action === 'created'
+        ? 'booking.confirmed'
+        : audit.action === 'cancelled'
+          ? 'booking.cancelled'
+          : 'booking.rescheduled';
+    if (
+      event.event_type !== expectedEvent ||
+      receipt.booking.version !== event.entry_version ||
+      receipt.booking.status !== (audit.action === 'cancelled' ? 'cancelled' : 'confirmed')
+    )
+      fail();
+    outbox.set(key, receipt);
+  }
+  const cached = new Set<string>();
+  for (const row of table('agenda_idempotency')) {
+    if (
+      typeof row.scope !== 'string' ||
+      typeof row.key !== 'string' ||
+      !/^[a-zA-Z0-9._:-]{8,128}$/.test(row.key) ||
+      typeof row.request_hash !== 'string' ||
+      !digestPattern.test(row.request_hash) ||
+      !integer(row.created_at, 0)
+    )
+      fail();
+    const response = parseJson(row.response_json);
+    if (!record(response)) fail();
+    const raw = record(response.booking) ? response.booking : response;
+    if (!identifier(raw.id)) fail();
+    const entry = entries.get(raw.id);
+    if (!entry) fail();
+    const snapshot =
+      entry.kind === 'block' ? blockSnapshot(response, entry) : receiptSnapshot(response, entry);
+    const version =
+      entry.kind === 'block'
+        ? (snapshot as ScheduleBlock).version
+        : (snapshot as BookingReceipt).booking.version;
+    const key = versionKey(raw.id, version);
+    const audit = audits.get(key);
+    if (!audit || cached.has(key) || row.scope !== expectedScope(audit, entry)) fail();
+    if (
+      entry.kind !== 'block' &&
+      canonicalStringify(snapshot) !== canonicalStringify(outbox.get(key))
+    )
+      fail();
+    if (
+      entry.kind === 'block' &&
+      (snapshot as ScheduleBlock).status !== (audit.action === 'unblocked' ? 'cancelled' : 'active')
+    )
+      fail();
+    cached.add(key);
+  }
+  for (const [id, entry] of entries) {
+    for (const audit of histories.get(id) ?? []) {
+      const key = versionKey(id, Number(audit.entry_version));
+      if (!cached.has(key) || (entry.kind !== 'block' && !outbox.has(key))) fail();
+    }
+  }
+}
 
 const backupOrder: Record<(typeof BACKUP_TABLES)[number], string> = {
   agenda_configuration: 'business_id',
@@ -112,7 +467,9 @@ export function validateBackup(value: unknown): AgendaBackup {
     }
   }
   // Copy caller-owned data so it cannot change during asynchronous restore checks.
-  return structuredClone(value) as unknown as AgendaBackup;
+  const backup = structuredClone(value) as unknown as AgendaBackup;
+  validateEventSnapshots(backup);
+  return backup;
 }
 
 async function verifyDatabase(store: SqliteStore, config: AgendaConfig): Promise<void> {
