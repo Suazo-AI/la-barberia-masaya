@@ -1314,3 +1314,87 @@ h1 span {
     padding: 1rem;
   }
 }
+.booking-customer-fields {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1.5rem;
+}
+.booking-field label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.booking-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem;
+  color: var(--ivory);
+  background: var(--ink);
+  border: 1px solid var(--muted);
+  font: inherit;
+  border-radius: 0;
+}
+.booking-field input:focus-visible {
+  outline: 2px solid var(--ivory);
+  outline-offset: 3px;
+}
+#booking-message:empty {
+  display: none;
+}
+#booking-receipt dd {
+  overflow-wrap: anywhere;
+}
+#booking-manage-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-right: 1rem;
+}
+#booking-manage-link[hidden] {
+  display: none;
+}
+.booking-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem;
+  color: var(--ivory);
+  background: var(--ink);
+  border: 1px solid var(--muted);
+  font: inherit;
+  border-radius: 0;
+}
+.booking-field select:focus-visible {
+  outline: 2px solid var(--ivory);
+  outline-offset: 3px;
+}
+.agenda-page {
+  max-width: 54rem;
+  margin-inline: auto;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  overflow-wrap: anywhere;
+}
+.agenda-page .booking-header {
+  padding: 1.5rem 0;
+}
+.agenda-page h1 {
+  font-family: Anton, Impact, sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1.08;
+}
+.agenda-page h2 {
+  font-size: 1.65rem;
+  margin-block: 1.5rem 1rem;
+}
+.agenda-page .booking-review dt {
+  color: var(--muted);
+}
+.agenda-page .booking-review dd {
+  margin: 0.35rem 0 1rem;
+  overflow-wrap: anywhere;
+}
+#manage-confirm-dialog {
+  padding: clamp(1rem, 4vw, 2rem);
+}
+#manage-confirm-dialog .booking-header {
+  padding: 0 0 1rem;
+}

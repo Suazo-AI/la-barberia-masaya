@@ -140,18 +140,18 @@ if (tools?.dataset.contentStatus === 'ready') {
     tools.hidden = reducedMotion.matches;
   });
 }
-// Load the demo on demand.
+// Load the configured agenda on demand.
 let bookingModule;
 document.querySelector('[data-booking-open]')?.addEventListener('click', async (event) => {
   event.preventDefault();
   const trigger = event.currentTarget;
   try {
-    bookingModule ||= import('./booking.js');
+    bookingModule ||= import('./booking-live.js');
     const { openBooking } = await bookingModule;
     openBooking(trigger);
   } catch {
     bookingModule = null;
     document.querySelector('#booking-load-status').textContent =
-      'La demo no pudo cargar. Recargá para volver a intentarlo o consultá una cita real en contacto.';
+      'No se pudo cargar la agenda. Recargá para intentar de nuevo o consultá en contacto.';
   }
 });

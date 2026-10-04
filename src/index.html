@@ -32,7 +32,7 @@
             ><span>Reservar cita</span></a
           >
           <p class="booking-preview-note" id="booking-load-status" aria-live="polite">
-            Demo · servicios, precios y horarios ficticios.
+            Agenda en preparación. Servicios y profesionales pendientes de configuración.
           </p>
         </div>
         <figure class="hero-scene">
@@ -320,10 +320,11 @@
       </div>
       <noscript>
         <section id="reserva" class="booking-fallback" aria-labelledby="booking-fallback-title">
-          <h2 id="booking-fallback-title">Demo de reservas</h2>
+          <h2 id="booking-fallback-title">Reservas</h2>
           <p>
-            Activá JavaScript para elegir un servicio y horario de ejemplo. Esta demo no crea una
-            cita. Podés consultar una cita real por teléfono en la sección de contacto.
+            Activá JavaScript para consultar la agenda. Las reservas estarán disponibles cuando el
+            negocio configure sus servicios y profesionales. Podés consultar por teléfono en
+            contacto.
           </p>
         </section>
       </noscript>
@@ -336,23 +337,18 @@
     >
       <div class="booking-header">
         <div>
-          <p class="section-label">DEMO DE RESERVA</p>
+          <p class="section-label">RESERVAS</p>
           <h2 id="booking-title">RESERVÁ TU TIEMPO.</h2>
         </div>
-        <button
-          class="booking-close"
-          type="button"
-          aria-label="Cerrar y descartar demo"
-          data-booking-close
-        >
+        <button class="booking-close" type="button" aria-label="Cerrar reservas" data-booking-close>
           Cerrar <span aria-hidden="true">×</span>
         </button>
       </div>
       <p class="booking-disclaimer" id="booking-disclaimer">
-        <strong>Solo una demo.</strong> Servicios, profesionales, precios y horarios de ejemplo. No
-        crea ni envía una cita.
+        Agenda pendiente de configuración. No se puede crear una cita hasta verificar los servicios,
+        precios y profesionales del negocio.
       </p>
-      <nav class="booking-progress" aria-label="Pasos de la demo">
+      <nav class="booking-progress" aria-label="Pasos de la reserva">
         <ol>
           <li>
             <button type="button" data-step="1"><span>1</span> Servicio</button>
@@ -372,16 +368,18 @@
             <h3 id="service-heading" tabindex="-1">Elegí tu servicio</h3>
             <p class="booking-help">Un buen corte empieza con lo que vos querés.</p>
             <fieldset class="booking-options">
-              <legend class="sr-only">Servicio de ejemplo</legend>
+              <legend class="sr-only">Servicio</legend>
               <div id="booking-services" class="booking-services"></div>
             </fieldset>
-            <p class="booking-help">Duraciones y precios ficticios en córdobas (NIO).</p>
+            <p class="booking-help">
+              Duración y precio en córdobas (NIO), según el catálogo configurado.
+            </p>
           </section>
           <section class="booking-step" data-panel="2" aria-labelledby="schedule-heading" hidden>
             <p class="booking-step-label">PASO 2 DE 3</p>
             <h3 id="schedule-heading" tabindex="-1">Encontrá tu horario</h3>
             <fieldset class="booking-options">
-              <legend>¿Con quién? <span>Profesionales ficticios</span></legend>
+              <legend>¿Con quién?</legend>
               <div class="booking-barbers" id="booking-barbers"></div>
             </fieldset>
             <div class="booking-date-field">
@@ -398,24 +396,48 @@
               aria-label="Elegir entre los próximos siete días"
             ></div>
             <fieldset class="booking-options booking-time-options">
-              <legend>Horarios de ejemplo</legend>
+              <legend>Horarios disponibles</legend>
               <p id="booking-slot-help" class="booking-help"></p>
               <div class="booking-slots" id="booking-slots"></div>
             </fieldset>
             <div class="booking-empty" id="booking-empty" hidden>
               <p id="booking-empty-message"></p>
               <button class="booking-text-button" type="button" id="booking-next-date">
-                Ver próxima fecha con turnos demo
+                Ver próxima fecha disponible
               </button>
             </div>
           </section>
           <section class="booking-step" data-panel="3" aria-labelledby="review-heading" hidden>
             <p class="booking-step-label">PASO 3 DE 3</p>
             <h3 id="review-heading" tabindex="-1">Revisá tu selección</h3>
-            <p class="booking-help">Podés editarla antes de completar la simulación.</p>
+            <p class="booking-help">
+              Podés editarla antes de confirmar. La hora se verifica al guardar.
+            </p>
             <div id="booking-review" class="booking-review"></div>
-            <p class="booking-review-note">
-              No necesitamos tu nombre ni tu contacto para esta demo. No se realiza ningún pago.
+            <div class="booking-customer-fields">
+              <div class="booking-field">
+                <label for="booking-customer-name">Nombre (opcional)</label
+                ><input
+                  id="booking-customer-name"
+                  type="text"
+                  maxlength="80"
+                  autocomplete="name"
+                  aria-describedby="booking-contact-note"
+                />
+              </div>
+              <div class="booking-field">
+                <label for="booking-customer-email">Correo (opcional)</label
+                ><input
+                  id="booking-customer-email"
+                  type="email"
+                  maxlength="254"
+                  autocomplete="email"
+                  aria-describedby="booking-contact-note"
+                />
+              </div>
+            </div>
+            <p id="booking-contact-note" class="booking-review-note">
+              No se realiza ningún pago. Las notificaciones por correo están desactivadas.
             </p>
           </section>
           <section
@@ -425,12 +447,19 @@
             hidden
           >
             <span class="booking-complete-mark" aria-hidden="true">✓</span>
-            <p class="booking-step-label">DEMO FINALIZADA</p>
-            <h3 id="complete-heading" tabindex="-1">Simulación completada.</h3>
-            <p class="booking-complete-message">No se ha creado ni enviado una cita.</p>
-            <p class="booking-help">
-              Probaste el recorrido con datos ficticios. Para consultar una cita real, llamá al
-              negocio desde contacto.
+            <p class="booking-step-label">RESULTADO</p>
+            <h3 id="complete-heading" tabindex="-1">Resultado de la reserva</h3>
+            <p class="booking-complete-message"></p>
+            <dl id="booking-receipt" class="booking-review"></dl>
+            <a id="booking-manage-link" class="booking-text-button" href="./manage.html" hidden
+              >Gestionar esta reserva</a
+            >
+            <button id="booking-copy-link" class="booking-text-button" type="button" hidden>
+              Copiar enlace de gestión
+            </button>
+            <p id="booking-link-note" class="booking-help">
+              El enlace de gestión permite cancelar o reprogramar esta reserva. Guardalo en privado;
+              no se envió ningún correo.
             </p>
           </section>
           <section
@@ -439,11 +468,11 @@
             aria-labelledby="portfolio-heading"
             hidden
           >
-            <p class="booking-step-label">PERFIL DE EJEMPLO</p>
+            <p class="booking-step-label">PORTAFOLIO</p>
             <h3 id="portfolio-heading" tabindex="-1">Trabajos del barbero</h3>
             <p class="booking-help">
-              Este perfil es de ejemplo. Su nombre, foto y trabajos reales todavía no están
-              confirmados.
+              Se muestran únicamente trabajos verificados y atribuibles a este profesional. Las
+              fotos pendientes no se sustituyen por fotografías generales del negocio.
             </p>
             <div id="booking-portfolio-works" class="booking-portfolio-works"></div>
             <div id="booking-portfolio-empty" class="booking-empty">
@@ -465,12 +494,16 @@
             role="status"
             aria-atomic="true"
           ></p>
+          <p id="booking-message" class="booking-help" role="status" aria-atomic="true"></p>
+          <button id="booking-retry" class="booking-text-button" type="button" hidden>
+            Reintentar
+          </button>
         </div>
         <aside class="booking-summary" aria-labelledby="selection-heading">
           <p class="section-label" id="selection-heading">TU SELECCIÓN</p>
           <dl id="booking-summary"></dl>
           <p class="booking-summary-note">
-            Precios y disponibilidad ficticios.<br />Sin datos personales. Sin pagos.
+            La hora se confirma al guardar.<br />Sin pagos. Correos desactivados.
           </p>
         </aside>
       </div>
@@ -478,7 +511,7 @@
         <div class="booking-footer-links">
           <button class="booking-text-button" type="button" id="booking-back" hidden>Volver</button>
           <button class="booking-text-button" type="button" id="booking-reset">
-            Reiniciar demo
+            Reiniciar selección
           </button>
         </div>
         <button class="booking-primary" type="button" id="booking-continue" disabled>

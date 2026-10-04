@@ -12,8 +12,9 @@ const galleryImage = await gzip('assets/images/local-overview-1000.webp');
 const applicationJsBytes = (await readFile('dist/motion.js')).length;
 const applicationJsGzipBytes = await gzip('motion.js');
 const bookingJsBytes =
-  (await readFile('dist/booking.js')).length + (await readFile('dist/booking-model.js')).length;
-const bookingJsGzipBytes = (await gzip('booking.js')) + (await gzip('booking-model.js'));
+  (await readFile('dist/booking-live.js')).length +
+  (await readFile('dist/booking-client.js')).length;
+const bookingJsGzipBytes = (await gzip('booking-live.js')) + (await gzip('booking-client.js'));
 const total =
   applicationJsGzipBytes +
   markup +
@@ -43,7 +44,11 @@ const report = {
   applicationJsBudget: 6 * 1024,
   optionalBookingJsBytes: bookingJsBytes,
   optionalBookingJsGzipBytes: bookingJsGzipBytes,
-  optionalBookingBudget: 24 * 1024,
+  // New persistent agenda adds API validation/retry/capability flows. The former
+  // isolated demo allowance was 24 KiB. Bootstrap/core/full gzip caps stay fixed.
+  optionalBookingBudget: 36 * 1024,
+  optionalBookingBudgetReason:
+    'Persistent agenda client with server catalog, stale-response protection, idempotent retries and scoped management links; no framework/runtime dependency.',
   optionalGalleryJsBytes: (await readFile('dist/art-gallery.js')).length,
   optionalGalleryJsGzipBytes: await gzip('art-gallery.js'),
   optionalGalleryBudget: 20 * 1024,

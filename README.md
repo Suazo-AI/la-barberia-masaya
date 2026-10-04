@@ -1,5 +1,7 @@
 # La Barbería Masaya
 
+Current authorized increment: a [persistent portable agenda](agenda/README.md), with local SQLite, a candidate Workers/D1 adapter, customer management and an administrator panel. Business configuration and verified host identity remain prerequisites for activation. The default site fails closed instead of substituting fictional availability. No backend deployment or notification has occurred. Earlier paragraphs below are historical website increments; the authentic Obsidian content is now active on explicit request.
+
 The current private increment includes a verified visit panel with address, weekly hours and Maps directions. The approved Obsidian effect awaits authentic haircut/review content; its engine is retained, with local-photo controls disabled. The premises gallery remains static. See [visit evidence](docs/evidence/visit-review.md).
 
 The approved **round-two option 2, contundente** hero and subsequently selected monochrome **El local** grid are implemented as semantic HTML/CSS. This is the first private working increment of the website, not the full website or a public launch.

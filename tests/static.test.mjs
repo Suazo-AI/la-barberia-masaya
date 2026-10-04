@@ -22,11 +22,19 @@ test('semantic Spanish page and selected copy', () => {
 test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /name="robots" content="noindex, nofollow"/);
   assert.doesNotMatch(html, /<iframe|<form|wa\.me|whatsapp/i);
-  assert.match(html, /Servicios, profesionales, precios y horarios de ejemplo/);
-  assert.match(html, /No se ha creado ni enviado una cita/);
+  assert.match(html, /Agenda pendiente de configuración/);
+  assert.match(html, /No se puede crear una cita hasta verificar/);
   assert.doesNotMatch(html, /src="https?:\/\//);
   assert.equal((html.match(/href="https?:\/\//g) || []).length, 6);
   assert.equal(html.includes('http-equiv="refresh"'), false);
+});
+test('static build excludes configuration, fixtures and persistent private data', async () => {
+  const entries = await readdir('dist', { recursive: true });
+  assert.ok(entries.includes('booking-live.js'));
+  assert.ok(entries.includes('admin.html'));
+  assert.ok(entries.includes('manage.html'));
+  for (const entry of entries)
+    assert.doesNotMatch(entry, /fixture|sqlite|backup|\.ts$|agenda\/|booking-model|legacy-booking/);
 });
 test('all output image bytes exactly match optimized inputs, with no concept or source screenshots', async () => {
   const files = await readdir('dist/assets/images');

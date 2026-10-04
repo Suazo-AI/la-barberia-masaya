@@ -19,6 +19,22 @@ const types = {
 const server = http.createServer(async (req, res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    if (pathname.startsWith('/api/agenda/')) {
+      res.writeHead(503, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      res.end(
+        JSON.stringify({
+          error: {
+            code: 'CONFIGURATION_REQUIRED',
+            message: 'La agenda está pendiente de configuración.',
+          },
+        }),
+      );
+      return;
+    }
     const filename = path.resolve(
       root,
       `.${pathname.endsWith('/') ? `${pathname}index.html` : pathname}`,

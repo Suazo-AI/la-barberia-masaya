@@ -1,6 +1,6 @@
 # Website specification
 
-Current increment: v0.5, reservation demo, authorized 2026-10-03. Section 10 supersedes the previous call-only hero and restrictions on fictional services/calendar UI. Earlier sections retain the approved visual/content history; no mock value is a fact about the business.
+Current increment: v0.6, persistent portable agenda, authorized 2026-10-04. [Agenda specification](docs/agenda/spec.md) supersedes section 10's no-backend/persistence restrictions for the implementation and draft PR. Production remains closed until verified business configuration and host administrator identity exist; fixtures are local/test only. No merge, backend deployment or external notification is authorized. Earlier sections retain the approved visual/content history; no mock value is a fact about the business.
 
 Version 0.4 · 2026-10-03 · Business timezone: America/Managua
 

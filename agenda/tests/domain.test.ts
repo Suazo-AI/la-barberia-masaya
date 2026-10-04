@@ -1,0 +1,492 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import type { TestContext } from 'node:test';
+import { SqliteStore, migrateSqlite } from '../adapters/sqlite.ts';
+import { localFixtureConfig, unconfiguredConfig } from '../fixtures/local.ts';
+import {
+  AgendaError,
+  canonicalStringify,
+  createAgendaService,
+  hashConfiguration,
+  validateAgendaConfig,
+} from '../core/index.ts';
+import { addDays, fromUtcSeconds, localDate, toUtcSeconds } from '../core/time.ts';
+import type {
+  Actor,
+  AgendaConfig,
+  MutationContext,
+  SqlStatement,
+  SqlStore,
+} from '../core/contracts.ts';
+
+const fixedNow = () => new Date('2026-10-05T18:00:00Z'); // Monday noon in Managua.
+const day = '2026-10-05';
+const publicActor: Actor = { kind: 'public' };
+const admin: Actor = { kind: 'admin', id: 'fixture-owner' };
+const digest = 'a'.repeat(64);
+const context = (key: string, actor: Actor = publicActor): MutationContext => ({
+  idempotencyKey: key,
+  actor,
+  configVersion: 1,
+});
+const input = (startMinute = 780, professionalId?: string) => ({
+  serviceId: 'cut',
+  date: day,
+  startMinute,
+  ...(professionalId ? { professionalId } : {}),
+});
+const errorCode = (code: string) => (error: unknown) =>
+  error instanceof AgendaError && error.code === code;
+
+async function fixture(
+  t: TestContext,
+  config: AgendaConfig = structuredClone(localFixtureConfig),
+  now = fixedNow,
+) {
+  const store = new SqliteStore(':memory:');
+  t.after(() => store.close());
+  await migrateSqlite(store);
+  const agenda = createAgendaService(store, config, { now });
+  return { agenda, store, config };
+}
+
+async function counts(store: SqliteStore) {
+  return {
+    entries: (await store.all<{ total: number }>('SELECT count(*) AS total FROM agenda_entries'))[0]
+      .total,
+    idempotency: (
+      await store.all<{ total: number }>('SELECT count(*) AS total FROM agenda_idempotency')
+    )[0].total,
+    audit: (await store.all<{ total: number }>('SELECT count(*) AS total FROM agenda_audit'))[0]
+      .total,
+    outbox: (await store.all<{ total: number }>('SELECT count(*) AS total FROM agenda_outbox'))[0]
+      .total,
+  };
+}
+
+test('unconfigured and unverified production fail closed without inserting configuration or bookings', async (t) => {
+  for (const config of [
+    unconfiguredConfig,
+    { ...localFixtureConfig, mode: 'production' as const },
+  ]) {
+    const { store, agenda } = await fixture(t, config);
+    await assert.rejects(agenda.catalog(), errorCode('CONFIGURATION_REQUIRED'));
+    await assert.rejects(
+      agenda.createBooking(input(), context('closed-0001')),
+      errorCode('CONFIGURATION_REQUIRED'),
+    );
+    assert.deepEqual(await counts(store), { entries: 0, idempotency: 0, audit: 0, outbox: 0 });
+    assert.equal((await store.all('SELECT * FROM agenda_configuration')).length, 0);
+  }
+});
+
+test('configuration validation requires sorted explicit shifts, eligible staff, integer prices and buffers', () => {
+  assert.deepEqual(validateAgendaConfig(localFixtureConfig), []);
+  const config = structuredClone(localFixtureConfig);
+  config.professionals[0].weeklyHours[1] = [
+    [780, 900],
+    [850, 1140],
+  ];
+  config.services[0].professionalIds = ['missing'];
+  config.services[0].priceMinorUnits = 20.5;
+  config.services[0].bufferAfterMinutes = -1;
+  assert.equal(validateAgendaConfig(config).length, 4);
+});
+
+test('local dates use Managua across UTC midnight and leap/date arithmetic round trips', async (t) => {
+  const now = () => new Date('2026-10-06T05:45:00Z');
+  const { agenda } = await fixture(t, undefined, now);
+  assert.equal((await agenda.catalog()).dateRange.min, '2026-10-05');
+  assert.equal(localDate(now()), '2026-10-05');
+  assert.equal(toUtcSeconds('2026-10-05', 780), Date.parse('2026-10-05T19:00:00Z') / 1000);
+  assert.deepEqual(fromUtcSeconds(toUtcSeconds('2026-10-05', 780)), {
+    date: '2026-10-05',
+    minute: 780,
+  });
+  assert.equal(addDays('2028-02-28', 1), '2028-02-29');
+  assert.throws(() => toUtcSeconds('2026-02-30', 780), errorCode('INVALID_INPUT'));
+});
+
+test('availability deduplicates Any, respects lead/horizon/Tuesday closure/duration and closing buffers', async (t) => {
+  const { agenda } = await fixture(t);
+  const catalog = await agenda.catalog();
+  assert.equal(catalog.configVersion, 1);
+  assert.equal(catalog.notifications, 'disabled');
+  assert.equal(catalog.dateRange.max, '2026-10-26');
+  const cut = await agenda.availability({ serviceId: 'cut', date: day });
+  assert.equal(cut.reason, 'available');
+  assert.equal(cut.slots[0].startMinute, 780);
+  assert.deepEqual(cut.slots[0].professionalIds, ['a', 'b']);
+  assert.equal(cut.slots.at(-1)!.startMinute, 1110);
+  const combo = await agenda.availability({ serviceId: 'combo', professionalId: 'a', date: day });
+  assert.equal(combo.slots.at(-1)!.startMinute, 1080);
+  assert.equal(
+    (await agenda.availability({ serviceId: 'cut', date: '2026-10-06' })).reason,
+    'closed',
+  );
+  assert.equal(
+    (await agenda.availability({ serviceId: 'cut', date: '2026-10-04' })).reason,
+    'past',
+  );
+  await assert.rejects(
+    agenda.availability({ serviceId: 'cut', date: '2026-10-27' }),
+    errorCode('INVALID_INPUT'),
+  );
+  await assert.rejects(
+    agenda.createBooking({ ...input(), startMinute: 781 }, context('grid-0001')),
+    errorCode('INVALID_INPUT'),
+  );
+});
+
+test('Any assigns one free professional and only two allocations succeed at a shared time', async (t) => {
+  const { agenda, store } = await fixture(t);
+  const first = await agenda.createBooking(input(), context('any-book-0001'));
+  const second = await agenda.createBooking(
+    { ...input(), customer: { email: 'fixture@example.invalid' } },
+    context('any-book-0002'),
+  );
+  assert.equal(first.booking.professionalId, 'a');
+  assert.equal(second.booking.professionalId, 'b');
+  assert.equal(second.booking.customerDisplayName, undefined);
+  await assert.rejects(
+    agenda.createBooking(input(), context('any-book-0003')),
+    errorCode('SLOT_UNAVAILABLE'),
+  );
+  assert.deepEqual(await counts(store), { entries: 2, idempotency: 2, audit: 2, outbox: 2 });
+  const outbox = await store.all<{ status: string; recipient: string | null }>(
+    'SELECT status, recipient FROM agenda_outbox ORDER BY recipient',
+  );
+  assert.ok(outbox.every((event) => event.status === 'disabled'));
+  assert.equal(outbox[1].recipient, 'fixture@example.invalid');
+});
+
+test('preparation/cleanup buffers protect allocated intervals while adjacent intervals remain valid', async (t) => {
+  const { agenda } = await fixture(t);
+  await agenda.createBooking(
+    { ...input(780, 'a'), serviceId: 'beard' },
+    context('buffer-book-0001'),
+  );
+  await assert.rejects(
+    agenda.createBooking(input(795, 'a'), context('buffer-book-0002')),
+    errorCode('SLOT_UNAVAILABLE'),
+  );
+  const adjacent = await agenda.createBooking(input(810, 'a'), context('buffer-book-0003'));
+  assert.equal(adjacent.booking.startMinute, 810);
+  const other = await agenda.createBooking(input(795, 'b'), context('buffer-book-0004'));
+  assert.equal(other.booking.professionalId, 'b');
+  const beforeConfig = structuredClone(localFixtureConfig);
+  beforeConfig.services[0].bufferBeforeMinutes = 10;
+  const before = await fixture(t, beforeConfig);
+  assert.equal(
+    (await before.agenda.availability({ serviceId: 'cut', professionalId: 'a', date: day }))
+      .slots[0].startMinute,
+    795,
+  );
+});
+
+test('idempotency preserves exact original response and changed payload conflicts without extra effects', async (t) => {
+  const { agenda, store } = await fixture(t);
+  const bookingInput = { ...input(780, 'a'), managementHash: digest };
+  const ctx = context('idem-create-0001');
+  const first = await agenda.createBooking(bookingInput, ctx);
+  assert.deepEqual(await agenda.createBooking(bookingInput, ctx), first);
+  await assert.rejects(
+    agenda.createBooking({ ...bookingInput, startMinute: 810 }, ctx),
+    errorCode('IDEMPOTENCY_CONFLICT'),
+  );
+  await assert.rejects(
+    agenda.createBooking({ ...bookingInput, managementHash: 'b'.repeat(64) }, ctx),
+    errorCode('IDEMPOTENCY_CONFLICT'),
+  );
+  assert.deepEqual(await counts(store), { entries: 1, idempotency: 1, audit: 1, outbox: 1 });
+  const response = (
+    await store.all<{ response_json: string }>('SELECT response_json FROM agenda_idempotency')
+  )[0].response_json;
+  assert.ok(!response.includes(digest));
+  assert.ok(!response.includes('managementHash'));
+});
+
+test('customer capability is reservation scoped and response/export replies never expose its digest', async (t) => {
+  const { agenda } = await fixture(t);
+  const receipt = await agenda.createBooking(
+    { ...input(780, 'a'), managementHash: digest },
+    context('capability-0001'),
+  );
+  const id = receipt.booking.id;
+  assert.equal(receipt.customerManagement, 'token');
+  assert.equal(await agenda.authorizeCustomer(id, digest), true);
+  assert.equal(await agenda.authorizeCustomer(id, 'b'.repeat(64)), false);
+  assert.equal(await agenda.authorizeCustomer(id, 'invalid'), false);
+  await assert.rejects(agenda.getBooking(id, publicActor), errorCode('FORBIDDEN'));
+  await assert.rejects(
+    agenda.getBooking(id, { kind: 'customer', reservationId: 'other-booking' }),
+    errorCode('FORBIDDEN'),
+  );
+  await assert.rejects(
+    agenda.cancelBooking(id, 1, context('cap-cancel-0001')),
+    errorCode('FORBIDDEN'),
+  );
+  assert.deepEqual(await agenda.getBooking(id, { kind: 'customer', reservationId: id }), receipt);
+  const backup = await agenda.exportData();
+  for (const name of ['agenda_idempotency', 'agenda_outbox'])
+    assert.ok(!JSON.stringify(backup.tables.find((table) => table.name === name)).includes(digest));
+});
+
+test('conflicting reschedule rolls back entirely; successful move and cancel use optimistic versions', async (t) => {
+  const { agenda, store } = await fixture(t);
+  const first = await agenda.createBooking(input(780, 'a'), context('move-create-0001'));
+  await agenda.createBooking(input(840, 'a'), context('move-create-0002'));
+  const originalCounts = await counts(store);
+  await assert.rejects(
+    agenda.rescheduleBooking(
+      first.booking.id,
+      { date: day, startMinute: 840, professionalId: 'a' },
+      1,
+      context('move-conflict-0001', admin),
+    ),
+    errorCode('SLOT_UNAVAILABLE'),
+  );
+  assert.deepEqual(await counts(store), originalCounts);
+  assert.deepEqual(await agenda.getBooking(first.booking.id, admin), first);
+  const moved = await agenda.rescheduleBooking(
+    first.booking.id,
+    { date: day, startMinute: 810, professionalId: 'b' },
+    1,
+    context('move-valid-0001', admin),
+  );
+  assert.equal(moved.booking.version, 2);
+  assert.equal(moved.booking.professionalId, 'b');
+  await assert.rejects(
+    agenda.cancelBooking(first.booking.id, 1, context('move-stale-0001', admin)),
+    errorCode('VERSION_CONFLICT'),
+  );
+  const cancelled = await agenda.cancelBooking(
+    first.booking.id,
+    2,
+    context('move-cancel-0001', admin),
+  );
+  assert.equal(cancelled.booking.version, 3);
+  assert.equal(cancelled.booking.status, 'cancelled');
+  assert.equal((await agenda.listBookings({ date: day })).length, 1);
+  assert.equal((await agenda.listBookings({ date: day, includeCancelled: true })).length, 2);
+});
+
+test('walk-ins and blocks require admin and participate in the same conflict invariant', async (t) => {
+  const { agenda, store } = await fixture(t);
+  await assert.rejects(
+    agenda.createWalkIn(input(), context('walk-public-0001')),
+    errorCode('FORBIDDEN'),
+  );
+  const blockInput = {
+    professionalId: 'a',
+    date: day,
+    startMinute: 780,
+    endMinute: 840,
+    label: 'Fixture break',
+  };
+  await assert.rejects(
+    agenda.createBlock(blockInput, context('block-public-0001')),
+    errorCode('FORBIDDEN'),
+  );
+  const block = await agenda.createBlock(blockInput, context('block-admin-0001', admin));
+  await assert.rejects(
+    agenda.createWalkIn(input(795, 'a'), context('walk-block-0001', admin)),
+    errorCode('SLOT_UNAVAILABLE'),
+  );
+  await assert.rejects(
+    agenda.createBooking(input(795, 'a'), context('book-block-0001')),
+    errorCode('SLOT_UNAVAILABLE'),
+  );
+  const unblocked = await agenda.cancelBlock(block.id, 1, context('unblock-admin-0001', admin));
+  assert.equal(unblocked.version, 2);
+  const walkIn = await agenda.createWalkIn(input(795, 'a'), context('walk-admin-0001', admin));
+  assert.equal(walkIn.booking.kind, 'walk-in');
+  await assert.rejects(
+    agenda.createBlock({ ...blockInput, startMinute: 810 }, context('block-conflict-0001', admin)),
+    errorCode('SLOT_UNAVAILABLE'),
+  );
+  assert.equal((await agenda.listBlocks({ date: day })).length, 0);
+  assert.equal((await agenda.listBlocks({ date: day, includeCancelled: true })).length, 1);
+  assert.deepEqual(await counts(store), { entries: 2, idempotency: 3, audit: 3, outbox: 1 });
+});
+
+test('customer cancellation deadline is enforced while administrator can resolve the booking', async (t) => {
+  let clock = fixedNow();
+  const { agenda } = await fixture(t, undefined, () => clock);
+  const created = await agenda.createBooking(
+    { ...input(780, 'a'), managementHash: digest },
+    context('policy-create-0001'),
+  );
+  clock = new Date('2026-10-05T18:30:00Z');
+  await assert.rejects(
+    agenda.cancelBooking(
+      created.booking.id,
+      1,
+      context('policy-client-0001', { kind: 'customer', reservationId: created.booking.id }),
+    ),
+    errorCode('POLICY_RESTRICTION'),
+  );
+  assert.equal(
+    (await agenda.cancelBooking(created.booking.id, 1, context('policy-admin-0001', admin))).booking
+      .status,
+    'cancelled',
+  );
+});
+
+test('lost update after the advisory read rolls back idempotency, outbox and audit through SQL changes guard', async (t) => {
+  const { agenda: winnerAgenda, store, config } = await fixture(t);
+  const created = await winnerAgenda.createBooking(input(780, 'a'), context('race-created-0001'));
+  let raced = false;
+  const interleaved: SqlStore = {
+    all: (sql, params) => store.all(sql, params),
+    run: (sql, params) => store.run(sql, params),
+    batch: async (statements: SqlStatement[]) => {
+      if (
+        !raced &&
+        statements.some((statement) => statement.sql.startsWith('UPDATE agenda_entries'))
+      ) {
+        raced = true;
+        await winnerAgenda.cancelBooking(created.booking.id, 1, context('race-winner-0001', admin));
+      }
+      return store.batch(statements);
+    },
+  };
+  const loser = createAgendaService(interleaved, config, { now: fixedNow });
+  await assert.rejects(
+    loser.rescheduleBooking(
+      created.booking.id,
+      { date: day, startMinute: 840, professionalId: 'b' },
+      1,
+      context('race-loser-0001', admin),
+    ),
+    errorCode('VERSION_CONFLICT'),
+  );
+  assert.deepEqual(await counts(store), { entries: 1, idempotency: 2, audit: 2, outbox: 2 });
+  assert.equal(
+    (await winnerAgenda.getBooking(created.booking.id, admin)).booking.status,
+    'cancelled',
+  );
+  assert.equal(
+    (await store.all('SELECT * FROM agenda_idempotency WHERE key = ?', ['race-loser-0001'])).length,
+    0,
+  );
+});
+
+test('stale catalog and stale active server configuration cannot mutate existing allocations', async (t) => {
+  const { agenda, store, config } = await fixture(t);
+  await agenda.catalog();
+  await assert.rejects(
+    agenda.createBooking(input(), { ...context('cfg-client-0001'), configVersion: 2 }),
+    errorCode('CONFIGURATION_CHANGED'),
+  );
+  const changed = { ...config, version: 2 };
+  await store.run('UPDATE agenda_configuration SET version = ?, config_hash = ?, config_json = ?', [
+    2,
+    await hashConfiguration(changed),
+    canonicalStringify(changed),
+  ]);
+  await assert.rejects(
+    agenda.createBooking(input(), context('cfg-server-0001')),
+    errorCode('CONFIGURATION_CHANGED'),
+  );
+  const fresh = createAgendaService(store, changed, { now: fixedNow });
+  assert.equal((await fresh.catalog()).configVersion, 2);
+  assert.deepEqual(await counts(store), { entries: 0, idempotency: 0, audit: 0, outbox: 0 });
+});
+
+test('booking replay remains successful if another writer commits between initial replay and occupancy reads', async (t) => {
+  const { agenda: winner, store, config } = await fixture(t);
+  const ctx = context('replay-interleave-0001');
+  const bookingInput = input(780, 'a');
+  let triggered = false;
+  const interleaved: SqlStore = {
+    all: async <T>(sql: string, params?: Parameters<SqlStore['all']>[1]): Promise<T[]> => {
+      if (!triggered && sql.includes("status = 'confirmed' AND allocated_start_utc")) {
+        triggered = true;
+        await winner.createBooking(bookingInput, ctx);
+      }
+      return store.all<T>(sql, params);
+    },
+    run: (sql, params) => store.run(sql, params),
+    batch: (statements) => store.batch(statements),
+  };
+  const replaying = createAgendaService(interleaved, config, { now: fixedNow });
+  const replay = await replaying.createBooking(bookingInput, ctx);
+  assert.deepEqual(replay, await winner.createBooking(bookingInput, ctx));
+  assert.deepEqual(await counts(store), { entries: 1, idempotency: 1, audit: 1, outbox: 1 });
+});
+
+test('Any retries another professional when the database rejects a newly raced occupied interval', async (t) => {
+  const { agenda: winner, store, config } = await fixture(t);
+  let triggered = false;
+  const interleaved: SqlStore = {
+    all: (sql, params) => store.all(sql, params),
+    run: (sql, params) => store.run(sql, params),
+    batch: async (statements) => {
+      if (
+        !triggered &&
+        statements.some((statement) => statement.sql.startsWith('INSERT INTO agenda_entries'))
+      ) {
+        triggered = true;
+        await winner.createBooking(input(780, 'a'), context('any-race-winner-0001'));
+      }
+      return store.batch(statements);
+    },
+  };
+  const agenda = createAgendaService(interleaved, config, { now: fixedNow });
+  const created = await agenda.createBooking(input(780), context('any-race-loser-0001'));
+  assert.equal(created.booking.professionalId, 'b');
+  assert.deepEqual(await counts(store), { entries: 2, idempotency: 2, audit: 2, outbox: 2 });
+});
+
+test('configuration change between validation and commit fails the in-transaction guard without secondary effects', async (t) => {
+  const { store, config } = await fixture(t);
+  const updatedConfig = { ...config, version: 2 };
+  let triggered = false;
+  const interleaved: SqlStore = {
+    all: (sql, params) => store.all(sql, params),
+    run: (sql, params) => store.run(sql, params),
+    batch: async (statements) => {
+      if (
+        !triggered &&
+        statements.some((statement) => statement.sql.startsWith('INSERT INTO agenda_entries'))
+      ) {
+        triggered = true;
+        await store.run(
+          'UPDATE agenda_configuration SET version = ?, config_hash = ?, config_json = ?',
+          [2, await hashConfiguration(updatedConfig), canonicalStringify(updatedConfig)],
+        );
+      }
+      return store.batch(statements);
+    },
+  };
+  const agenda = createAgendaService(interleaved, config, { now: fixedNow });
+  await assert.rejects(
+    agenda.createBooking(input(), context('cfg-interleave-0001')),
+    errorCode('CONFIGURATION_CHANGED'),
+  );
+  assert.deepEqual(await counts(store), { entries: 0, idempotency: 0, audit: 0, outbox: 0 });
+  assert.equal(
+    (await store.all<{ version: number }>('SELECT version FROM agenda_configuration'))[0].version,
+    2,
+  );
+});
+
+test('repeated catalog and availability reads do not write after initial configuration', async (t) => {
+  const { store, config } = await fixture(t);
+  let batches = 0;
+  const counted: SqlStore = {
+    all: (sql, params) => store.all(sql, params),
+    run: (sql, params) => store.run(sql, params),
+    batch: (statements) => {
+      batches += 1;
+      return store.batch(statements);
+    },
+  };
+  const agenda = createAgendaService(counted, config, { now: fixedNow });
+  await agenda.catalog();
+  assert.equal(batches, 1);
+  await agenda.catalog();
+  await agenda.availability({ serviceId: 'cut', date: day });
+  assert.equal(batches, 1);
+});

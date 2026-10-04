@@ -10,7 +10,7 @@ import {
   mockOccupations,
   availableSlots,
   nextAvailableDate,
-} from '../src/booking-model.js';
+} from '../agenda/fixtures/legacy-booking-model.js';
 
 const now = new Date('2026-10-03T15:00:00Z'); // Saturday 09:00 in Managua.
 const query = { date: '2026-10-03', serviceId: 'cut', barberId: 'any', now };

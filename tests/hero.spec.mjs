@@ -93,7 +93,7 @@ test('accessibility: no WCAG A/AA violations at mobile and desktop', async ({ pa
   await writeFile('.private-evidence/axe-results.json', JSON.stringify(reports, null, 2));
 });
 
-test('keyboard, repeated demo opening, and history', async ({ page }) => {
+test('keyboard, repeated agenda opening, and history', async ({ page }) => {
   await page.goto('/');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
@@ -138,7 +138,7 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
     '#reserva',
   );
   await page.getByRole('link', { name: 'Reservar cita' }).click();
-  await expect(page.getByRole('heading', { name: 'Demo de reservas', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reservas', exact: true })).toBeVisible();
   await expect(page.locator('.work-grid img')).toHaveCount(2);
   await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
   await expect(page.locator('.work-grid')).toContainText('Moises Diaz');

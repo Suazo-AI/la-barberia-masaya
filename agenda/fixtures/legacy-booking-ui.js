@@ -9,7 +9,7 @@ import {
   nextAvailableDate,
   formatDate,
   formatTime,
-} from './booking-model.js';
+} from './legacy-booking-model.js';
 
 const dialog = document.querySelector('#booking-dialog');
 const services = dialog.querySelector('#booking-services');

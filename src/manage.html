@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#111110" />
+    <title>Gestionar mi reserva · La Barbería</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./manage.js" type="module"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <main id="contenido" class="agenda-page" tabindex="-1">
+      <a class="booking-text-button" href="./">Volver a La Barbería</a>
+      <header class="booking-header">
+        <div>
+          <p class="section-label">ENLACE PRIVADO</p>
+          <h1>GESTIONÁ TU RESERVA.</h1>
+        </div>
+      </header>
+      <p class="booking-help" id="manage-mode"></p>
+      <p
+        class="booking-help"
+        id="manage-message"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        Verificando el enlace privado…
+      </p>
+      <button class="booking-text-button" type="button" id="manage-retry" hidden>Reintentar</button>
+      <section id="manage-booking" aria-labelledby="manage-heading" hidden>
+        <h2 id="manage-heading" tabindex="-1">Mi reserva</h2>
+        <dl class="booking-review" id="manage-receipt"></dl>
+        <p class="booking-help" id="manage-policy"></p>
+        <div class="booking-portfolio-actions" id="manage-actions">
+          <button class="booking-primary" type="button" id="manage-move">Reprogramar</button>
+          <button class="booking-text-button" type="button" id="manage-cancel">
+            Cancelar reserva
+          </button>
+        </div>
+        <p class="booking-review-note">
+          El enlace da acceso a esta reserva. Guardalo de forma privada. No se ha enviado ningún
+          correo.
+        </p>
+        <button class="booking-text-button" type="button" id="manage-copy">
+          Copiar mi enlace privado
+        </button>
+      </section>
+      <section id="manage-reschedule" aria-labelledby="manage-reschedule-heading" hidden>
+        <h2 id="manage-reschedule-heading" tabindex="-1">Elegí un nuevo horario</h2>
+        <p class="booking-help">
+          Tu reserva actual se conserva hasta que el cambio quede registrado.
+        </p>
+        <div class="booking-customer-fields">
+          <div class="booking-field">
+            <label for="manage-professional">Profesional</label>
+            <select id="manage-professional"></select>
+          </div>
+          <div class="booking-field">
+            <label for="manage-date">Fecha</label>
+            <input id="manage-date" type="date" aria-describedby="manage-date-help" />
+          </div>
+        </div>
+        <p class="booking-help" id="manage-date-help">Hora de Nicaragua (America/Managua).</p>
+        <fieldset class="booking-options">
+          <legend>Nuevo horario disponible</legend>
+          <div class="booking-slots" id="manage-slots"></div>
+        </fieldset>
+        <p class="booking-help" id="manage-slot-message"></p>
+        <div class="booking-portfolio-actions">
+          <button class="booking-primary" type="button" id="manage-confirm-move" disabled>
+            Confirmar cambio
+          </button>
+          <button class="booking-text-button" type="button" id="manage-back">
+            Conservar mi reserva
+          </button>
+        </div>
+      </section>
+      <noscript
+        ><p>
+          Activá JavaScript para verificar y gestionar tu reserva con su enlace privado.
+        </p></noscript
+      >
+    </main>
+    <dialog
+      class="booking-dialog"
+      id="manage-confirm-dialog"
+      aria-labelledby="manage-confirm-heading"
+      aria-describedby="manage-confirm-help"
+    >
+      <div class="booking-header">
+        <div>
+          <p class="section-label">CANCELAR RESERVA</p>
+          <h2 id="manage-confirm-heading" tabindex="-1">¿Querés cancelar?</h2>
+        </div>
+      </div>
+      <p class="booking-help" id="manage-confirm-help">
+        El turno se libera cuando la cancelación queda registrada.
+      </p>
+      <div class="booking-portfolio-actions">
+        <button class="booking-primary" type="button" id="manage-confirm-cancel">
+          Sí, cancelar reserva
+        </button>
+        <button class="booking-text-button" type="button" id="manage-keep">
+          Conservar mi reserva
+        </button>
+      </div>
+    </dialog>
+  </body>
+</html>
