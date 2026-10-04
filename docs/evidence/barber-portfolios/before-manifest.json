@@ -1,0 +1,88 @@
+[
+  {
+    "sourceCommit": "df506167b67381be285220680ce2346101bae5b9",
+    "url": "http://127.0.0.1:4175",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "clock": "2026-10-03T09:00:00-06:00",
+    "browser": "154.0.8037.93",
+    "method": "Actual Chrome screenshots and recorded actions; no synthesized frames",
+    "artifacts": [
+      {
+        "filename": "before-page-390.png",
+        "sha256": "dc393a5422d1be0b0932d6aa529dfdaff4ef7c25dd7c82273e14546428b6808b",
+        "bytes": 874221
+      },
+      {
+        "filename": "before-hero-390.png",
+        "sha256": "5ac7971b0d5f0b0cb715982c69ab999d33d23783839f1a67f03ffa32e4f19ab0",
+        "bytes": 211620
+      },
+      {
+        "filename": "before-reviews-390.png",
+        "sha256": "9b5f0e5b219a5694644fd7659267efb2494b29f082a9021015dd340e05f132f1",
+        "bytes": 439303
+      },
+      {
+        "filename": "before-gallery-review-390.png",
+        "sha256": "3eab6cfc86da87430c61192c1c01899dbdf083b8e77b5ddfbaafbc9f6bdf113b",
+        "bytes": 17143
+      },
+      {
+        "filename": "before-barbers-390.png",
+        "sha256": "d714c60acdbb82da19a8f9e25b23b19d65060174eb523dc270d1021af9ef0543",
+        "bytes": 42297
+      },
+      {
+        "filename": "before-flow-390.webm",
+        "sha256": "64b8034a93a986bb3570bac147c8800d627020268553a9f798d7cae6931b9203",
+        "bytes": 888341
+      }
+    ]
+  },
+  {
+    "sourceCommit": "df506167b67381be285220680ce2346101bae5b9",
+    "url": "http://127.0.0.1:4175",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "clock": "2026-10-03T09:00:00-06:00",
+    "browser": "154.0.8037.93",
+    "method": "Actual Chrome screenshots and recorded actions; no synthesized frames",
+    "artifacts": [
+      {
+        "filename": "before-page-1440.png",
+        "sha256": "f8a53c948653109989b4fe4882512e8d117937bd3c85b417e60c10fdde0e2bc6",
+        "bytes": 2248376
+      },
+      {
+        "filename": "before-hero-1440.png",
+        "sha256": "58f50d6ef77fd453ace80049ae0deb86b96b2d0419e3642dfa9e22a2611e0f48",
+        "bytes": 995890
+      },
+      {
+        "filename": "before-reviews-1440.png",
+        "sha256": "67c2fb7b3236ea8cf44a0bf8610e59e7aa415d7c42c242e024ca978b00803565",
+        "bytes": 615001
+      },
+      {
+        "filename": "before-gallery-review-1440.png",
+        "sha256": "077f7cf7f2122b5a284ed50e1d1533f5126870a06a99cdb31eb6c4fc672a4a13",
+        "bytes": 233919
+      },
+      {
+        "filename": "before-barbers-1440.png",
+        "sha256": "66db206d9e38f20638c6be6803749f8f5feb86c32d403bc23ad06a9a16c8dfd1",
+        "bytes": 259851
+      },
+      {
+        "filename": "before-flow-1440.webm",
+        "sha256": "30cb4bcaa26f263b7061410be59d3a97f3512760d955a01c6934d51feac904ba",
+        "bytes": 1439588
+      }
+    ]
+  }
+]
