@@ -25,8 +25,8 @@ export const SERVICES = [
   },
 ];
 export const BARBERS = [
-  { id: 'a', name: 'Profesional A', label: 'Profesional A · demo' },
-  { id: 'b', name: 'Profesional B', label: 'Profesional B · demo' },
+  { id: 'a', name: 'Profesional A', label: 'Profesional A · demo', portfolio: [] },
+  { id: 'b', name: 'Profesional B', label: 'Profesional B · demo', portfolio: [] },
 ];
 export const WEEKLY_HOURS = [
   [600, 1020],

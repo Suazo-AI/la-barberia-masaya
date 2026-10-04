@@ -9,6 +9,8 @@ Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-
 
 ## State, 2026-10-03
 
+Latest presentation/profile increment, 2026-10-04: the marked masthead is removed; the three exact review excerpts keep their source, attribution, dated observation and selection qualification. Anonymous example barber profiles expose an optional portfolio inside the existing dialog. Real identities/photos/work are absent and no general business photograph is attributed to an individual. [Profile requirements](docs/barber-portfolios.md) record the pending reservation-production decision; fictional prices and slots retain their existing disclosure.
+
 Latest increment: [reservation demo](docs/booking-demo.md), implemented from the exact approved app at `0755fce62688e380a737db9e267bad22e35acf25`, rather than README-only main. Hero **Reservar cita** opens three accessible steps with fictional services/prices/professionals/slots and an unequivocal simulation outcome. Real contact stays secondary. No personal data, backend, payment, storage or actual reservation. [Booking evidence](docs/evidence/booking-review.md) records checks and review limits. PR #2 remains draft; the parent controls private preview updates. Historical states below describe previous increments.
 
 - The user selected the contundente hero and authorized continuing the website end to end with creative explanations and human-guided references for unresolved sections

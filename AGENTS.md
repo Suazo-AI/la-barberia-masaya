@@ -2,6 +2,8 @@
 
 Leer [START-HERE.md](START-HERE.md) antes de trabajar.
 
+Actualización de alcance, 2026-10-04: el usuario pidió quitar la cabecera marcada, corregir la presentación de reseñas y añadir perfiles de barberos con portafolio a demanda. Solo los perfiles/portafolios de este nuevo pedido pueden seguir como ejemplos. Aún faltan nombres, fotos y trabajos atribuibles; usar placeholders honestos, sin atribuir las fotos generales del negocio a un barbero. La remoción de avisos de reserva está pendiente de datos reales y de la estrategia de agenda: el negocio no lleva citas y su WhatsApp es poco activo. No publicar precios/cupos ficticios como reales. Mantener el aviso actual de la simulación hasta resolver esa dependencia con el padre. [Requisitos y límites](docs/barber-portfolios.md). Edición del PR DRAFT autorizada; el padre controla el preview privado, sin merge ni lanzamiento público.
+
 Actualización de alcance, 2026-10-03: el usuario autorizó implementar y publicar en el PR DRAFT una demo de reservas con información ficticia. [SPEC.md](SPEC.md), sección 10, es la instrucción vigente para este incremento y sustituye el CTA de llamada del hero y la prohibición de UI de agenda/servicios ficticios. Conservá las decisiones visuales y contenido real existentes. No confundir la demo con disponibilidad, precios, personal ni confirmaciones reales. Sin datos personales, API, pagos, WhatsApp, persistencia, merge ni despliegue público. El padre actualiza el preview privado; esta implementación no opera Sites.
 Repo canónico público: https://github.com/Suazo-AI/la-barberia-masaya.
 El alcance actual es únicamente el website de La Barbería Masaya.

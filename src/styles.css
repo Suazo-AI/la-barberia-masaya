@@ -27,7 +27,6 @@
   --ink: #111110;
   --ivory: #f4efe3;
   --muted: #bdb9af;
-  --header-height: 5.25rem;
   --gutter: clamp(1.25rem, 4.2vw, 5rem);
   font-family: Barlow, Arial, sans-serif;
   color: var(--ivory);
@@ -71,40 +70,10 @@ a {
   transform: none;
 }
 
-.masthead {
-  min-height: var(--header-height);
-  padding: 1.1rem var(--gutter);
-  display: flex;
-  align-items: center;
-  gap: clamp(1rem, 2vw, 2rem);
-}
-.wordmark {
-  flex: 0 0 auto;
-  font-family: Anton, Impact, sans-serif;
-  font-size: clamp(1.55rem, 2.25vw, 2.65rem);
-  line-height: 1.2;
-  white-space: nowrap;
-}
-.masthead-rule {
-  height: 1px;
-  background: var(--ivory);
-  opacity: 0.7;
-  flex: 1;
-}
-.location {
-  flex: 0 0 auto;
-  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
-  font-weight: 700;
-  font-size: clamp(0.875rem, 1.2vw, 1.35rem);
-  letter-spacing: 0.19em;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
 .hero {
   display: grid;
   grid-template-columns: 3fr 2fr;
-  min-height: calc(100svh - var(--header-height));
+  min-height: calc(100svh - 5.25rem);
 }
 .hero-copy {
   min-width: 0;
@@ -237,9 +206,6 @@ h1 span {
 }
 
 @media (max-width: 1023px) {
-  :root {
-    --header-height: 4.75rem;
-  }
   .hero {
     grid-template-columns: 1fr;
     min-height: 0;
@@ -275,25 +241,6 @@ h1 span {
 }
 
 @media (max-width: 540px) {
-  .masthead {
-    padding: 1.1rem var(--gutter);
-    gap: 0.4rem 0.8rem;
-    flex-wrap: wrap;
-  }
-  .wordmark {
-    font-size: 1.4rem;
-  }
-  .masthead-rule {
-    display: none;
-  }
-  .location {
-    margin-left: auto;
-    font-size: 0.8125rem;
-    letter-spacing: 0.12em;
-    white-space: normal;
-    max-width: 7.5rem;
-    text-align: right;
-  }
   .hero-copy {
     padding-top: 1.85rem;
     padding-bottom: 2.2rem;
@@ -653,6 +600,7 @@ h1 span {
   min-height: 44px;
   color: var(--ivory);
   text-underline-offset: 0.25em;
+  gap: 0.35rem;
 }
 .work-card time,
 .review-date {
@@ -662,7 +610,7 @@ h1 span {
 .review-card {
   display: flex;
   flex-direction: column;
-  padding: 2rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
   justify-content: space-between;
 }
 .review-card .section-label {
@@ -692,7 +640,7 @@ h1 span {
     grid-template-columns: 1fr;
   }
   .review-card {
-    min-height: 22rem;
+    min-height: 18rem;
   }
 }
 .work-intro > *,
@@ -1007,11 +955,11 @@ h1 span {
   outline-offset: 3px;
 }
 .booking-barbers {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.booking-barbers .booking-option:first-child {
-  flex-basis: 100%;
+.booking-barbers > .booking-option {
+  grid-column: 1 / -1;
 }
 .booking-barbers .booking-option {
   flex: 1 1 9rem;
@@ -1021,6 +969,71 @@ h1 span {
 }
 .booking-barbers .booking-option-copy > strong {
   font-size: 1.25rem;
+}
+.booking-profile {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  min-width: 0;
+  border: 1px solid #777366;
+  background: #1a1916;
+}
+.booking-profile-photo {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  color: var(--muted);
+  background: #25241f;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.booking-profile-photo svg {
+  width: 3rem;
+  max-width: 100%;
+  height: 3rem;
+}
+.booking-profile .booking-option {
+  border-color: transparent;
+}
+.booking-profile .booking-text-button {
+  padding-inline: 0.8rem;
+  text-align: center;
+}
+.booking-portfolio-works {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.booking-portfolio-works figure {
+  margin: 0;
+  min-width: 0;
+}
+.booking-portfolio-works img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.booking-portfolio-works figcaption {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem 0;
+  line-height: 1.5;
+}
+.booking-portfolio-works a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  text-underline-offset: 0.25em;
+}
+.booking-portfolio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
 }
 .booking-date-field {
   display: flex;
@@ -1287,6 +1300,10 @@ h1 span {
   }
 }
 @media (max-width: 420px) {
+  .booking-barbers,
+  .booking-portfolio-works {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .booking-dates {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }

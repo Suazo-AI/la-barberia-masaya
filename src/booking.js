@@ -23,12 +23,22 @@ const status = dialog.querySelector('#booking-status');
 const advance = dialog.querySelector('#booking-continue');
 const back = dialog.querySelector('#booking-back');
 const progress = dialog.querySelector('.booking-progress');
+const portfolioWorks = dialog.querySelector('#booking-portfolio-works');
 const originalTitle = document.title;
 let opener;
+let portfolioOpener;
 let state;
 
 function newState() {
-  return { step: 1, visited: 1, serviceId: '', barberId: 'any', date: dateRange().min, slot: null };
+  return {
+    step: 1,
+    visited: 1,
+    serviceId: '',
+    barberId: 'any',
+    date: dateRange().min,
+    slot: null,
+    portfolioId: '',
+  };
 }
 
 function invalidateSlot() {
@@ -64,7 +74,17 @@ services.innerHTML = SERVICES.map((service) =>
 ).join('');
 barbers.innerHTML =
   radio('demo-barber', 'any', 'Sin preferencia', 'Cualquier profesional de la demo') +
-  BARBERS.map(({ id, name }) => radio('demo-barber', id, name, 'De demostración')).join('');
+  BARBERS.map(
+    ({ id, name }) => `<div class="booking-profile">
+    <div class="booking-profile-photo" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="32" cy="21" r="10" /><path d="M12 56v-7a20 20 0 0 1 40 0v7" />
+      </svg><span>Foto pendiente</span>
+    </div>${radio('demo-barber', id, name, 'Perfil de ejemplo · foto pendiente')}
+    <button class="booking-text-button" type="button" data-portfolio-open="${id}"
+      aria-label="Ver sus trabajos de ${name}">Ver sus trabajos <span aria-hidden="true">↗</span></button>
+    </div>`,
+  ).join('');
 
 function selectionRows() {
   const service = selectedService();
@@ -109,15 +129,19 @@ function renderSummary() {
 }
 
 function renderControls() {
+  const viewingPortfolio = Boolean(state.portfolioId);
   for (const button of progress.querySelectorAll('[data-step]')) {
     const step = Number(button.dataset.step);
     button.disabled = step > state.visited;
     if (step === state.step) button.setAttribute('aria-current', 'step');
     else button.removeAttribute('aria-current');
   }
-  progress.hidden = state.step === 4;
-  dialog.querySelector('.booking-summary').hidden = state.step === 3;
-  dialog.querySelector('.booking-body').classList.toggle('booking-body-review', state.step === 3);
+  progress.hidden = state.step === 4 || viewingPortfolio;
+  dialog.querySelector('.booking-summary').hidden = state.step === 3 || viewingPortfolio;
+  dialog.querySelector('.booking-footer').hidden = viewingPortfolio;
+  dialog
+    .querySelector('.booking-body')
+    .classList.toggle('booking-body-review', state.step === 3 || viewingPortfolio);
   back.hidden = state.step === 1 || state.step === 4;
   dialog.querySelector('#booking-reset').hidden = state.step === 4;
   advance.textContent =
@@ -130,6 +154,8 @@ function announce(message) {
 }
 
 function showStep(step) {
+  state.portfolioId = '';
+  portfolioWorks.replaceChildren();
   state.step = step;
   for (const panel of dialog.querySelectorAll('[data-panel]'))
     panel.hidden = Number(panel.dataset.panel) !== step;
@@ -140,12 +166,69 @@ function showStep(step) {
     step === 4
       ? `Demo finalizada · ${originalTitle}`
       : `Paso ${step} de 3 · Demo de reserva · ${originalTitle}`;
+  focusHeading(heading);
+}
+
+function focusHeading(heading) {
   dialog.scrollTop = 0;
   heading.focus({ preventScroll: true });
   const headingBox = heading.getBoundingClientRect();
   const dialogBox = dialog.getBoundingClientRect();
   if (headingBox.top < dialogBox.top || headingBox.bottom > dialogBox.bottom)
     heading.scrollIntoView({ block: 'center', behavior: 'auto' });
+}
+
+function selectBarber(id) {
+  if (state.barberId === id) return;
+  state.barberId = id;
+  for (const input of barbers.querySelectorAll('input')) input.checked = input.value === id;
+  invalidateSlot();
+  const available = renderTimes();
+  announce(`${available.length} horarios ficticios. Seleccioná un nuevo horario.`);
+}
+
+function openPortfolio(id, trigger) {
+  const barber = BARBERS.find((item) => item.id === id);
+  if (!barber || state?.step !== 2) return;
+  state.portfolioId = id;
+  portfolioOpener = trigger;
+  for (const panel of dialog.querySelectorAll('[data-panel]'))
+    panel.hidden = panel.dataset.panel !== 'portfolio';
+  const heading = dialog.querySelector('#portfolio-heading');
+  heading.textContent = `Trabajos de ${barber.name}`;
+  portfolioWorks.replaceChildren();
+  // Only verified, explicitly attributed works can enter a personal portfolio.
+  // Images are created here, after interest, never when rendering the profile list.
+  for (const work of barber.portfolio.filter((item) => item.verified === true)) {
+    const figure = document.createElement('figure');
+    const image = document.createElement('img');
+    image.alt = work.alt;
+    image.width = work.width;
+    image.height = work.height;
+    image.decoding = 'async';
+    image.src = work.src;
+    const caption = document.createElement('figcaption');
+    caption.textContent = work.caption;
+    const source = document.createElement('a');
+    source.href = work.sourceURL;
+    source.rel = 'noreferrer';
+    source.textContent = 'Ver publicación original';
+    caption.append(source);
+    figure.append(image, caption);
+    portfolioWorks.append(figure);
+  }
+  dialog.querySelector('#booking-portfolio-empty').hidden = portfolioWorks.childElementCount > 0;
+  renderControls();
+  document.title = `Trabajos de ${barber.name} · Perfil de ejemplo · ${originalTitle}`;
+  focusHeading(heading);
+}
+
+function closePortfolio() {
+  if (!state?.portfolioId) return;
+  showStep(2);
+  portfolioOpener?.focus();
+  portfolioOpener?.scrollIntoView({ block: 'center', behavior: 'auto' });
+  portfolioOpener = null;
 }
 
 function renderDates() {
@@ -234,10 +317,17 @@ services.addEventListener('change', (event) => {
   );
 });
 barbers.addEventListener('change', (event) => {
-  state.barberId = event.target.value;
-  invalidateSlot();
-  const available = renderTimes();
-  announce(`${available.length} horarios ficticios. Seleccioná un nuevo horario.`);
+  selectBarber(event.target.value);
+});
+barbers.addEventListener('click', (event) => {
+  const trigger = event.target.closest('[data-portfolio-open]');
+  if (trigger) openPortfolio(trigger.dataset.portfolioOpen, trigger);
+});
+dialog.querySelector('#booking-portfolio-back').addEventListener('click', closePortfolio);
+dialog.querySelector('#booking-portfolio-select').addEventListener('click', () => {
+  if (!state?.portfolioId) return;
+  selectBarber(state.portfolioId);
+  closePortfolio();
 });
 dateInput.addEventListener('change', () => setDate(dateInput.value));
 dates.addEventListener('click', (event) => {
@@ -293,6 +383,11 @@ advance.addEventListener('click', () => {
   } else if (state.step === 3) showStep(4);
 });
 dialog.querySelector('[data-booking-close]').addEventListener('click', () => dialog.close());
+dialog.addEventListener('cancel', (event) => {
+  if (!state?.portfolioId) return;
+  event.preventDefault();
+  closePortfolio();
+});
 dialog.addEventListener('keydown', (event) => {
   if (event.key !== 'Tab') return;
   const controls = [...dialog.querySelectorAll('button, input, [href], [tabindex]')].filter(
@@ -317,6 +412,8 @@ dialog.addEventListener('keydown', (event) => {
 dialog.addEventListener('close', () => {
   if (dialog.open) return;
   state = null;
+  portfolioOpener = null;
+  portfolioWorks.replaceChildren();
   document.body.classList.remove('booking-open');
   document.title = originalTitle;
   opener?.focus({ preventScroll: true });

@@ -6,10 +6,9 @@ const html = await readFile('dist/index.html', 'utf8');
 
 test('semantic Spanish page and selected copy', () => {
   assert.match(html, /<html lang="es">/);
-  for (const tag of ['header', 'main', 'footer', 'h1'])
+  for (const tag of ['main', 'footer', 'h1'])
     assert.equal((html.match(new RegExp(`<${tag}(?: |>)`, 'g')) || []).length, 1);
   for (const copy of [
-    'LA BARBERÍA',
     'TU ESTILO.',
     'BIEN HECHO.',
     'Un espacio para tu próximo corte.',
@@ -17,6 +16,7 @@ test('semantic Spanish page and selected copy', () => {
   ])
     assert.equal(html.split('<body>')[1].split(copy).length - 1, 1);
   assert.equal((html.match(/href="tel:/g) || []).length, 1);
+  assert.doesNotMatch(html, /<header|class="masthead"/);
   assert.match(html, /href="tel:\+50585482197"/);
 });
 test('preview privacy and no unsupported integrations', () => {
