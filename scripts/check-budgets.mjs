@@ -44,11 +44,11 @@ const report = {
   applicationJsBudget: 6 * 1024,
   optionalBookingJsBytes: bookingJsBytes,
   optionalBookingJsGzipBytes: bookingJsGzipBytes,
-  // New persistent agenda adds API validation/retry/capability flows. The former
-  // isolated demo allowance was 24 KiB. Bootstrap/core/full gzip caps stay fixed.
-  optionalBookingBudget: 36 * 1024,
+  // Persistent API/retry/capability flows plus document-loss guards. The former
+  // 36 KiB cap predates reload recovery. Bootstrap/core/full gzip caps stay fixed.
+  optionalBookingBudget: 40 * 1024,
   optionalBookingBudgetReason:
-    'Persistent agenda client with server catalog, stale-response protection, idempotent retries and scoped management links; no framework/runtime dependency.',
+    'Persistent agenda client with server catalog, stale-response protection, idempotent retries, scoped management links and non-secret document-loss guards; no framework/runtime dependency.',
   optionalGalleryJsBytes: (await readFile('dist/art-gallery.js')).length,
   optionalGalleryJsGzipBytes: await gzip('art-gallery.js'),
   optionalGalleryBudget: 20 * 1024,

@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791082135924,
+      "tag": "0000_agenda_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791082136572,
+      "tag": "0001_agenda_overlap_guards",
+      "breakpoints": true
+    }
+  ]
+}

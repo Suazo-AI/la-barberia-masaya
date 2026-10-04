@@ -1,0 +1,4 @@
+{
+  "extends": "../agenda/tsconfig.json",
+  "include": ["./schema.ts", "../drizzle.config.ts"]
+}

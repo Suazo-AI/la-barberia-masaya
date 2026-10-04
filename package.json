@@ -11,25 +11,31 @@
     "@playwright/test": "1.63.0",
     "@types/node": "24.19.1",
     "chrome-launcher": "1.2.2",
+    "drizzle-kit": "0.31.11",
+    "drizzle-orm": "0.45.3",
+    "esbuild": "0.28.2",
     "html-validate": "11.16.1",
     "lighthouse": "13.5.0",
     "prettier": "3.9.9",
     "typescript": "7.0.2"
   },
   "scripts": {
-    "typecheck:agenda": "tsc -p agenda/tsconfig.json",
+    "typecheck:agenda": "tsc -p agenda/tsconfig.json && tsc -p db/tsconfig.json",
     "test:agenda": "node --test agenda/tests/*.test.ts",
     "test:agenda:e2e": "playwright test -c agenda/playwright.config.mjs",
     "agenda:local": "node agenda/local-server.ts",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview.mjs",
-    "lint": "prettier --check src scripts tests agenda playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json && html-validate src/*.html",
-    "format": "prettier --write src scripts tests agenda playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json",
+    "lint": "prettier --check src scripts tests agenda db drizzle.config.ts .openai/hosting.json playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json && html-validate src/*.html",
+    "format": "prettier --write src scripts tests agenda db drizzle.config.ts .openai/hosting.json playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json",
     "test": "node --test tests/static.test.mjs tests/booking-model.test.mjs",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test --grep accessibility",
     "check:budgets": "node scripts/check-budgets.mjs",
-    "check": "npm run lint && npm run typecheck:agenda && npm run build && npm test && npm run test:agenda && npm run check:budgets && npm run test:e2e && npm run test:agenda:e2e",
-    "test:performance": "node scripts/lighthouse.mjs"
+    "check": "npm run lint && npm run typecheck:agenda && npm run build && npm test && npm run test:agenda && npm run test:sites && npm run build && npm run check:budgets && npm run test:e2e && npm run test:agenda:e2e",
+    "test:performance": "node scripts/lighthouse.mjs",
+    "build:sites": "node scripts/build-sites.mjs",
+    "test:sites": "npm run build:sites && node --test tests/sites-artifact.test.mjs",
+    "db:generate": "drizzle-kit generate"
   }
 }

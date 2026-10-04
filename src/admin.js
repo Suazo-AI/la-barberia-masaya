@@ -1,6 +1,14 @@
+import {
+  mutationReloadGuard,
+  reloadRecoveryMessage,
+  reloadStorageMessage,
+} from './booking-client.js';
+
 const API = '/api/agenda/v1';
 const byId = (id) => document.getElementById(id);
 const dialog = byId('manage-dialog');
+const reloadGuard = mutationReloadGuard('admin');
+let recoveryBlocked = reloadGuard.status() !== 'clear';
 const state = {
   catalog: null,
   bookings: [],
@@ -26,6 +34,7 @@ const errorMessages = {
     'Esta entrada cambió. Cerrá esta ventana y actualizá la agenda antes de editarla.',
   IDEMPOTENCY_CONFLICT:
     'El contenido de este intento cambió. Actualizá la agenda antes de continuar.',
+  RECOVERY_UNAVAILABLE: reloadStorageMessage,
   CONFIGURATION_CHANGED: 'La configuración cambió. Actualizá la agenda antes de continuar.',
   RATE_LIMITED: 'Hay demasiados intentos. Esperá un momento antes de volver a intentar.',
   INVALID_INPUT: 'Revisá los campos y el horario de la acción.',
@@ -106,9 +115,13 @@ async function request(path, options = {}) {
       cache: 'no-store',
       ...options,
       headers: { Accept: 'application/json', ...options.headers },
+      referrerPolicy: 'no-referrer',
+      signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(20000)])
+        : AbortSignal.timeout(20000),
     });
   } catch (error) {
-    if (error.name === 'AbortError') throw error;
+    if (options.signal?.aborted) throw error;
     throw new ApiError(0, 'NETWORK_ERROR');
   }
   let payload;
@@ -177,7 +190,7 @@ function restorePendingFields(operation) {
 
 function renderPendingOperation() {
   const operation = state.operation;
-  const blocked = Boolean(operation);
+  const blocked = Boolean(operation) || recoveryBlocked;
   for (const id of ['walkin-form', 'block-form', 'reschedule-form']) {
     for (const control of byId(id).querySelectorAll('input, select, button[type="submit"]'))
       control.disabled = blocked;
@@ -186,22 +199,31 @@ function renderPendingOperation() {
     byId(id).disabled = blocked;
   for (const id of ['pending-operation', 'manage-pending-operation']) {
     const panel = byId(id);
-    panel.hidden = !operation;
-    panel.querySelector('p').textContent = !operation
-      ? ''
-      : operation.inFlight
-        ? 'Confirmando la acción original. Los formularios están bloqueados hasta conocer el resultado.'
-        : 'Hay una acción pendiente de confirmar. Su horario, datos y clave se conservan. Reintentá esa misma acción antes de hacer cambios; cerrar o actualizar no la descarta.';
+    panel.hidden = !blocked;
+    panel.querySelector('p').textContent = recoveryBlocked
+      ? reloadGuard.status() === 'unavailable'
+        ? reloadStorageMessage
+        : reloadRecoveryMessage
+      : !operation
+        ? ''
+        : operation.inFlight
+          ? 'Confirmando la acción original. Los formularios están bloqueados hasta conocer el resultado.'
+          : 'Hay una acción pendiente de confirmar. Su horario, datos y clave se conservan. Reintentá esa misma acción antes de hacer cambios; cerrar el diálogo o actualizar la lista no la descarta. No recargués la página: se perderá el intento en memoria y las nuevas acciones quedarán bloqueadas.';
     const button = panel.querySelector('button');
-    button.hidden = !state.catalog;
-    button.disabled = !operation || operation.inFlight || !state.catalog;
+    button.hidden = !state.catalog || recoveryBlocked;
+    button.disabled = recoveryBlocked || !operation || operation.inFlight || !state.catalog;
   }
   if (operation && state.catalog && !byId('admin-workspace').hidden)
     restorePendingFields(operation);
 }
 
 function createOperation(path, body, formId = null) {
-  if (state.operation) throw new ApiError(409, 'OPERATION_PENDING');
+  if (state.operation || recoveryBlocked) throw new ApiError(409, 'OPERATION_PENDING');
+  if (reloadGuard.status() !== 'clear') {
+    recoveryBlocked = true;
+    renderPendingOperation();
+    return null;
+  }
   const operation = {
     path,
     serialized: JSON.stringify(body),
@@ -260,6 +282,10 @@ function isConfirmedResult(operation, result) {
 async function mutation(operation) {
   if (state.operation !== operation || operation.inFlight)
     throw new ApiError(409, 'OPERATION_PENDING');
+  if (!reloadGuard.arm()) {
+    if (!operation.uncertain) state.operation = null;
+    throw new ApiError(409, 'RECOVERY_UNAVAILABLE');
+  }
   operation.inFlight = true;
   renderPendingOperation();
   try {
@@ -269,6 +295,7 @@ async function mutation(operation) {
       body: operation.serialized,
     });
     if (!isConfirmedResult(operation, result)) throw new ApiError(200, 'INVALID_RESPONSE');
+    reloadGuard.clear();
     state.operation = null;
     return result;
   } catch (error) {
@@ -281,7 +308,10 @@ async function mutation(operation) {
       error.code === 'INVALID_RESPONSE'
     )
       operation.uncertain = true;
-    else state.operation = null;
+    else {
+      reloadGuard.clear();
+      state.operation = null;
+    }
     throw error;
   } finally {
     operation.inFlight = false;
@@ -580,9 +610,16 @@ function setFormBusy(form, busy) {
 }
 
 async function formMutation(form, feedbackId, path, body, successMessage, onSuccess) {
-  if (!state.catalog || state.operation || form.getAttribute('aria-busy') === 'true') return;
+  if (
+    recoveryBlocked ||
+    !state.catalog ||
+    state.operation ||
+    form.getAttribute('aria-busy') === 'true'
+  )
+    return;
   const managed = form.id === 'reschedule-form' ? state.managed : null;
   const operation = createOperation(path, body, form.id);
+  if (!operation) return;
   operation.retry = async () => {
     if (!state.catalog || operation.inFlight) return;
     setFormBusy(form, true);
@@ -673,7 +710,7 @@ byId('walkin-service').addEventListener('change', updateWalkinService);
 byId('walkin-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (state.operation || !form.reportValidity() || !state.catalog) return;
+  if (recoveryBlocked || state.operation || !form.reportValidity() || !state.catalog) return;
   const startMinute = parseTime(byId('walkin-time').value);
   if (!Number.isInteger(startMinute))
     return feedback('walkin-feedback', 'Elegí una hora de inicio válida.');
@@ -702,7 +739,7 @@ byId('walkin-form').addEventListener('submit', (event) => {
 byId('block-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (state.operation || !form.reportValidity() || !state.catalog) return;
+  if (recoveryBlocked || state.operation || !form.reportValidity() || !state.catalog) return;
   const startMinute = parseTime(byId('block-start').value);
   const endMinute = parseTime(byId('block-end').value);
   if (!Number.isInteger(startMinute) || !Number.isInteger(endMinute) || endMinute <= startMinute) {
@@ -735,6 +772,7 @@ byId('reschedule-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   if (
+    recoveryBlocked ||
     state.operation ||
     !form.reportValidity() ||
     !state.catalog ||
@@ -818,7 +856,7 @@ dialog.addEventListener('keydown', (event) => {
 });
 
 byId('request-cancel').addEventListener('click', () => {
-  if (state.operation) return;
+  if (recoveryBlocked || state.operation) return;
   byId('request-cancel').hidden = true;
   byId('cancel-confirmation').hidden = false;
   byId('keep-booking').focus({ preventScroll: false });
@@ -831,7 +869,13 @@ byId('keep-booking').addEventListener('click', () => {
 });
 
 byId('confirm-cancel').addEventListener('click', async () => {
-  if (!state.catalog || !state.managed || state.operation || byId('confirm-cancel').disabled)
+  if (
+    recoveryBlocked ||
+    !state.catalog ||
+    !state.managed ||
+    state.operation ||
+    byId('confirm-cancel').disabled
+  )
     return;
   const managed = state.managed;
   const { kind, entry } = managed;
@@ -840,6 +884,7 @@ byId('confirm-cancel').addEventListener('click', async () => {
     `/admin/${kind === 'block' ? 'blocks' : 'bookings'}/${encodeURIComponent(entry.id)}/cancel`,
     { configVersion: state.catalog.configVersion, expectedVersion: entry.version },
   );
+  if (!operation) return;
   operation.retry = async () => {
     if (!state.catalog || operation.inFlight) return;
     feedback('manage-feedback', '');

@@ -10,6 +10,9 @@ import {
   formatTime,
   formatPrice,
   errorMessage,
+  mutationReloadGuard,
+  reloadRecoveryMessage,
+  reloadStorageMessage,
 } from './booking-client.js';
 
 const dialog = document.querySelector('#booking-dialog');
@@ -27,6 +30,7 @@ let opener;
 let portfolioOpener;
 let controller;
 let generation = 0;
+const reloadGuard = mutationReloadGuard('create');
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -98,7 +102,7 @@ function renderRows(target, rows, editable = false) {
 }
 
 function renderControls() {
-  const locked = state.submitting || state.uncertain;
+  const locked = state.submitting || state.uncertain || state.recoveryBlocked;
   for (const button of progress.querySelectorAll('[data-step]')) {
     const step = Number(button.dataset.step);
     button.disabled = locked || step > state.visited;
@@ -117,7 +121,7 @@ function renderControls() {
   $('#booking-reset').hidden = !state.catalog || state.step === 4;
   $('#booking-reset').disabled = locked;
   $('#booking-reset').textContent = 'Volver a empezar';
-  advance.hidden = !state.catalog || state.uncertain;
+  advance.hidden = !state.catalog || state.uncertain || state.recoveryBlocked;
   advance.textContent = state.submitting
     ? 'Verificando reserva…'
     : state.step === 3
@@ -339,7 +343,28 @@ function configureLabels() {
   $('[data-booking-close]').setAttribute('aria-label', 'Cerrar reservas');
 }
 
+function blockAfterReload(status = reloadGuard.status()) {
+  state.recoveryBlocked = true;
+  state.loading = false;
+  $('#service-heading').textContent =
+    status === 'unavailable'
+      ? 'Reservas bloqueadas por seguridad'
+      : 'Solicitud pendiente de verificar';
+  $('#booking-disclaimer').textContent =
+    status === 'unavailable'
+      ? 'La protección al recargar requiere almacenamiento de sesión disponible.'
+      : 'No se puede iniciar otra reserva desde esta pestaña hasta verificar el intento anterior.';
+  document.querySelector('#booking-load-status').textContent = 'Reservas bloqueadas por seguridad.';
+  showStep(1);
+  message(status === 'unavailable' ? reloadStorageMessage : reloadRecoveryMessage);
+  focusVisible($('#service-heading'));
+}
+
 async function loadCatalog(reason = '') {
+  if (state.recoveryBlocked || reloadGuard.status() !== 'clear') {
+    blockAfterReload();
+    return;
+  }
   controller?.abort();
   controller = new AbortController();
   const requestGeneration = ++generation;
@@ -390,7 +415,7 @@ async function loadCatalog(reason = '') {
 }
 
 function reset(reason = '') {
-  if (state?.submitting || state?.uncertain) return;
+  if (state?.submitting || state?.uncertain || state?.recoveryBlocked) return;
   state = {
     step: 1,
     visited: 1,
@@ -406,6 +431,7 @@ function reset(reason = '') {
     loading: false,
     submitting: false,
     uncertain: false,
+    recoveryBlocked: false,
   };
   for (const input of dialog.querySelectorAll('input')) {
     input.checked = false;
@@ -487,7 +513,11 @@ function closePortfolio() {
 }
 
 async function finishBooking() {
-  if (state.submitting) return;
+  if (state.submitting || state.recoveryBlocked) return;
+  if (!state.pending && reloadGuard.status() !== 'clear') {
+    blockAfterReload();
+    return;
+  }
   if (!state.pending) {
     if (!state.slot) return;
     const name = $('#booking-customer-name');
@@ -519,11 +549,16 @@ async function finishBooking() {
       return;
     }
   }
+  if (!reloadGuard.arm()) {
+    message(reloadStorageMessage, state.uncertain);
+    return;
+  }
   state.submitting = true;
   renderControls();
   message('Verificando y guardando la reserva…');
   try {
     const receipt = await createBooking(state.pending);
+    reloadGuard.clear();
     state.receipt = receipt;
     state.submitting = false;
     state.uncertain = false;
@@ -567,6 +602,7 @@ async function finishBooking() {
       renderControls();
       return;
     }
+    reloadGuard.clear();
     state.pending = null;
     state.uncertain = false;
     if (error.code === 'CONFIGURATION_CHANGED') {
@@ -655,6 +691,7 @@ advance.addEventListener('click', () => {
   } else if (state.step === 3) void finishBooking();
 });
 $('#booking-retry')?.addEventListener('click', () => {
+  if (state.recoveryBlocked) return;
   if (state.pending) void finishBooking();
   else if (!state.catalog) void loadCatalog();
   else void loadTimes();
@@ -704,7 +741,7 @@ dialog.addEventListener('close', () => {
   generation += 1;
   portfolioOpener = null;
   $('#booking-portfolio-works').replaceChildren();
-  if (!state?.uncertain && !state?.receipt) state = null;
+  if (!state?.uncertain && !state?.receipt && !state?.recoveryBlocked) state = null;
   document.body.classList.remove('booking-open');
   document.title = originalTitle;
   opener?.focus({ preventScroll: true });
@@ -715,7 +752,8 @@ export function openBooking(trigger) {
   opener = trigger;
   document.body.classList.add('booking-open');
   dialog.showModal();
-  if (state?.receipt || state?.uncertain) {
+  if (state?.recoveryBlocked) blockAfterReload();
+  else if (state?.receipt || state?.uncertain) {
     showStep(state.receipt ? 4 : 3);
     if (state.uncertain)
       message('Resultado pendiente de verificar. Reintentá la misma solicitud.', true);

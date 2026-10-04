@@ -12,6 +12,8 @@ async function open(page) {
 async function schedule(page, date = '2026-10-09') {
   await page.locator('#booking-services input[value="cut"]').check();
   await page.locator('#booking-continue').click();
+  expect(date >= (await page.locator('#booking-date').getAttribute('min'))).toBe(true);
+  expect(date <= (await page.locator('#booking-date').getAttribute('max'))).toBe(true);
   await page.locator('#booking-date').fill(date);
   await page.locator('#booking-date').dispatchEvent('change');
   await expect(page.locator('#booking-slots input').first()).toBeVisible();
@@ -525,5 +527,241 @@ for (const action of ['cancel', 'reschedule']) {
     const saved = await current.json();
     expect(saved.booking).toEqual(original.booking);
     expect(saved.booking.version).toBe(2);
+  });
+}
+
+for (const interruption of ['lost response', 'in-flight response']) {
+  test(`real document reload after ${interruption} blocks a second Any-professional create`, async ({
+    page,
+    request,
+  }) => {
+    let original;
+    let writes = 0;
+    let release;
+    let committed;
+    const responseHeld = new Promise((resolve) => (release = resolve));
+    const didCommit = new Promise((resolve) => (committed = resolve));
+    await page.route(`${api}/bookings`, async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      writes += 1;
+      expect(route.request().postDataJSON().professionalId).toBeUndefined();
+      const response = await route.fetch();
+      expect(response.status()).toBe(201);
+      original = await response.json();
+      committed();
+      if (interruption === 'in-flight response') await responseHeld;
+      await route.abort('connectionfailed');
+    });
+    await open(page);
+    await review(page, interruption === 'lost response' ? '2026-10-05' : '2026-10-08');
+    await page.locator('#booking-continue').click();
+    await didCommit;
+    if (interruption === 'lost response')
+      await expect(page.locator('#booking-message')).toContainText(
+        'No se pudo verificar si la reserva quedó guardada',
+      );
+    else await expect(page.locator('#booking-dialog')).toHaveAttribute('aria-busy', 'true');
+    expect(
+      await page.evaluate(() => ({
+        local: { ...localStorage },
+        session: { ...sessionStorage },
+      })),
+    ).toEqual({ local: {}, session: { 'agenda:pending:create': '1' } });
+    const before = await (
+      await request.get(`/api/agenda/v1/admin/schedule?date=${original.booking.date}`)
+    ).json();
+    // This is an actual new document, not the dialog close or catalog refresh.
+    await page.reload();
+    release();
+    await page.locator('[data-booking-open]').click();
+    await expect(page.locator('#service-heading')).toHaveText('Solicitud pendiente de verificar');
+    await expect(page.locator('#booking-message')).toContainText('Pedí a un administrador');
+    await expect(page.locator('#booking-services input')).toHaveCount(0);
+    await expect(page.locator('#booking-continue')).not.toBeVisible();
+    await expect(page.locator('#booking-retry')).not.toBeVisible();
+    await expect(page.locator('#complete-heading')).not.toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.locator('[data-booking-open]').click();
+    await expect(page.locator('#booking-message')).toContainText(
+      'solicitud pendiente de verificar',
+    );
+    expect(writes).toBe(1);
+    const after = await (
+      await request.get(`/api/agenda/v1/admin/schedule?date=${original.booking.date}`)
+    ).json();
+    expect(after.bookings).toEqual(before.bookings);
+    expect(after.bookings.filter(({ id }) => id === original.booking.id)).toHaveLength(1);
+    expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+      'agenda:pending:create': '1',
+    });
+    const audit = await new AxeBuilder({ page }).analyze();
+    expect(audit.violations).toEqual([]);
+  });
+}
+
+test('real private-page reload loses the capability safely and keeps mutations blocked on retained-link read', async ({
+  page,
+  request,
+}) => {
+  await open(page);
+  await review(page, '2026-10-14');
+  await page.locator('#booking-continue').click();
+  await expect(page.locator('#complete-heading')).toBeVisible();
+  const link = await page.locator('#booking-manage-link').getAttribute('href');
+  const capability = new URLSearchParams(new URL(link).hash.slice(1));
+  await page.locator('#booking-manage-link').click();
+  await expect(page.locator('#manage-booking')).toBeVisible();
+  const writes = [];
+  await page.route(`${api}/bookings/*/reschedule`, async (route) => {
+    writes.push(route.request().postDataJSON());
+    const result = await route.fetch();
+    expect(result.status()).toBe(200);
+    return route.abort('connectionfailed');
+  });
+  await page.locator('#manage-move').click();
+  await expect(page.locator('#manage-slots input').first()).toBeVisible();
+  await page.locator('#manage-slots input').first().check();
+  await page.locator('#manage-confirm-move').click();
+  await expect(page.locator('#manage-message')).toContainText('No se pudo verificar el resultado');
+  expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+    'agenda:pending:manage': '1',
+  });
+  const reads = [];
+  page.on('request', (req) => {
+    if (req.method() === 'GET' && req.url().includes('/api/agenda/v1/bookings/'))
+      reads.push(req.url());
+  });
+  await page.reload();
+  expect(new URL(page.url()).hash).toBe('');
+  await expect(page.locator('#manage-message')).toContainText('reabrilo para consultar el estado');
+  await expect(page.locator('#manage-booking')).not.toBeVisible();
+  expect(reads).toEqual([]);
+  // The user supplies the original private link again. Its fragment is consumed
+  // and scrubbed; a successful current read alone cannot settle an older write.
+  await page.goto(link);
+  await expect(page.locator('#manage-booking')).toBeVisible();
+  await expect(page.locator('#manage-message')).toContainText('Pedí a un administrador');
+  await expect(page.locator('#manage-cancel')).toBeDisabled();
+  await expect(page.locator('#manage-move')).toBeDisabled();
+  expect(new URL(page.url()).hash).toBe('');
+  expect(new URL(page.url()).search).toBe('');
+  await page.locator('#manage-retry').click();
+  await expect(page.locator('#manage-cancel')).toBeDisabled();
+  expect(writes).toHaveLength(1);
+  expect(await page.evaluate(() => ({ ...localStorage }))).toEqual({});
+  expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+    'agenda:pending:manage': '1',
+  });
+  const current = await request.get(`/api/agenda/v1/bookings/${capability.get('id')}`, {
+    headers: { Authorization: `Bearer ${capability.get('token')}` },
+  });
+  expect(current.status()).toBe(200);
+  expect((await current.json()).booking).toMatchObject({
+    version: 2,
+    date: writes[0].date,
+    startMinute: writes[0].startMinute,
+  });
+});
+
+test('unavailable session storage fails closed before public creation', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'sessionStorage', {
+      get() {
+        throw new DOMException('Blocked in regression test', 'SecurityError');
+      },
+    });
+  });
+  let writes = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST') writes += 1;
+  });
+  await page.goto('/');
+  await page.locator('[data-booking-open]').click();
+  await expect(page.locator('#booking-message')).toContainText(
+    'El navegador no permite conservar la protección',
+  );
+  await expect(page.locator('#booking-services input')).toHaveCount(0);
+  await expect(page.locator('#booking-continue')).not.toBeVisible();
+  expect(writes).toBe(0);
+});
+
+for (const flow of ['create', 'private cancel']) {
+  test(`temporary storage write failure preserves the uncertain ${flow} retry and exact request`, async ({
+    page,
+  }) => {
+    await open(page);
+    await review(page, flow === 'create' ? '2026-10-16' : '2026-10-23');
+    if (flow === 'private cancel') {
+      await page.locator('#booking-continue').click();
+      await expect(page.locator('#complete-heading')).toBeVisible();
+      await page.locator('#booking-manage-link').click();
+      await expect(page.locator('#manage-booking')).toBeVisible();
+    }
+    const attempts = [];
+    let original;
+    const path = flow === 'create' ? '/bookings' : '/bookings/*/cancel';
+    await page.route(`${api}${path}`, async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      attempts.push({
+        key: route.request().headers()['idempotency-key'],
+        body: route.request().postDataJSON(),
+        authorization: route.request().headers().authorization,
+      });
+      if (attempts.length !== 1) return route.continue();
+      const response = await route.fetch();
+      expect(response.status()).toBe(flow === 'create' ? 201 : 200);
+      original = await response.json();
+      return route.abort('connectionfailed');
+    });
+    const message = page.locator(flow === 'create' ? '#booking-message' : '#manage-message');
+    const retry = page.locator(flow === 'create' ? '#booking-retry' : '#manage-retry');
+    if (flow === 'create') await page.locator('#booking-continue').click();
+    else {
+      await page.locator('#manage-cancel').click();
+      await page.locator('#manage-confirm-cancel').click();
+    }
+    await expect(message).toContainText('No se pudo verificar');
+    await expect(retry).toBeVisible();
+    // A transient quota/security failure must not discard the existing request
+    // or hide its only retry control. Reads of the existing marker still work.
+    await page.evaluate(() => {
+      window.restoreAgendaStorageForTest = () => {
+        Storage.prototype.setItem = originalSetItem;
+        delete window.restoreAgendaStorageForTest;
+      };
+      const originalSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (key.startsWith('agenda:pending:'))
+          throw new DOMException('Temporary storage denial', 'QuotaExceededError');
+        return originalSetItem.call(this, key, value);
+      };
+    });
+    await retry.click();
+    await expect(message).toContainText('El navegador no permite conservar la protección');
+    await expect(retry).toBeVisible();
+    await expect(retry).toBeEnabled();
+    expect(attempts).toHaveLength(1);
+    await expect(
+      page.locator(flow === 'create' ? '#booking-reset' : '#manage-cancel'),
+    ).toBeDisabled();
+    expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+      [`agenda:pending:${flow === 'create' ? 'create' : 'manage'}`]: '1',
+    });
+    await page.evaluate(() => window.restoreAgendaStorageForTest());
+    const replay = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname.endsWith(flow === 'create' ? '/bookings' : '/cancel'),
+    );
+    await retry.click();
+    const response = await replay;
+    expect(response.status()).toBe(flow === 'create' ? 201 : 200);
+    expect(await response.json()).toEqual(original);
+    await expect(
+      page.locator(flow === 'create' ? '#complete-heading' : '#manage-heading'),
+    ).toHaveText(flow === 'create' ? 'Reserva de prueba registrada.' : 'Reserva cancelada');
+    expect(attempts).toHaveLength(2);
+    expect(attempts[1]).toEqual(attempts[0]);
+    expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({});
   });
 }
