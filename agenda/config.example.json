@@ -1,0 +1,15 @@
+{
+  "mode": "unconfigured",
+  "businessId": "la-barberia-masaya",
+  "businessName": "La Barbería",
+  "timeZone": "America/Managua",
+  "currency": "NIO",
+  "verified": false,
+  "version": 1,
+  "services": [],
+  "professionals": [],
+  "slotStepMinutes": 15,
+  "minLeadMinutes": 30,
+  "maxAdvanceDays": 21,
+  "cancellationLeadMinutes": 60
+}

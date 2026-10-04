@@ -19,4 +19,11 @@ playwright-report/
 /selected-section-reference/
 
 .baseline-source/
+.local-agenda/
+.agenda-private/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.agenda-backup.json
 node_modules

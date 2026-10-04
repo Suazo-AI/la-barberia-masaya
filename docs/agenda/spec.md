@@ -1,0 +1,48 @@
+# Persistent agenda MVP
+
+Authorized 2026-10-04 through the parent thread. Baseline: `181bc7e1f379d195aea0c06e6d56e2ac75d5886e` (application `4bc86aa49839eb1f9e644899545fbbdd8493744a`). This increment supersedes the earlier no-backend restriction for implementation and draft PR verification. The parent owns hosting. No merge, backend deployment, external messages, infrastructure credentials or paid resources are authorized.
+
+## Architecture and ownership
+
+Use standard TypeScript, Web Request/Response and SQL. `agenda/core` owns business rules and typed contracts; `agenda/migrations` owns the database invariants. `agenda/adapters` supplies Node SQLite and Workers D1 without coupling the domain to a host. The existing static site consumes a same-origin versioned HTTP contract. An independently loaded administrator screen uses the same service. No new language, framework, separate repository or arbitrary license is introduced.
+
+SQL enforces active half-open interval conflicts per professional for bookings, walk-ins and blocks. A successful mutation, idempotency record, audit event and notification outbox entry commit together. D1 prepared-statement batches are transactional; conditional updates affecting zero rows do not automatically fail, so SQL assertion guards must enforce exactly one affected row. Optimistic versions prevent lost updates. Availability is advisory; only the committed mutation confirms a persisted booking.
+
+Store UTC integer seconds; accept local dates and minutes in `America/Managua`. Price is an integer number of NIO minor units. Configured services declare duration, before/after buffers and eligible professionals; each professional declares explicit weekly intervals. Snapshot prices/duration/buffers and guard the active configuration version inside mutation batches. Catalog exposes `configVersion`; every mutation submits the version the client reviewed. A changed version returns `CONFIGURATION_CHANGED` and requires a refreshed review, even when the same service IDs still exist. No default catalog, staff, prices or policies are business facts. The mode is `unconfigured` by default; `production` requires complete explicitly verified configuration and an approved administrator identity adapter. Fixtures are local/test opt-in and must never be production fallback data.
+
+## Infrastructure boundaries
+
+- Workers/D1 is the candidate host adapter, not an activated deployment. Source: [D1 batches](https://developers.cloudflare.com/d1/worker-api/d1-database/), checked 2026-10-04.
+- No assumed Cron, Queues, Durable Objects or rate-limit bindings. Use SQL-backed bounded throttling and a durable outbox. The notification adapter defaults to no-send. Provider and runner setup are separate prerequisites; never claim an email was sent.
+- Administrator authorization accepts only a server-side trusted identity resolver and configured owner allowlist. Never infer an identity from a client-supplied header. Without the verified host integration, production administrative access and booking activation fail closed. Loopback fixture testing uses a clearly marked server-injected fixture principal, unavailable in production.
+- The parent subsequently authorized random, high-entropy per-booking management capabilities as application security. The browser uses Web Crypto to create a 32-byte token; it retains the token in memory and an optional management URL fragment, sends it only in JSON creation or an authorization header, and never in query strings/logs/referrers. HTTP passes only its SHA-256 hash to storage. Idempotent retries reuse the original token and payload. This does not provision an OAuth account or infrastructure secret. Customer reads/cancel/reschedule verify the scoped hash before calling the domain; administrator access still uses the separate trusted host identity port. Lost management links require an authorized administrator.
+- Export is versioned, administrator-only, no-cache and intentionally contains private booking data. It is never a build asset or public evidence artifact. Restore runs offline into a new database and validates schema, configuration and invariants before activation. A real export/restore round trip is an acceptance check. D1 Time Travel availability is not assumed from Sites access; [official backup documentation](https://developers.cloudflare.com/d1/reference/time-travel/) describes the hosting capability separately.
+
+## Acceptance
+
+The API is `/api/agenda/v1`: `GET /catalog`, `GET /availability?serviceId&professionalId&date`, and `POST /bookings`. Customer-scoped `GET /bookings/:id`, `POST /bookings/:id/cancel` and `POST /bookings/:id/reschedule` require the management capability in an Authorization Bearer header. Admin routes are `GET /admin/schedule`, `POST /admin/walk-ins`, `POST /admin/blocks`, `POST /admin/bookings/:id/cancel`, `POST /admin/bookings/:id/reschedule`, `POST /admin/blocks/:id/cancel`, and `GET /admin/export`. JSON mutations require `Idempotency-Key` and `configVersion`; cancel/move also require `expectedVersion`. Failures use `{error:{code,message}}` without SQL, personal data or secrets. Body fields derive from the typed contracts; HTTP strips the raw management token and computes its hash. `SqlStore.batch` must return SELECT rows by statement position in both adapters; export includes the stored configuration from that same snapshot.
+
+| ID | Behavior / evidence |
+| --- | --- |
+| A-01 | Incomplete/unverified production config returns unavailable and creates no booking. Fixture data resides outside website assets and is explicitly labeled in local UI and responses. |
+| A-02 | Service duration, closing bounds, lead time, horizon, service/professional eligibility and Managua dates filter availability. Any-professional selection deduplicates times and assigns one actual eligible free professional transactionally. |
+| A-03 | Concurrent overlapping writes through separate database connections/processes produce at most one active allocation per professional. Adjacent intervals and simultaneous different professionals remain valid. |
+| A-04 | Same scoped idempotency key and same payload return the original response without duplicate bookings/outbox/audit. Changed payload returns conflict. Racing identical keys cannot duplicate effects. |
+| A-05 | Cancel and reschedule require ownership or approved admin authority, expected version, valid current policy and atomic rollback. A conflicting move retains the previous reservation. Zero-row updates cannot claim success or add outbox/audit/idempotency effects. |
+| A-06 | Admin can list dated bookings/blocks, enter walk-ins, block/unblock intervals and cancel/reschedule. All active allocations share the database overlap invariant. No customer/admin listing or email is exposed publicly. |
+| A-07 | Notification records commit with the mutation; no-send is the default, bounded retry semantics are explicit, and transport failures cannot erase a committed appointment. Test adapters never contact third parties. |
+| A-08 | Origin/JSON/body-size/input/rate controls and authorization protect writes and administrative export. Request errors reveal no secrets or customer data. Public responses and private endpoints are no-store. |
+| A-09 | A consistent, versioned export restores into a fresh SQLite store, passes integrity/foreign-key/conflict checks and reproduces bookings, blocks, outbox and idempotency behavior. Corrupt/incompatible backups are rejected without replacing the source database. |
+| A-10 | Existing dark Anton/Barlow hero, local photographs, exact real review content, Obsidian and dated location/hours remain. Booking dialog preserves keyboard/focus/Escape, editable steps, slot invalidation, reduced motion and narrow/200% text reflow. Network failure or stale slot never claims success. |
+| A-11 | Real mobile/desktop before/after screenshots and videos identify source commits, URL and fixture mode. Independent review evaluates the exact source and tests. Human acceptance and production activation remain separate. |
+| A-12 | Portable module has run/config/backup documentation, clear configuration contracts and a license proposal with third-party boundaries. No license is applied until the owner selects it. No personal data, secrets or private backups enter Git or the static build. |
+
+## Increment sequence
+
+1. Root: spec/contracts, configuration template, tooling and integration coordination.
+2. Domain owner: `agenda/core` and migrations; adapters/test owner: SQLite/D1 storage and backup tests.
+3. HTTP owner: Web router, trusted identity port and Node/Worker adapter. Public and admin UI owners use the established API only.
+4. Test owner: concurrent database, API security and persistence tests. Independent reviewer stays read-only.
+5. Root: final integration, static/site regression checks, genuine browser evidence and draft PR publication. Parent coordinates host adapter activation.
+
+Business blockers: verified services/prices/durations, named eligible staff and shifts, booking/cancel policies, owner identity allowlist, host identity contract, sender/provider/runner, private backup destination and selected open-source license. Development continues without inventing these facts.

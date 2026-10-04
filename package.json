@@ -9,12 +9,18 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
+    "@types/node": "24.19.1",
     "chrome-launcher": "1.2.2",
     "html-validate": "11.16.1",
     "lighthouse": "13.5.0",
-    "prettier": "3.9.9"
+    "prettier": "3.9.9",
+    "typescript": "7.0.2"
   },
   "scripts": {
+    "typecheck:agenda": "tsc -p agenda/tsconfig.json",
+    "test:agenda": "node --test agenda/tests/*.test.ts",
+    "test:agenda:e2e": "playwright test -c agenda/playwright.config.mjs",
+    "agenda:local": "node agenda/local-server.ts",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview.mjs",
     "lint": "prettier --check src scripts tests playwright.config.mjs package.json .htmlvalidate.json .prettierrc.json && html-validate src/*.html",
@@ -23,7 +29,7 @@
     "test:e2e": "playwright test",
     "test:a11y": "playwright test --grep accessibility",
     "check:budgets": "node scripts/check-budgets.mjs",
-    "check": "npm run lint && npm run build && npm test && npm run check:budgets && npm run test:e2e",
+    "check": "npm run lint && npm run typecheck:agenda && npm run build && npm test && npm run test:agenda && npm run check:budgets && npm run test:e2e && npm run test:agenda:e2e",
     "test:performance": "node scripts/lighthouse.mjs"
   }
 }
