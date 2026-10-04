@@ -9,7 +9,7 @@ const state = {
   opener: null,
   readController: null,
   catalogController: null,
-  keys: new Map(),
+  operation: null,
 };
 
 class ApiError extends Error {
@@ -41,7 +41,7 @@ function safeMessage(error) {
   if (error.status === 409)
     return 'La agenda cambió o el horario está ocupado. Actualizá e intentá de nuevo.';
   if (error.status === 0)
-    return 'No se pudo confirmar el resultado. Reintentá con los mismos datos o actualizá la agenda antes de editar.';
+    return 'No se pudo confirmar el resultado. La acción original se conserva; reintentá esa misma acción antes de hacer cambios.';
   return 'No se pudo completar la acción. Revisá tu conexión e intentá de nuevo.';
 }
 
@@ -62,7 +62,6 @@ function setLocked(error) {
   state.bookings = [];
   state.blocks = [];
   state.managed = null;
-  state.keys.clear();
   byId('booking-list').replaceChildren();
   byId('block-list').replaceChildren();
   byId('walkin-form').reset();
@@ -92,6 +91,7 @@ function setLocked(error) {
       'Revisá tu conexión y usá Actualizar para volver a consultar la agenda.';
     announce('La agenda no está disponible en este momento.');
   }
+  renderPendingOperation();
 }
 
 function locksWorkspace(error) {
@@ -121,21 +121,172 @@ async function request(path, options = {}) {
   return payload;
 }
 
-function mutation(path, body) {
-  const serialized = JSON.stringify(body);
-  const scope = `${path}:${serialized}`;
-  if (!state.keys.has(scope)) state.keys.set(scope, crypto.randomUUID());
-  return request(path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Idempotency-Key': state.keys.get(scope),
-    },
-    body: serialized,
-  }).then((result) => {
-    state.keys.delete(scope);
-    return result;
+function pendingPanel(id, buttonId) {
+  const panel = document.createElement('div');
+  panel.id = id;
+  panel.className = 'form-feedback';
+  panel.hidden = true;
+  const message = document.createElement('p');
+  const button = document.createElement('button');
+  button.id = buttonId;
+  button.type = 'button';
+  button.className = 'button button-secondary';
+  button.textContent = 'Reintentar acción pendiente';
+  button.addEventListener('click', () => {
+    const operation = state.operation;
+    if (state.catalog && operation && !operation.inFlight) void operation.retry();
   });
+  panel.append(message, button);
+  return panel;
+}
+
+document.querySelector('.status-row').after(pendingPanel('pending-operation', 'retry-operation'));
+byId('manage-feedback').after(pendingPanel('manage-pending-operation', 'retry-manage-operation'));
+
+function restorePendingFields(operation) {
+  const body = JSON.parse(operation.serialized);
+  const values =
+    operation.formId === 'walkin-form'
+      ? {
+          'walkin-service': body.serviceId,
+          'walkin-professional': body.professionalId,
+          'walkin-date': body.date,
+          'walkin-time': formatTime(body.startMinute),
+          'walkin-name': body.customer?.displayName || '',
+        }
+      : operation.formId === 'block-form'
+        ? {
+            'block-professional': body.professionalId,
+            'block-date': body.date,
+            'block-start': formatTime(body.startMinute),
+            'block-end': formatTime(body.endMinute),
+            'block-label': body.label,
+          }
+        : operation.formId === 'reschedule-form' &&
+            operation.path.includes(
+              `/bookings/${encodeURIComponent(state.managed?.entry.id || '')}/`,
+            )
+          ? {
+              'reschedule-professional': body.professionalId,
+              'reschedule-date': body.date,
+              'reschedule-time': formatTime(body.startMinute),
+            }
+          : {};
+  for (const [id, value] of Object.entries(values)) byId(id).value = value;
+}
+
+function renderPendingOperation() {
+  const operation = state.operation;
+  const blocked = Boolean(operation);
+  for (const id of ['walkin-form', 'block-form', 'reschedule-form']) {
+    for (const control of byId(id).querySelectorAll('input, select, button[type="submit"]'))
+      control.disabled = blocked;
+  }
+  for (const id of ['request-cancel', 'confirm-cancel', 'refresh-manage'])
+    byId(id).disabled = blocked;
+  for (const id of ['pending-operation', 'manage-pending-operation']) {
+    const panel = byId(id);
+    panel.hidden = !operation;
+    panel.querySelector('p').textContent = !operation
+      ? ''
+      : operation.inFlight
+        ? 'Confirmando la acción original. Los formularios están bloqueados hasta conocer el resultado.'
+        : 'Hay una acción pendiente de confirmar. Su horario, datos y clave se conservan. Reintentá esa misma acción antes de hacer cambios; cerrar o actualizar no la descarta.';
+    const button = panel.querySelector('button');
+    button.hidden = !state.catalog;
+    button.disabled = !operation || operation.inFlight || !state.catalog;
+  }
+  if (operation && state.catalog && !byId('admin-workspace').hidden)
+    restorePendingFields(operation);
+}
+
+function createOperation(path, body, formId = null) {
+  if (state.operation) throw new ApiError(409, 'OPERATION_PENDING');
+  const operation = {
+    path,
+    serialized: JSON.stringify(body),
+    key: crypto.randomUUID(),
+    mode: state.catalog.mode,
+    formId,
+    uncertain: false,
+    inFlight: false,
+    retry: null,
+  };
+  state.operation = operation;
+  return operation;
+}
+
+function isConfirmedResult(operation, result) {
+  const body = JSON.parse(operation.serialized);
+  const block = operation.path === '/admin/blocks' || operation.path.startsWith('/admin/blocks/');
+  const entry = block ? result : result?.booking;
+  const action = operation.path.match(
+    /\/admin\/(?:bookings|blocks)\/([^/]+)\/(cancel|reschedule)$/,
+  );
+  const status = action?.[2] === 'cancel' ? 'cancelled' : block ? 'active' : 'confirmed';
+  if (
+    !entry ||
+    typeof entry.id !== 'string' ||
+    !entry.id ||
+    entry.status !== status ||
+    !Number.isInteger(entry.version) ||
+    entry.version !== (action ? body.expectedVersion + 1 : 1) ||
+    (action && entry.id !== decodeURIComponent(action[1])) ||
+    typeof entry.professionalId !== 'string' ||
+    typeof entry.date !== 'string' ||
+    !Number.isInteger(entry.startMinute) ||
+    !Number.isInteger(entry.endMinute) ||
+    entry.startMinute < 0 ||
+    entry.endMinute <= entry.startMinute ||
+    entry.endMinute > 1440
+  )
+    return false;
+  if (block) return typeof entry.label === 'string';
+  return (
+    result.mode === operation.mode &&
+    result.notification === 'disabled' &&
+    ['token', 'admin-only'].includes(result.customerManagement) &&
+    ['booking', 'walk-in'].includes(entry.kind) &&
+    typeof entry.serviceName === 'string' &&
+    typeof entry.professionalName === 'string' &&
+    entry.currency === 'NIO' &&
+    Number.isInteger(entry.durationMinutes) &&
+    entry.durationMinutes > 0 &&
+    Number.isInteger(entry.priceMinorUnits) &&
+    entry.priceMinorUnits >= 0
+  );
+}
+
+async function mutation(operation) {
+  if (state.operation !== operation || operation.inFlight)
+    throw new ApiError(409, 'OPERATION_PENDING');
+  operation.inFlight = true;
+  renderPendingOperation();
+  try {
+    const result = await request(operation.path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': operation.key },
+      body: operation.serialized,
+    });
+    if (!isConfirmedResult(operation, result)) throw new ApiError(200, 'INVALID_RESPONSE');
+    state.operation = null;
+    return result;
+  } catch (error) {
+    // An absent/malformed/5xx response does not prove the transaction rolled back.
+    // Once uncertain, only the exact successful replay resolves this operation.
+    if (
+      operation.uncertain ||
+      error.status === 0 ||
+      error.status >= 500 ||
+      error.code === 'INVALID_RESPONSE'
+    )
+      operation.uncertain = true;
+    else state.operation = null;
+    throw error;
+  } finally {
+    operation.inFlight = false;
+    renderPendingOperation();
+  }
 }
 
 function option(value, label) {
@@ -200,9 +351,8 @@ function configureFormDates({ preserveValues = false } = {}) {
     input.max = state.catalog.dateRange.max;
     input.value = preserveValues && input.value ? validFormDate(input.value) : selectedDate;
   }
-  for (const id of ['walkin-time', 'block-start', 'block-end', 'reschedule-time']) {
-    byId(id).step = String(state.catalog.slotStepMinutes * 60);
-  }
+  for (const id of ['walkin-time', 'block-start', 'block-end']) byId(id).step = '60';
+  byId('reschedule-time').step = String(state.catalog.slotStepMinutes * 60);
 }
 
 function updateWalkinService() {
@@ -377,6 +527,7 @@ async function loadSchedule({ announceResult = true } = {}) {
     byId('admin-workspace').hidden = false;
     byId('mode-notice').hidden = false;
     content.hidden = false;
+    renderPendingOperation();
     if (announceResult)
       announce(`Agenda del ${byId('schedule-date').value} actualizada. ${active} citas activas.`);
     return true;
@@ -429,30 +580,36 @@ function setFormBusy(form, busy) {
 }
 
 async function formMutation(form, feedbackId, path, body, successMessage, onSuccess) {
-  if (!state.catalog || form.getAttribute('aria-busy') === 'true') return;
+  if (!state.catalog || state.operation || form.getAttribute('aria-busy') === 'true') return;
   const managed = form.id === 'reschedule-form' ? state.managed : null;
-  setFormBusy(form, true);
-  feedback(feedbackId, '');
-  try {
-    const result = await mutation(path, body);
-    if (!state.catalog) return;
-    onSuccess?.(result);
-    announce(successMessage);
-    const loaded = await loadSchedule({ announceResult: false });
-    if (!loaded && state.catalog)
-      announce(`${successMessage} No se pudo actualizar la lista; usá Actualizar.`);
-    if (loaded && managed && !dialog.open) byId('schedule-title').focus({ preventScroll: false });
-  } catch (error) {
-    if (locksWorkspace(error)) setLocked(error);
-    else if (managed && state.managed !== managed) announce(safeMessage(error));
-    else {
-      feedback(feedbackId, safeMessage(error));
-      if (error.code === 'CONFIGURATION_CHANGED' && dialog.open)
-        byId('refresh-manage').hidden = false;
+  const operation = createOperation(path, body, form.id);
+  operation.retry = async () => {
+    if (!state.catalog || operation.inFlight) return;
+    setFormBusy(form, true);
+    feedback(feedbackId, '');
+    try {
+      const result = await mutation(operation);
+      if (!state.catalog) return;
+      onSuccess?.(result);
+      announce(successMessage);
+      const loaded = await loadSchedule({ announceResult: false });
+      if (!loaded && state.catalog)
+        announce(`${successMessage} No se pudo actualizar la lista; usá Actualizar.`);
+      if (loaded && managed && !dialog.open) byId('schedule-title').focus({ preventScroll: false });
+    } catch (error) {
+      if (locksWorkspace(error)) setLocked(error);
+      else if (managed && state.managed !== managed) announce(safeMessage(error));
+      else {
+        feedback(feedbackId, safeMessage(error));
+        if (error.code === 'CONFIGURATION_CHANGED' && dialog.open && !state.operation)
+          byId('refresh-manage').hidden = false;
+      }
+    } finally {
+      setFormBusy(form, false);
+      renderPendingOperation();
     }
-  } finally {
-    setFormBusy(form, false);
-  }
+  };
+  await operation.retry();
 }
 
 function savedMessage(action) {
@@ -499,6 +656,7 @@ function openManager(kind, entry, opener) {
     byId('reschedule-time').value = formatTime(entry.startMinute);
   }
   dialog.showModal();
+  renderPendingOperation();
   byId('manage-title').focus({ preventScroll: false });
 }
 
@@ -515,7 +673,7 @@ byId('walkin-service').addEventListener('change', updateWalkinService);
 byId('walkin-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (!form.reportValidity() || !state.catalog) return;
+  if (state.operation || !form.reportValidity() || !state.catalog) return;
   const startMinute = parseTime(byId('walkin-time').value);
   if (!Number.isInteger(startMinute))
     return feedback('walkin-feedback', 'Elegí una hora de inicio válida.');
@@ -544,7 +702,7 @@ byId('walkin-form').addEventListener('submit', (event) => {
 byId('block-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (!form.reportValidity() || !state.catalog) return;
+  if (state.operation || !form.reportValidity() || !state.catalog) return;
   const startMinute = parseTime(byId('block-start').value);
   const endMinute = parseTime(byId('block-end').value);
   if (!Number.isInteger(startMinute) || !Number.isInteger(endMinute) || endMinute <= startMinute) {
@@ -576,7 +734,13 @@ byId('block-form').addEventListener('submit', (event) => {
 byId('reschedule-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (!form.reportValidity() || !state.catalog || state.managed?.kind !== 'booking') return;
+  if (
+    state.operation ||
+    !form.reportValidity() ||
+    !state.catalog ||
+    state.managed?.kind !== 'booking'
+  )
+    return;
   const startMinute = parseTime(byId('reschedule-time').value);
   if (!Number.isInteger(startMinute))
     return feedback('manage-feedback', 'Elegí una hora de inicio válida.');
@@ -596,7 +760,8 @@ byId('reschedule-form').addEventListener('submit', (event) => {
     body,
     savedMessage('Cita reprogramada'),
     () => {
-      if (state.managed === managed) dialog.close();
+      if (state.managed?.entry.id === entry.id && state.managed.kind === managed.kind)
+        dialog.close();
     },
   );
 });
@@ -653,6 +818,7 @@ dialog.addEventListener('keydown', (event) => {
 });
 
 byId('request-cancel').addEventListener('click', () => {
+  if (state.operation) return;
   byId('request-cancel').hidden = true;
   byId('cancel-confirmation').hidden = false;
   byId('keep-booking').focus({ preventScroll: false });
@@ -665,38 +831,40 @@ byId('keep-booking').addEventListener('click', () => {
 });
 
 byId('confirm-cancel').addEventListener('click', async () => {
-  if (!state.catalog || !state.managed || byId('confirm-cancel').disabled) return;
+  if (!state.catalog || !state.managed || state.operation || byId('confirm-cancel').disabled)
+    return;
   const managed = state.managed;
   const { kind, entry } = managed;
-  byId('confirm-cancel').disabled = true;
-  feedback('manage-feedback', '');
-  try {
-    await mutation(
-      `/admin/${kind === 'block' ? 'blocks' : 'bookings'}/${encodeURIComponent(entry.id)}/cancel`,
-      {
-        configVersion: state.catalog.configVersion,
-        expectedVersion: entry.version,
-      },
-    );
-    if (!state.catalog) return;
-    const message = savedMessage(kind === 'block' ? 'Bloqueo retirado' : 'Cita cancelada');
-    if (state.managed === managed) dialog.close();
-    announce(message);
-    const loaded = await loadSchedule({ announceResult: false });
-    if (!loaded && state.catalog)
-      announce(`${message} No se pudo actualizar la lista; usá Actualizar.`);
-    if (loaded && !dialog.open) byId('schedule-title').focus({ preventScroll: false });
-  } catch (error) {
-    if (locksWorkspace(error)) setLocked(error);
-    else if (state.managed !== managed) announce(safeMessage(error));
-    else {
-      feedback('manage-feedback', safeMessage(error));
-      if (error.code === 'CONFIGURATION_CHANGED' && dialog.open)
-        byId('refresh-manage').hidden = false;
+  const message = savedMessage(kind === 'block' ? 'Bloqueo retirado' : 'Cita cancelada');
+  const operation = createOperation(
+    `/admin/${kind === 'block' ? 'blocks' : 'bookings'}/${encodeURIComponent(entry.id)}/cancel`,
+    { configVersion: state.catalog.configVersion, expectedVersion: entry.version },
+  );
+  operation.retry = async () => {
+    if (!state.catalog || operation.inFlight) return;
+    feedback('manage-feedback', '');
+    try {
+      await mutation(operation);
+      if (!state.catalog) return;
+      if (state.managed?.entry.id === entry.id && state.managed.kind === kind) dialog.close();
+      announce(message);
+      const loaded = await loadSchedule({ announceResult: false });
+      if (!loaded && state.catalog)
+        announce(`${message} No se pudo actualizar la lista; usá Actualizar.`);
+      if (loaded && !dialog.open) byId('schedule-title').focus({ preventScroll: false });
+    } catch (error) {
+      if (locksWorkspace(error)) setLocked(error);
+      else if (state.managed !== managed) announce(safeMessage(error));
+      else {
+        feedback('manage-feedback', safeMessage(error));
+        if (error.code === 'CONFIGURATION_CHANGED' && dialog.open && !state.operation)
+          byId('refresh-manage').hidden = false;
+      }
+    } finally {
+      renderPendingOperation();
     }
-  } finally {
-    byId('confirm-cancel').disabled = false;
-  }
+  };
+  await operation.retry();
 });
 
 byId('export-agenda').addEventListener('click', async () => {

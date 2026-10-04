@@ -266,7 +266,8 @@ async function commit(action) {
   } catch (error) {
     busy = false;
     confirmation.close();
-    if (error.uncertain) {
+    // Preserve the original request until its earlier uncertain result is known.
+    if (uncertain || error.uncertain) {
       uncertain = true;
       retryAction = 'mutation';
       setControls();

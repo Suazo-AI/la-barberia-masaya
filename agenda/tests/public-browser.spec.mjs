@@ -363,3 +363,167 @@ test('private cancellation retries one committed request and reflows at 320px/20
   const audit = await new AxeBuilder({ page }).analyze();
   expect(audit.violations).toEqual([]);
 });
+
+test('a rejected retry cannot erase an uncertain Any-professional creation', async ({ page }) => {
+  const attempts = [];
+  const rejected = [
+    { status: 429, code: 'RATE_LIMITED' },
+    { status: 409, code: 'CONFIGURATION_CHANGED' },
+    { status: 503, code: 'CONFIGURATION_REQUIRED' },
+    { status: 403, code: 'FORBIDDEN' },
+  ];
+  let original;
+  await page.route(`${api}/bookings`, async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    attempts.push({
+      key: route.request().headers()['idempotency-key'],
+      body: route.request().postDataJSON(),
+    });
+    if (attempts.length === 1) {
+      const response = await route.fetch();
+      expect(response.status()).toBe(201);
+      original = await response.json();
+      return route.abort('connectionfailed');
+    }
+    const refusal = rejected[attempts.length - 2];
+    if (refusal)
+      return route.fulfill({ status: refusal.status, json: { error: { code: refusal.code } } });
+    return route.continue();
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await review(page, '2026-10-24');
+  await page.locator('#booking-continue').click();
+  await expect(page.locator('#booking-message')).toContainText(
+    'No se pudo verificar si la reserva quedó guardada',
+  );
+  for (const refusal of rejected) {
+    const response = page.waitForResponse(
+      (result) =>
+        result.url().endsWith('/api/agenda/v1/bookings') && result.status() === refusal.status,
+    );
+    await page.locator('#booking-retry').click();
+    await response;
+    await expect(page.locator('#booking-message')).toContainText(
+      'No se pudo verificar si la reserva quedó guardada',
+    );
+    await expect(page.locator('#booking-reset')).toBeDisabled();
+    await expect(page.locator('#booking-back')).toBeDisabled();
+    await expect(page.locator('[data-step="1"]')).toBeDisabled();
+    await expect(page.locator('#booking-continue')).not.toBeVisible();
+    await expect(page.locator('#complete-heading')).not.toBeVisible();
+  }
+  await page.keyboard.press('Escape');
+  await page.locator('[data-booking-open]').click();
+  await expect(page.locator('#review-heading')).toBeVisible();
+  await expect(page.locator('#booking-reset')).toBeDisabled();
+  const replay = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/agenda/v1/bookings') && response.request().method() === 'POST',
+  );
+  await page.locator('#booking-retry').click();
+  const response = await replay;
+  expect(response.status()).toBe(201);
+  expect(await response.json()).toEqual(original);
+  await expect(page.locator('#complete-heading')).toHaveText('Reserva de prueba registrada.');
+  expect(attempts).toHaveLength(rejected.length + 2);
+  expect(attempts[0].body.professionalId).toBeUndefined();
+  for (const attempt of attempts) expect(attempt).toEqual(attempts[0]);
+  const listing = await page.request.get('/api/agenda/v1/admin/schedule?date=2026-10-24');
+  expect(listing.status()).toBe(200);
+  const bookings = (await listing.json()).bookings.filter(
+    (booking) =>
+      booking.kind === 'booking' &&
+      booking.startMinute === original.booking.startMinute &&
+      booking.serviceId === original.booking.serviceId,
+  );
+  expect(bookings).toHaveLength(1);
+  expect(bookings[0].id).toBe(original.booking.id);
+});
+
+for (const action of ['cancel', 'reschedule']) {
+  test(`a rejected retry preserves the earlier uncertain private ${action}`, async ({ page }) => {
+    await open(page);
+    await review(page, action === 'cancel' ? '2026-10-19' : '2026-10-22');
+    await page.locator('#booking-continue').click();
+    await expect(page.locator('#complete-heading')).toBeVisible();
+    const link = new URL(await page.locator('#booking-manage-link').getAttribute('href'));
+    const capability = new URLSearchParams(link.hash.slice(1));
+    await page.locator('#booking-manage-link').click();
+    await expect(page.locator('#manage-booking')).toBeVisible();
+    const attempts = [];
+    const rejected = [
+      { status: 429, code: 'RATE_LIMITED' },
+      { status: 409, code: 'CONFIGURATION_CHANGED' },
+      { status: 403, code: 'FORBIDDEN' },
+    ];
+    let original;
+    await page.route(`${api}/bookings/*/${action}`, async (route) => {
+      attempts.push({
+        key: route.request().headers()['idempotency-key'],
+        body: route.request().postDataJSON(),
+        authorization: route.request().headers().authorization,
+      });
+      if (attempts.length === 1) {
+        const response = await route.fetch();
+        expect(response.status()).toBe(200);
+        original = await response.json();
+        return route.abort('connectionfailed');
+      }
+      const refusal = rejected[attempts.length - 2];
+      if (refusal)
+        return route.fulfill({ status: refusal.status, json: { error: { code: refusal.code } } });
+      return route.continue();
+    });
+    if (action === 'cancel') {
+      await page.locator('#manage-cancel').click();
+      await page.locator('#manage-confirm-cancel').click();
+    } else {
+      await page.locator('#manage-move').click();
+      await expect(page.locator('#manage-slots input').first()).toBeVisible();
+      await page.locator('#manage-slots input').first().check();
+      await page.locator('#manage-confirm-move').click();
+    }
+    await expect(page.locator('#manage-message')).toContainText(
+      'No se pudo verificar el resultado',
+    );
+    for (const refusal of rejected) {
+      const response = page.waitForResponse(
+        (result) =>
+          new URL(result.url()).pathname.endsWith(`/${action}`) &&
+          result.status() === refusal.status,
+      );
+      await page.locator('#manage-retry').click();
+      await response;
+      await expect(page.locator('#manage-message')).toContainText(
+        'No se pudo verificar el resultado',
+      );
+      await expect(page.locator('#manage-cancel')).toBeDisabled();
+      await expect(page.locator('#manage-move')).toBeDisabled();
+      await expect(page.locator('#manage-confirm-move')).toBeDisabled();
+      await expect(page.locator('#manage-date')).toBeDisabled();
+      await expect(page.locator('#manage-heading')).toHaveText('Mi reserva');
+    }
+    const replay = page.waitForResponse(
+      (result) =>
+        new URL(result.url()).pathname.endsWith(`/${action}`) &&
+        result.request().method() === 'POST',
+    );
+    await page.locator('#manage-retry').click();
+    const response = await replay;
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual(original);
+    await expect(page.locator('#manage-message')).toContainText(
+      action === 'cancel' ? 'Cancelación registrada' : 'Cambio registrado',
+    );
+    expect(attempts).toHaveLength(rejected.length + 2);
+    for (const attempt of attempts) expect(attempt).toEqual(attempts[0]);
+    const current = await page.request.get(`/api/agenda/v1/bookings/${capability.get('id')}`, {
+      headers: { Authorization: `Bearer ${capability.get('token')}` },
+    });
+    expect(current.status()).toBe(200);
+    const saved = await current.json();
+    expect(saved.booking).toEqual(original.booking);
+    expect(saved.booking.version).toBe(2);
+  });
+}

@@ -557,7 +557,8 @@ async function finishBooking() {
     message('Reserva registrada. Conservá tu enlace privado.');
   } catch (error) {
     state.submitting = false;
-    if (error.uncertain) {
+    // A rejected retry does not resolve a previously lost mutation response.
+    if (state.uncertain || error.uncertain) {
       state.uncertain = true;
       message(
         'No se pudo verificar si la reserva quedó guardada. Reintentá para recuperar el resultado de la misma solicitud; evitá crear otra reserva.',
