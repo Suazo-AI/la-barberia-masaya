@@ -1,0 +1,93 @@
+import type { AgendaConfig } from '../core/contracts.ts';
+
+// Explicit opt-in local/test fixtures. None of these services, prices, policies,
+// staff or shifts is a verified business fact. Never a production fallback.
+export const localFixtureConfig: AgendaConfig = {
+  mode: 'fixture',
+  businessId: 'local-fixture',
+  businessName: 'Agenda local de pruebas',
+  timeZone: 'America/Managua',
+  currency: 'NIO',
+  verified: false,
+  version: 1,
+  slotStepMinutes: 15,
+  minLeadMinutes: 30,
+  maxAdvanceDays: 21,
+  cancellationLeadMinutes: 60,
+  services: [
+    {
+      id: 'cut',
+      name: 'Corte de prueba',
+      description: 'Servicio ficticio para verificar la agenda.',
+      durationMinutes: 30,
+      priceMinorUnits: 20000,
+      professionalIds: ['a', 'b'],
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 0,
+    },
+    {
+      id: 'beard',
+      name: 'Barba de prueba',
+      description: 'Servicio ficticio de menor duración.',
+      durationMinutes: 20,
+      priceMinorUnits: 15000,
+      professionalIds: ['a', 'b'],
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 10,
+    },
+    {
+      id: 'combo',
+      name: 'Corte y barba de prueba',
+      description: 'Servicio ficticio de mayor duración.',
+      durationMinutes: 50,
+      priceMinorUnits: 30000,
+      professionalIds: ['a', 'b'],
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 10,
+    },
+  ],
+  professionals: [
+    {
+      id: 'a',
+      name: 'Profesional A · fixture',
+      weeklyHours: [
+        [[600, 1020]],
+        [[780, 1140]],
+        [],
+        [[780, 1140]],
+        [[780, 1140]],
+        [[600, 1140]],
+        [[600, 1140]],
+      ],
+    },
+    {
+      id: 'b',
+      name: 'Profesional B · fixture',
+      weeklyHours: [
+        [[600, 1020]],
+        [[780, 1140]],
+        [],
+        [[780, 1140]],
+        [[780, 1140]],
+        [[600, 1140]],
+        [[600, 1140]],
+      ],
+    },
+  ],
+};
+
+export const unconfiguredConfig: AgendaConfig = {
+  mode: 'unconfigured',
+  businessId: 'la-barberia-masaya',
+  businessName: 'La Barbería',
+  timeZone: 'America/Managua',
+  currency: 'NIO',
+  verified: false,
+  version: 1,
+  services: [],
+  professionals: [],
+  slotStepMinutes: 15,
+  minLeadMinutes: 30,
+  maxAdvanceDays: 21,
+  cancellationLeadMinutes: 60,
+};

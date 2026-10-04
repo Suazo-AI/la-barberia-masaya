@@ -1,0 +1,125 @@
+{
+  "sourceCommit": "5fdedba2500cda2227a087f74c57138f37c9d010",
+  "baselineCommit": "0755fce62688e380a737db9e267bad22e35acf25",
+  "stats": {
+    "startTime": "2026-10-03T22:31:03.772Z",
+    "duration": 27697.8,
+    "expected": 7,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "checks": [
+    {
+      "title": "booking keyboard trap, radio arrows, back, reset and Escape restore focus",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 924
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "booking reflow at 320px and 200% text with reduced motion",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1437
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "booking revalidates expired start before completing demo",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 678
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "complete, edit, unavailable days and reopen 390",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 6910
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "accessibility: booking steps 390",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3855
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "complete, edit, unavailable days and reopen 1440",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7574
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "accessibility: booking steps 1440",
+      "ok": true,
+      "outcomes": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3871
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "environment": {
+    "node": "v24.18.0",
+    "playwright": "1.63.0",
+    "browser": "Installed Chrome; see CI for pinned Chromium",
+    "platform": "Windows"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "sourceCommit": "4bc86aa49839eb1f9e644899545fbbdd8493744a",
+  "node": "v24.18.0",
+  "playwright": "1.63.0",
+  "cwd": "repository root",
+  "fullSuite": {
+    "command": "npm run check",
+    "exitCode": 0,
+    "staticPassed": 15,
+    "browserStats": {
+      "startTime": "2026-10-04T00:15:19.393Z",
+      "duration": 71391.402,
+      "expected": 32,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "source": "Working tree before the only final change: a gallery-instructions clarification"
+  },
+  "finalChecks": {
+    "commands": [
+      "npm run lint",
+      "npm run build",
+      "npm test",
+      "npm run check:budgets",
+      "playwright test tests/motion.spec.mjs --grep \"authentic Obsidian interaction\""
+    ],
+    "exitCode": 0,
+    "staticPassed": 15,
+    "browserStats": {
+      "startTime": "2026-10-04T00:20:23.624Z",
+      "duration": 19257.349,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "limits": [
+    "No actual Safari/iOS or screen reader test",
+    "Automated axe results are not full WCAG conformance",
+    "Inherited Lighthouse Chrome ownership/permission check remains unresolved",
+    "Reservation-production facts/agenda remain pending"
+  ]
+}

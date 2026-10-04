@@ -1,0 +1,23 @@
+{
+  "lazyWorkPhotoGzipBytes": 123463,
+  "fullPageAssetGzipBytes": 522238,
+  "fullPageBudget": 563200,
+  "method": "Modeled core assets only, not observed initial requests: hero + local view + fonts + HTML/CSS/JS/favicon. JPGs separately included in full-page total. Browser tests measure actual initial requests.",
+  "node": "v24.18.0",
+  "markupGzipBytes": 10882,
+  "fontGzipBytes": 64465,
+  "largestImageGzipBytes": 223558,
+  "galleryImageGzipBytes": 92302,
+  "modeledCoreAssetGzipBytes": 393420,
+  "markupBudget": 76800,
+  "coreBudget": 409600,
+  "applicationJsBytes": 6093,
+  "applicationJsGzipBytes": 2036,
+  "applicationJsBudget": 6144,
+  "optionalBookingJsBytes": 16484,
+  "optionalBookingJsGzipBytes": 5355,
+  "optionalBookingBudget": 24576,
+  "optionalGalleryJsBytes": 14329,
+  "optionalGalleryJsGzipBytes": 4511,
+  "optionalGalleryBudget": 20480
+}

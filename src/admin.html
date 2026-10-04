@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es-NI">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="description" content="Panel privado de administración de la agenda." />
+    <title>Agenda privada · La Barbería Masaya</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./admin.css" />
+    <script type="module" src="./admin.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#agenda-main">Ir a la agenda</a>
+    <header class="admin-header">
+      <div>
+        <p class="eyebrow">La Barbería · Masaya</p>
+        <h1>Agenda privada</h1>
+      </div>
+      <a class="text-link" href="./">Ver el sitio ↗</a>
+    </header>
+    <main id="agenda-main">
+      <p id="mode-notice" class="mode-notice" hidden></p>
+      <div class="status-row">
+        <p id="agenda-status" role="status" aria-live="polite" aria-atomic="true">
+          Comprobando acceso a la agenda…
+        </p>
+        <button id="reload-agenda" class="button button-secondary" type="button">Actualizar</button>
+      </div>
+      <section id="access-panel" class="access-panel" aria-labelledby="access-title">
+        <h2 id="access-title">Comprobando acceso</h2>
+        <p id="access-description">
+          La agenda y los datos de clientes solo se muestran con autorización del servidor.
+        </p>
+      </section>
+      <div id="admin-workspace" hidden>
+        <section class="schedule-section" aria-labelledby="schedule-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">America/Managua · NIO</p>
+              <h2 id="schedule-title" tabindex="-1">El día en la barbería</h2>
+            </div>
+            <p id="schedule-summary" class="muted"></p>
+          </div>
+          <form id="schedule-filter" class="filter-form">
+            <label>
+              Fecha
+              <input id="schedule-date" name="date" type="date" required />
+            </label>
+            <label>
+              Profesional
+              <select id="schedule-professional" name="professionalId">
+                <option value="">Todos los profesionales</option>
+              </select>
+            </label>
+            <button class="button button-secondary" type="submit">Ver agenda</button>
+          </form>
+          <div id="schedule-content" class="schedule-content" aria-busy="false">
+            <div class="schedule-column">
+              <h3>Citas y entradas sin reserva</h3>
+              <p id="bookings-empty" class="empty-state" hidden>
+                No hay citas para esta selección.
+              </p>
+              <ul id="booking-list" class="entry-list"></ul>
+            </div>
+            <div class="schedule-column">
+              <h3>Bloqueos</h3>
+              <p id="blocks-empty" class="empty-state" hidden>
+                No hay bloqueos para esta selección.
+              </p>
+              <ul id="block-list" class="entry-list"></ul>
+            </div>
+          </div>
+        </section>
+        <div class="entry-forms">
+          <section class="form-panel" aria-labelledby="walkin-title">
+            <p class="eyebrow">Cliente que llega al local</p>
+            <h2 id="walkin-title">Registrar sin reserva</h2>
+            <p class="muted">El servicio y el tiempo se toman de la configuración de la agenda.</p>
+            <form id="walkin-form" class="stacked-form">
+              <label>
+                Servicio
+                <select id="walkin-service" name="serviceId" required></select>
+              </label>
+              <p id="walkin-service-hint" class="field-hint"></p>
+              <label>
+                Profesional
+                <select id="walkin-professional" name="professionalId" required></select>
+              </label>
+              <div class="field-pair">
+                <label>
+                  Fecha de la entrada
+                  <input id="walkin-date" name="date" type="date" required />
+                </label>
+                <label>
+                  Hora de inicio
+                  <input id="walkin-time" name="time" type="time" required />
+                </label>
+              </div>
+              <label>
+                Nombre del cliente (opcional)
+                <input
+                  id="walkin-name"
+                  name="displayName"
+                  type="text"
+                  maxlength="80"
+                  autocomplete="off"
+                />
+              </label>
+              <p class="field-hint">No se solicita correo ni se envían confirmaciones.</p>
+              <p id="walkin-feedback" class="form-feedback" role="alert" hidden></p>
+              <button class="button" type="submit">Registrar entrada</button>
+            </form>
+          </section>
+          <section class="form-panel" aria-labelledby="block-title">
+            <p class="eyebrow">Tiempo no disponible</p>
+            <h2 id="block-title">Bloquear un horario</h2>
+            <p class="muted">
+              El bloqueo comparte la agenda y no puede solaparse con una cita activa.
+            </p>
+            <form id="block-form" class="stacked-form">
+              <label>
+                Profesional del bloqueo
+                <select id="block-professional" name="professionalId" required></select>
+              </label>
+              <label>
+                Fecha del bloqueo
+                <input id="block-date" name="date" type="date" required />
+              </label>
+              <div class="field-pair">
+                <label>
+                  Desde
+                  <input id="block-start" name="start" type="time" required />
+                </label>
+                <label>
+                  Hasta
+                  <input id="block-end" name="end" type="time" required />
+                </label>
+              </div>
+              <label>
+                Motivo del bloqueo
+                <input
+                  id="block-label"
+                  name="label"
+                  type="text"
+                  maxlength="80"
+                  required
+                  autocomplete="off"
+                />
+              </label>
+              <p class="field-hint">Usá un motivo breve sin información sensible.</p>
+              <p id="block-feedback" class="form-feedback" role="alert" hidden></p>
+              <button class="button" type="submit">Crear bloqueo</button>
+            </form>
+          </section>
+        </div>
+        <section class="backup-panel" aria-labelledby="backup-title">
+          <div>
+            <p class="eyebrow">Copia privada</p>
+            <h2 id="backup-title">Respaldo de la agenda</h2>
+            <p class="muted">Incluye datos privados de la agenda. Guardalo en un lugar seguro.</p>
+          </div>
+          <button id="export-agenda" class="button button-secondary" type="button">
+            Descargar respaldo
+          </button>
+        </section>
+      </div>
+    </main>
+    <footer class="admin-footer">
+      <p>Acceso administrativo verificado por el servidor. Zona horaria: America/Managua.</p>
+    </footer>
+    <dialog id="manage-dialog" aria-labelledby="manage-title">
+      <div class="dialog-top">
+        <p class="eyebrow">Gestionar agenda</p>
+        <button id="close-manage" class="button button-secondary" type="button">Cerrar</button>
+      </div>
+      <h2 id="manage-title" tabindex="-1">Gestionar cita</h2>
+      <p id="manage-mode" class="field-hint"></p>
+      <p id="manage-summary" class="muted"></p>
+      <p id="manage-customer"></p>
+      <p id="manage-feedback" class="form-feedback" role="alert" hidden></p>
+      <button id="refresh-manage" class="button button-secondary" type="button" hidden>
+        Actualizar configuración y revisar
+      </button>
+      <form id="reschedule-form" class="stacked-form">
+        <h3>Reprogramar</h3>
+        <label>
+          Nuevo profesional
+          <select id="reschedule-professional" name="professionalId" required></select>
+        </label>
+        <div class="field-pair">
+          <label>
+            Nueva fecha
+            <input id="reschedule-date" name="date" type="date" required />
+          </label>
+          <label>
+            Nueva hora de inicio
+            <input id="reschedule-time" name="time" type="time" required />
+          </label>
+        </div>
+        <p class="field-hint">Si el nuevo horario está ocupado, la cita original se conserva.</p>
+        <button class="button" type="submit">Guardar nuevo horario</button>
+      </form>
+      <div class="cancel-area">
+        <button id="request-cancel" class="button button-secondary" type="button">
+          Cancelar cita
+        </button>
+        <div id="cancel-confirmation" class="cancel-confirmation" hidden>
+          <p id="cancel-question">¿Querés cancelar esta cita y liberar su horario?</p>
+          <div class="action-pair">
+            <button id="confirm-cancel" class="button" type="button">Confirmar cancelación</button>
+            <button id="keep-booking" class="button button-secondary" type="button">
+              Mantener cita
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+  </body>
+</html>

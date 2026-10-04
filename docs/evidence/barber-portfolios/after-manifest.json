@@ -1,0 +1,118 @@
+[
+  {
+    "sourceCommit": "4bc86aa49839eb1f9e644899545fbbdd8493744a",
+    "url": "http://127.0.0.1:4173",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "clock": "2026-10-03T09:00:00-06:00",
+    "browser": "154.0.8037.93",
+    "method": "Actual Chrome screenshots and recorded actions; no synthesized frames",
+    "artifacts": [
+      {
+        "filename": "after-page-390.png",
+        "sha256": "6cc5f9a7582ceeab0cdcaaf05741b92776a3cee8c2f4de6c943933d7c408de4e",
+        "bytes": 865868
+      },
+      {
+        "filename": "after-hero-390.png",
+        "sha256": "6f910c6d358ed7b36e34c9a71086a117784f26c81785006259adaaa21d184553",
+        "bytes": 243861
+      },
+      {
+        "filename": "after-reviews-390.png",
+        "sha256": "af0e8cdffc802d969b16ad61762966d81dad3f441b7189bc9bb7492d38e6813f",
+        "bytes": 435326
+      },
+      {
+        "filename": "after-gallery-review-390.png",
+        "sha256": "4e077897ef480492c6dbd054edf4426fec5ce8705bb9cdd4e41ef67fa9db49b9",
+        "bytes": 17537
+      },
+      {
+        "filename": "after-barbers-390.png",
+        "sha256": "76d59c51a73101e6748d34615b3eedfc7f7032cf39c1900417b0c4ef288332aa",
+        "bytes": 35732
+      },
+      {
+        "filename": "after-portfolio-390.png",
+        "sha256": "bee745c532f46cb7dc61f327d21362576dde1521561ee5caeb3853b2d8b3eaf3",
+        "bytes": 36084
+      },
+      {
+        "filename": "after-barber-selected-390.png",
+        "sha256": "6d650ca575b9734686bd4917e25ad9b61ac1fb23f6e4507a324ad86e0f643091",
+        "bytes": 32556
+      },
+      {
+        "filename": "after-portfolio-return-390.png",
+        "sha256": "eeb0b7472a072c9fd6b89ca1ae3dd848cf645b44dcb0406464ca63d117540170",
+        "bytes": 31408
+      },
+      {
+        "filename": "after-flow-390.webm",
+        "sha256": "798c30d9af3fe961b115f70aba0fe97170823025480fb8bf7c331f69a6f92c5f",
+        "bytes": 995479
+      }
+    ]
+  },
+  {
+    "sourceCommit": "4bc86aa49839eb1f9e644899545fbbdd8493744a",
+    "url": "http://127.0.0.1:4173",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "clock": "2026-10-03T09:00:00-06:00",
+    "browser": "154.0.8037.93",
+    "method": "Actual Chrome screenshots and recorded actions; no synthesized frames",
+    "artifacts": [
+      {
+        "filename": "after-page-1440.png",
+        "sha256": "e99eade9d9e9c91e455e0921c833ce3dce3b58b896615a4cef7b250dc48b62b9",
+        "bytes": 2237059
+      },
+      {
+        "filename": "after-hero-1440.png",
+        "sha256": "2a7aa17d221a37992bd39fd59c774df86e9d561e1a528bc84f05b26e89ca284a",
+        "bytes": 992237
+      },
+      {
+        "filename": "after-reviews-1440.png",
+        "sha256": "1e3f858911a2a9eab29b36bdb118c4ab5b8ea19a23c6dcf470f61fc1d74650e5",
+        "bytes": 609541
+      },
+      {
+        "filename": "after-gallery-review-1440.png",
+        "sha256": "2443b1974160556c985e359b1ecbcdbff4090205c4afe1b1e4b8d61daf4f9ef9",
+        "bytes": 234418
+      },
+      {
+        "filename": "after-barbers-1440.png",
+        "sha256": "aabd8185279b9e00b6fd407b1ddd139c93429a4123082f59ad721eb669ad337f",
+        "bytes": 255203
+      },
+      {
+        "filename": "after-portfolio-1440.png",
+        "sha256": "8441d277258a48d1ab1d9fc17b2efba1b6553c8552d6ecb8690f3eb891e166e0",
+        "bytes": 331657
+      },
+      {
+        "filename": "after-barber-selected-1440.png",
+        "sha256": "86cb1158f7cd86dd651f7cab365f748b5ce5b33dd2dadf39ff44d4aa67f02698",
+        "bytes": 250294
+      },
+      {
+        "filename": "after-portfolio-return-1440.png",
+        "sha256": "360fd1980d8d9e4d75a8cc310706b20f77c3aa7159f4a4ae6f5c4d7b7d77f20a",
+        "bytes": 250341
+      },
+      {
+        "filename": "after-flow-1440.webm",
+        "sha256": "d2c54cd7f07f304d2e6406977efd75a8c4265b2cf551bcf153e27d8e614db917",
+        "bytes": 1451493
+      }
+    ]
+  }
+]

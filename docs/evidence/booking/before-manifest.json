@@ -1,0 +1,48 @@
+{
+  "sourceCommit": "0755fce62688e380a737db9e267bad22e35acf25",
+  "baselineCommit": "0755fce62688e380a737db9e267bad22e35acf25",
+  "runnerCommit": "5fdedba2500cda2227a087f74c57138f37c9d010",
+  "url": "http://127.0.0.1:4174/",
+  "date": "2026-10-03",
+  "timezone": "America/Managua",
+  "clock": "Actual capture clock; baseline has no booking flow",
+  "procedure": "Build pinned real source, wait for local fonts/photos, use Playwright Chrome on actual page. No reconstruction, generation or compositing.",
+  "files": [
+    {
+      "file": "ui-before-390.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real screenshot",
+      "sha256": "9844e62b4ba08544de9ec77b2e6e7d6bc4ecc10bca2071893466f0be407786b1"
+    },
+    {
+      "file": "ui-before-booking-390.webm",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "type": "real Playwright WebM; native recorder may scale viewport",
+      "sha256": "3e4d29c72d765e282e50ea27729713936082b7ad912da258bf46d72bc3e1ff6b"
+    },
+    {
+      "file": "ui-before-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real screenshot",
+      "sha256": "376f0b3c9573c8d8d81b2e29370bfe4d908f38e80ff620d3416faf5ade4db124"
+    },
+    {
+      "file": "ui-before-booking-1440.webm",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "type": "real Playwright WebM; native recorder may scale viewport",
+      "sha256": "b126111cd4d5beffc3b004562c2668ed7e09e00fb5729444c20fbb2624570afe"
+    }
+  ]
+}

@@ -1,0 +1,319 @@
+{
+  "sourceCommit": "f321ab9c0db256fed92682ccad08ae15b552a628",
+  "baselineCommit": "181bc7e1f379d195aea0c06e6d56e2ac75d5886e",
+  "capturedAt": "2026-10-04T02:24:46.185Z",
+  "before": "No administrator UI existed at 181bc7e1f379d195aea0c06e6d56e2ac75d5886e. No fabricated before screenshots or video.",
+  "sourceVerification": "All four owned source files matched git show exact source commit. Admin HTML/CSS/JS matched dist and HTTP served bytes before capture.",
+  "origin": "http://127.0.0.1:4191",
+  "route": "/admin.html",
+  "mode": "fixture",
+  "serverClockUtc": "2026-10-04T15:00:00Z",
+  "timezone": "America/Managua",
+  "currency": "NIO",
+  "browser": "154.0.8037.93",
+  "fixtureData": "Only synthetic local fixtures and names explicitly labelled Cliente ficticio. No real client data, messages, email, payments or backup download.",
+  "procedure": "Separate fixture server 4191. Same date 2026-10-16, separate fixture professionals A/B for 390/1440. Fill and persist walk-in, create block, record overview and manager, attempt conflicting move and verify preserved original/version through API, move to free slot, explicitly cancel, release block. Actual browser actions and actual SQL-backed responses; no interception, simulated server success, reconstructed images or generated frames.",
+  "counts": {
+    "screenshots": 10,
+    "videos": 2
+  },
+  "source": [
+    {
+      "path": "src/admin.html",
+      "bytes": 9341,
+      "sha256": "07806159cec72573d44aaf9151a79c06ba2248603aff593ce1a29205146e7d48",
+      "committedBytesVerified": true
+    },
+    {
+      "path": "src/admin.css",
+      "bytes": 6353,
+      "sha256": "4bd28a599f5744060b3b2b85d9817c91ad3e69bdc35f04c1a02f3a57b8178c14",
+      "committedBytesVerified": true
+    },
+    {
+      "path": "src/admin.js",
+      "bytes": 34276,
+      "sha256": "37e77792c8e0d790496479ff26a4a96f459dbf95155aa33e7f5c91fd0fe73b44",
+      "committedBytesVerified": true
+    },
+    {
+      "path": "agenda/tests/admin-browser.spec.mjs",
+      "bytes": 30366,
+      "sha256": "58feda285ae814e898c91ab56a828593e8c93d8710f4c2dbc472cb4874bac5cd",
+      "committedBytesVerified": true
+    }
+  ],
+  "flows": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "date": "2026-10-16",
+      "professionalId": "a",
+      "mode": "fixture",
+      "notifications": "disabled",
+      "results": {
+        "create": 201,
+        "block": 201,
+        "conflictingMove": 409,
+        "originalPreserved": true,
+        "move": 200,
+        "movedVersion": 2,
+        "cancel": 200,
+        "cancelledVersion": 3,
+        "unblock": 200
+      },
+      "javascriptErrors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "date": "2026-10-16",
+      "professionalId": "b",
+      "mode": "fixture",
+      "notifications": "disabled",
+      "results": {
+        "create": 201,
+        "block": 201,
+        "conflictingMove": 409,
+        "originalPreserved": true,
+        "move": 200,
+        "movedVersion": 2,
+        "cancel": 200,
+        "cancelledVersion": 3,
+        "unblock": 200
+      },
+      "javascriptErrors": []
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "admin-forms-390.png",
+      "type": "real-browser-screenshot",
+      "role": "Walk-in form filled with explicitly fictional data",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 36310,
+      "sha256": "226feee197132a35cc1b9670745f2e1c73306bcd086d4de14d7c17933963f9ca",
+      "actualImagePixels": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "admin-overview-390.png",
+      "type": "real-browser-screenshot",
+      "role": "Persisted fictional walk-in and block in dated/professional schedule",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 146973,
+      "sha256": "8f39203c82e09c8ebcbaaa0ee2a42d65a3a08638ae281a2e3ade2f713df91798",
+      "actualImagePixels": {
+        "width": 390,
+        "height": 3619
+      }
+    },
+    {
+      "path": "admin-manage-dialog-390.png",
+      "type": "real-browser-screenshot",
+      "role": "Native manage dialog with fixture disclosure and original snapshot",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 39417,
+      "sha256": "25f87efba5f6ea2e015ec885c99ccb007b941380436247ff475e16a2f9e246ab",
+      "actualImagePixels": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "admin-conflict-390.png",
+      "type": "real-browser-screenshot",
+      "role": "Real SQL overlap conflict with original booking retained",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 41991,
+      "sha256": "bc43d6b2d5271a9e42ffd6689eb9a4232bc7f59561b8a7b2485f6bde83a3812f",
+      "actualImagePixels": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "admin-cancelled-390.png",
+      "type": "real-browser-screenshot",
+      "role": "Original fictional walk-in reprogrammed then cancelled, block still visible",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 145554,
+      "sha256": "a944e4f9a3a130c1e13e27d870649efb27b7789714e244754baf2115517b4c17",
+      "actualImagePixels": {
+        "width": 390,
+        "height": 3565
+      }
+    },
+    {
+      "path": "admin-persisted-walkin-block-reschedule-cancel-390.webm",
+      "type": "real-browser-video",
+      "role": "Actual persisted walk-in, block, 409 rollback, successful move, explicit cancel and block release",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 907052,
+      "sha256": "27de332d0e2b646311f65d38ed28cf56cbab7bf1b2b414c3836eabe46727b0ca"
+    },
+    {
+      "path": "admin-forms-1440.png",
+      "type": "real-browser-screenshot",
+      "role": "Walk-in form filled with explicitly fictional data",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 82928,
+      "sha256": "b78e7068eda29263c7f2237bee683f3ddc8944c104d1dd3092e1c0351e027c36",
+      "actualImagePixels": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "path": "admin-overview-1440.png",
+      "type": "real-browser-screenshot",
+      "role": "Persisted fictional walk-in and block in dated/professional schedule",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 150028,
+      "sha256": "1f57ce8b328c55fe29a94cf258d2fb7cbb2add5a86e97e95d028d3b79c2594f6",
+      "actualImagePixels": {
+        "width": 1440,
+        "height": 1984
+      }
+    },
+    {
+      "path": "admin-manage-dialog-1440.png",
+      "type": "real-browser-screenshot",
+      "role": "Native manage dialog with fixture disclosure and original snapshot",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 90015,
+      "sha256": "3c0a41eead97ae7261f07c12dc9ed971d26a4a16e47a074b21602c509ec33a03",
+      "actualImagePixels": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "path": "admin-conflict-1440.png",
+      "type": "real-browser-screenshot",
+      "role": "Real SQL overlap conflict with original booking retained",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 94811,
+      "sha256": "c137e01a408dd814b03d25089b2ea6e4d028268fac9a2266b5da77a890fa1a27",
+      "actualImagePixels": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "path": "admin-cancelled-1440.png",
+      "type": "real-browser-screenshot",
+      "role": "Original fictional walk-in reprogrammed then cancelled, block still visible",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 148144,
+      "sha256": "cffe03b563b08702ea12dfa546f726ae477610203ec53bad192d04d3f7ad0567",
+      "actualImagePixels": {
+        "width": 1440,
+        "height": 1929
+      }
+    },
+    {
+      "path": "admin-persisted-walkin-block-reschedule-cancel-1440.webm",
+      "type": "real-browser-video",
+      "role": "Actual persisted walk-in, block, 409 rollback, successful move, explicit cancel and block release",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 1191289,
+      "sha256": "b32e214e7830c39adb52eb6bb144fc59726fb78a639439f3279cd72be50e9530"
+    }
+  ],
+  "mediaVerification": {
+    "verifiedAt": "2026-10-04T02:31:28.647Z",
+    "artifactsHashAndSizeVerified": 12,
+    "method": "Full recording decoded and re-encoded to a private temporary verification-only WebM because bundled FFmpeg has no null muxer. Original recordings remain unchanged; temporary outputs were removed.",
+    "videos": [
+      {
+        "path": "admin-persisted-walkin-block-reschedule-cancel-390.webm",
+        "decodedEveryFrame": true,
+        "decodeExitCode": 0,
+        "decodedFrames": 224,
+        "actualVideoPixels": {
+          "width": 390,
+          "height": 844
+        },
+        "durationSeconds": 8.96,
+        "originalBytesUnchanged": true,
+        "temporaryVerificationFileRemoved": true
+      },
+      {
+        "path": "admin-persisted-walkin-block-reschedule-cancel-1440.webm",
+        "decodedEveryFrame": true,
+        "decodeExitCode": 0,
+        "decodedFrames": 234,
+        "actualVideoPixels": {
+          "width": 1440,
+          "height": 900
+        },
+        "durationSeconds": 9.36,
+        "originalBytesUnchanged": true,
+        "temporaryVerificationFileRemoved": true
+      }
+    ]
+  },
+  "videoVerification": {
+    "method": "Independent reviewer checked original/raw WebM byte identity and Chrome midpoint decode.",
+    "sourceCommit": "f321ab9c0db256fed92682ccad08ae15b552a628",
+    "videos": [
+      {
+        "path": "admin-persisted-walkin-block-reschedule-cancel-390.webm",
+        "width": 390,
+        "height": 844,
+        "durationSeconds": 8.96,
+        "decodedMidpoint": true
+      },
+      {
+        "path": "admin-persisted-walkin-block-reschedule-cancel-1440.webm",
+        "width": 1440,
+        "height": 900,
+        "durationSeconds": 9.36,
+        "decodedMidpoint": true
+      }
+    ]
+  }
+}
