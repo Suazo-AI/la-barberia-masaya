@@ -8,6 +8,7 @@ export interface AgendaWorkerOptions<Environment extends object> {
   createService(environment: Environment): Promise<AgendaService>;
   allowedOrigins(environment: Environment): readonly string[];
   adminSubjects(environment: Environment): readonly string[];
+  barberSubjects?(environment: Environment): Readonly<Record<string, string>>;
   identityResolver?(environment: Environment): TrustedIdentityResolver | undefined;
   createRateLimiter?(environment: Environment): MutationRateLimiter | Promise<MutationRateLimiter>;
   bodyLimitBytes?: number;
@@ -42,6 +43,7 @@ export function createAgendaWorker<Environment extends object>(
       mode,
       allowedOrigins: options.allowedOrigins(environment),
       adminSubjects,
+      barberSubjects: options.barberSubjects?.(environment),
       identityResolver,
       rateLimiter,
       bodyLimitBytes: options.bodyLimitBytes,

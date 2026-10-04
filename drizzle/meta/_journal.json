@@ -15,6 +15,20 @@
       "when": 1791082136572,
       "tag": "0001_agenda_overlap_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791086137383,
+      "tag": "0002_staff_absences",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791086138052,
+      "tag": "0003_staff_absence_guards",
+      "breakpoints": true
     }
   ]
 }

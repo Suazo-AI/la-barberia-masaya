@@ -20,6 +20,7 @@ jobs:
       # Public CI may run only after these assets have explicit publication clearance.
       HERO_ASSET_DIR: src/assets/images
       UI_BASELINE_URL: http://127.0.0.1:4174
+      AGENDA_BASELINE_URL: http://127.0.0.1:4185
       SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -41,6 +42,15 @@ jobs:
       - name: Build pinned real baseline
         run: node scripts/build.mjs
         working-directory: .baseline-source
+      - name: Checkout real pre-role agenda for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: b3abca5b67ac2de7247c3f2d37801467c525473b
+          path: .private-evidence/staff-role-baseline
+      - name: Build pinned agenda baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/staff-role-baseline
       - run: npm run check
       - run: npm run test:performance
       - name: Upload test reports for this commit
@@ -61,6 +71,7 @@ jobs:
             .private-evidence/ui-*.json
             test-results/**/*.png
             test-results/**/*.webm
+            test-results/**/staff-roles-metadata.json
             test-results/**/error-context.md
           include-hidden-files: true
           if-no-files-found: error

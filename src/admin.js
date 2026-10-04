@@ -11,6 +11,8 @@ const reloadGuard = mutationReloadGuard('admin');
 let recoveryBlocked = reloadGuard.status() !== 'clear';
 const state = {
   catalog: null,
+  session: null,
+  absences: [],
   bookings: [],
   blocks: [],
   managed: null,
@@ -41,7 +43,24 @@ const errorMessages = {
   VALIDATION_ERROR: 'Revisá los campos y el horario de la acción.',
   BOOKING_NOT_FOUND: 'Esta cita ya no está disponible. Actualizá la agenda.',
   BLOCK_NOT_FOUND: 'Este bloqueo ya no está disponible. Actualizá la agenda.',
+  ABSENCE_NOT_FOUND: 'Esta ausencia ya no está disponible. Actualizá la agenda.',
+  ABSENCE_CONFLICT: 'Ya hay una ausencia en ese período. Revisá las ausencias de la agenda.',
 };
+
+function canManageShop() {
+  return state.session?.role === 'owner' && state.session.capabilities.manageShop === true;
+}
+
+function canReportAbsence() {
+  return state.session?.capabilities.reportAbsence === true;
+}
+
+function canManageEntry(kind, entry) {
+  return kind === 'absence'
+    ? canReportAbsence() &&
+        (canManageShop() || entry.professionalId === state.session?.professionalId)
+    : canManageShop();
+}
 
 function safeMessage(error) {
   if (errorMessages[error.code]) return errorMessages[error.code];
@@ -68,11 +87,18 @@ function setLocked(error) {
   state.catalogController?.abort();
   state.readController?.abort();
   state.catalog = null;
+  state.session = null;
+  state.absences = [];
   state.bookings = [];
   state.blocks = [];
   state.managed = null;
   byId('booking-list').replaceChildren();
   byId('block-list').replaceChildren();
+  byId('absence-list').replaceChildren();
+  byId('absence-form').reset();
+  byId('role-label').textContent = '';
+  byId('role-title').textContent = '';
+  byId('role-description').textContent = '';
   byId('walkin-form').reset();
   byId('block-form').reset();
   byId('reschedule-form').reset();
@@ -175,28 +201,43 @@ function restorePendingFields(operation) {
             'block-end': formatTime(body.endMinute),
             'block-label': body.label,
           }
-        : operation.formId === 'reschedule-form' &&
-            operation.path.includes(
-              `/bookings/${encodeURIComponent(state.managed?.entry.id || '')}/`,
-            )
+        : operation.formId === 'absence-form'
           ? {
-              'reschedule-professional': body.professionalId,
-              'reschedule-date': body.date,
-              'reschedule-time': formatTime(body.startMinute),
+              'absence-professional': body.professionalId,
+              'absence-start-date': body.startDate,
+              'absence-start-time': formatTime(body.startMinute),
+              'absence-end-date': body.endDate,
+              'absence-end-time': formatTime(body.endMinute),
+              'absence-reason': body.reason || '',
             }
-          : {};
+          : operation.formId === 'reschedule-form' &&
+              operation.path.includes(
+                `/bookings/${encodeURIComponent(state.managed?.entry.id || '')}/`,
+              )
+            ? {
+                'reschedule-professional': body.professionalId,
+                'reschedule-date': body.date,
+                'reschedule-time': formatTime(body.startMinute),
+              }
+            : {};
   for (const [id, value] of Object.entries(values)) byId(id).value = value;
 }
 
 function renderPendingOperation() {
   const operation = state.operation;
   const blocked = Boolean(operation) || recoveryBlocked;
-  for (const id of ['walkin-form', 'block-form', 'reschedule-form']) {
+  for (const id of ['walkin-form', 'block-form', 'reschedule-form', 'absence-form']) {
     for (const control of byId(id).querySelectorAll('input, select, button[type="submit"]'))
-      control.disabled = blocked;
+      control.disabled =
+        blocked ||
+        (id === 'absence-form'
+          ? !canReportAbsence() || (control.id === 'absence-professional' && !canManageShop())
+          : !canManageShop());
   }
   for (const id of ['request-cancel', 'confirm-cancel', 'refresh-manage'])
-    byId(id).disabled = blocked;
+    byId(id).disabled =
+      blocked || !state.managed || !canManageEntry(state.managed.kind, state.managed.entry);
+  byId('export-agenda').disabled = blocked || !canManageShop();
   for (const id of ['pending-operation', 'manage-pending-operation']) {
     const panel = byId(id);
     panel.hidden = !blocked;
@@ -238,8 +279,45 @@ function createOperation(path, body, formId = null) {
   return operation;
 }
 
+function isConfirmedAbsence(operation, entry, body) {
+  const revoked = operation.path.match(/^\/admin\/absences\/([^/]+)\/revoke$/);
+  if (
+    !entry ||
+    typeof entry.id !== 'string' ||
+    !entry.id ||
+    entry.status !== (revoked ? 'revoked' : 'active') ||
+    !Number.isInteger(entry.version) ||
+    entry.version !== (revoked ? body.expectedVersion + 1 : 1) ||
+    (revoked && entry.id !== decodeURIComponent(revoked[1])) ||
+    typeof entry.professionalId !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(entry.startDate) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(entry.endDate) ||
+    !Number.isInteger(entry.startMinute) ||
+    entry.startMinute < 0 ||
+    entry.startMinute >= 1440 ||
+    !Number.isInteger(entry.endMinute) ||
+    entry.endMinute < 0 ||
+    entry.endMinute > 1440 ||
+    entry.endDate < entry.startDate ||
+    (entry.endDate === entry.startDate && entry.endMinute <= entry.startMinute) ||
+    entry.timeZone !== 'America/Managua' ||
+    !Array.isArray(entry.affectedBookingIds) ||
+    !entry.affectedBookingIds.every((id) => typeof id === 'string') ||
+    !['none', 'requires-resolution'].includes(entry.resolution)
+  )
+    return false;
+  return (
+    Boolean(revoked) ||
+    ['professionalId', 'startDate', 'startMinute', 'endDate', 'endMinute'].every(
+      (key) => entry[key] === body[key],
+    )
+  );
+}
+
 function isConfirmedResult(operation, result) {
   const body = JSON.parse(operation.serialized);
+  if (operation.path === '/admin/absences' || operation.path.startsWith('/admin/absences/'))
+    return isConfirmedAbsence(operation, result, body);
   const block = operation.path === '/admin/blocks' || operation.path.startsWith('/admin/blocks/');
   const entry = block ? result : result?.booking;
   const action = operation.path.match(
@@ -375,13 +453,26 @@ function validFormDate(date) {
 
 function configureFormDates({ preserveValues = false } = {}) {
   const selectedDate = validFormDate(byId('schedule-date').value);
-  for (const id of ['walkin-date', 'block-date', 'reschedule-date']) {
+  for (const id of [
+    'walkin-date',
+    'block-date',
+    'reschedule-date',
+    'absence-start-date',
+    'absence-end-date',
+  ]) {
     const input = byId(id);
     input.min = state.catalog.dateRange.min;
     input.max = state.catalog.dateRange.max;
     input.value = preserveValues && input.value ? validFormDate(input.value) : selectedDate;
   }
-  for (const id of ['walkin-time', 'block-start', 'block-end']) byId(id).step = '60';
+  for (const id of [
+    'walkin-time',
+    'block-start',
+    'block-end',
+    'absence-start-time',
+    'absence-end-time',
+  ])
+    byId(id).step = '60';
   byId('reschedule-time').step = String(state.catalog.slotStepMinutes * 60);
 }
 
@@ -402,14 +493,37 @@ function updateWalkinService() {
 
 function configureWorkspace() {
   const { catalog } = state;
-  const professionalIds = catalog.professionals.map((professional) => professional.id);
+  const owner = canManageShop();
+  const professionals = owner
+    ? catalog.professionals
+    : catalog.professionals.filter(
+        (professional) => professional.id === state.session.professionalId,
+      );
+  const professionalIds = professionals.map((professional) => professional.id);
+  for (const panel of document.querySelectorAll('[data-owner-only]')) panel.hidden = !owner;
+  byId('absence-panel').hidden = !canReportAbsence();
+  byId('report-absence-link').hidden = !canReportAbsence();
+  byId('role-label').textContent = owner ? 'Acceso de propietario' : 'Acceso de barbero';
+  byId('role-title').textContent = owner
+    ? 'Tu equipo y su agenda'
+    : professionals[0]?.name || 'Mi agenda';
+  byId('role-description').textContent = owner
+    ? 'Gestioná todas las citas y las ausencias temporales del equipo.'
+    : 'Ves únicamente tu agenda. Podés reportar y retirar tus ausencias; el propietario gestiona los cambios en las citas.';
+  byId('schedule-title').textContent = owner ? 'El día en la barbería' : 'Mi agenda del día';
   const filter = byId('schedule-professional');
   const selectedId = filter.value;
   filter.replaceChildren(
-    option('', 'Todos los profesionales'),
-    ...catalog.professionals.map((professional) => option(professional.id, professional.name)),
+    ...(owner ? [option('', 'Todos los profesionales')] : []),
+    ...professionals.map((professional) => option(professional.id, professional.name)),
   );
   if (professionalIds.includes(selectedId)) filter.value = selectedId;
+  filter.disabled = !owner;
+  setProfessionalOptions(
+    byId('absence-professional'),
+    professionalIds,
+    byId('absence-professional').value,
+  );
   const serviceSelect = byId('walkin-service');
   const selectedService = serviceSelect.value;
   serviceSelect.replaceChildren(
@@ -467,7 +581,21 @@ function renderBookings() {
           'entry-status',
         ),
       );
-      if (booking.status === 'confirmed') {
+      if (
+        booking.status === 'confirmed' &&
+        state.absences.some(
+          (absence) =>
+            absence.status === 'active' && absence.affectedBookingIds.includes(booking.id),
+        )
+      ) {
+        article.append(
+          paragraph(
+            'Coincidía con una ausencia al reportarla. Revisá el horario actual; la cita sigue confirmada.',
+            'resolution-notice',
+          ),
+        );
+      }
+      if (booking.status === 'confirmed' && canManageShop()) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'button button-secondary';
@@ -508,7 +636,7 @@ function renderBlocks() {
           'entry-status',
         ),
       );
-      if (block.status === 'active') {
+      if (block.status === 'active' && canManageShop()) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'button button-secondary';
@@ -527,6 +655,66 @@ function renderBlocks() {
   byId('blocks-empty').hidden = elements.length !== 0;
 }
 
+function absenceRange(entry) {
+  return `${entry.startDate} ${formatTime(entry.startMinute)} → ${entry.endDate} ${formatTime(entry.endMinute)} · America/Managua`;
+}
+
+function renderAbsences() {
+  const elements = state.absences
+    .toSorted(
+      (left, right) =>
+        left.startDate.localeCompare(right.startDate) || left.startMinute - right.startMinute,
+    )
+    .map((absence) => {
+      const item = document.createElement('li');
+      const article = document.createElement('article');
+      article.className = `entry${absence.status === 'revoked' ? ' entry-cancelled' : ''}`;
+      const title = document.createElement('h4');
+      const professional = state.catalog.professionals.find(
+        (entry) => entry.id === absence.professionalId,
+      );
+      title.textContent = professional?.name || 'Profesional';
+      article.append(
+        title,
+        paragraph(absenceRange(absence)),
+        paragraph(
+          absence.status === 'active'
+            ? 'Ausencia activa · Sin nuevas citas en este período'
+            : 'Ausencia retirada',
+          'entry-status',
+        ),
+      );
+      if (absence.reason) article.append(paragraph(`Motivo: ${absence.reason}`));
+      if (absence.status === 'revoked')
+        article.append(
+          paragraph('Retirar la ausencia no cambia las citas existentes.', 'field-hint'),
+        );
+      if (absence.status === 'active' && absence.resolution === 'requires-resolution')
+        article.append(
+          paragraph(
+            `${absence.affectedBookingIds.length} cita(s) coincidían al reportar y se señalaron para revisión del propietario. Revisá su estado actual; no se modificaron automáticamente.`,
+            'resolution-notice',
+          ),
+        );
+      if (absence.status === 'active' && canManageEntry('absence', absence)) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'button button-secondary';
+        button.textContent = 'Retirar ausencia';
+        button.setAttribute(
+          'aria-label',
+          `Retirar ausencia de ${professional?.name || 'profesional'}, ${absence.startDate}`,
+        );
+        button.addEventListener('click', () => openManager('absence', absence, button));
+        article.append(button);
+      }
+      item.append(article);
+      return item;
+    });
+  byId('absence-list').replaceChildren(...elements);
+  byId('absences-empty').hidden = elements.length !== 0;
+}
+
 async function loadSchedule({ announceResult = true } = {}) {
   if (!state.catalog) return false;
   state.readController?.abort();
@@ -543,16 +731,24 @@ async function loadSchedule({ announceResult = true } = {}) {
     query.set('professionalId', byId('schedule-professional').value);
   try {
     const payload = await request(`/admin/schedule?${query}`, { signal: controller.signal });
-    if (!Array.isArray(payload.bookings) || !Array.isArray(payload.blocks))
+    if (
+      !Array.isArray(payload.bookings) ||
+      !Array.isArray(payload.blocks) ||
+      !Array.isArray(payload.absences)
+    )
       throw new ApiError(500, 'INVALID_RESPONSE');
     if (controller.signal.aborted || !state.catalog) return false;
     state.bookings = payload.bookings;
     state.blocks = payload.blocks;
+    state.absences = payload.absences;
+    renderAbsences();
     renderBookings();
     renderBlocks();
     const active = state.bookings.filter((booking) => booking.status === 'confirmed').length;
     const blocks = state.blocks.filter((block) => block.status === 'active').length;
-    byId('schedule-summary').textContent = `${active} citas activas · ${blocks} bloqueos activos`;
+    const absences = state.absences.filter((absence) => absence.status === 'active').length;
+    byId('schedule-summary').textContent =
+      `${active} citas activas · ${blocks} bloqueos · ${absences} ausencias`;
     byId('access-panel').hidden = true;
     byId('admin-workspace').hidden = false;
     byId('mode-notice').hidden = false;
@@ -580,6 +776,15 @@ async function bootstrap() {
   byId('reload-agenda').disabled = true;
   announce('Comprobando acceso y actualizando agenda…');
   try {
+    const session = await request('/admin/session', { signal: controller.signal });
+    if (
+      !['owner', 'barber'].includes(session.role) ||
+      typeof session.capabilities?.manageShop !== 'boolean' ||
+      typeof session.capabilities?.reportAbsence !== 'boolean' ||
+      (session.role === 'barber' && (!session.professionalId || session.capabilities.manageShop)) ||
+      (session.role === 'owner' && !session.capabilities.manageShop)
+    )
+      throw new ApiError(403, 'INVALID_SESSION');
     const catalog = await request('/catalog', { signal: controller.signal });
     if (
       !['fixture', 'production'].includes(catalog.mode) ||
@@ -594,6 +799,12 @@ async function bootstrap() {
     )
       throw new ApiError(503, 'CONFIGURATION_REQUIRED');
     if (controller.signal.aborted) return;
+    if (
+      session.role === 'barber' &&
+      !catalog.professionals.some((professional) => professional.id === session.professionalId)
+    )
+      throw new ApiError(403, 'INVALID_SESSION');
+    state.session = session;
     state.catalog = catalog;
     configureWorkspace();
     await loadSchedule();
@@ -654,34 +865,58 @@ function savedMessage(action) {
 }
 
 function openManager(kind, entry, opener) {
+  if (!state.catalog || !canManageEntry(kind, entry)) return;
   state.managed = { kind, entry };
   state.opener = opener;
   feedback('manage-feedback', '');
   byId('refresh-manage').hidden = true;
   byId('cancel-confirmation').hidden = true;
   byId('request-cancel').hidden = false;
-  byId('reschedule-form').hidden = kind === 'block';
-  byId('manage-title').textContent = kind === 'block' ? 'Quitar bloqueo' : 'Gestionar cita';
+  byId('reschedule-form').hidden = kind !== 'booking';
+  byId('manage-title').textContent =
+    kind === 'absence'
+      ? 'Retirar ausencia temporal'
+      : kind === 'block'
+        ? 'Quitar bloqueo'
+        : 'Gestionar cita';
   byId('manage-mode').textContent =
     state.catalog.mode === 'fixture'
       ? 'PRUEBA LOCAL · Datos y reservas ficticios. No se envían correos ni mensajes.'
       : 'El envío de correos y mensajes está desactivado.';
   byId('manage-summary').textContent =
-    `${entry.date} · ${formatTime(entry.startMinute)}–${formatTime(entry.endMinute)} · ` +
-    (kind === 'booking'
-      ? `${entry.professionalName} · ${entry.serviceName} · ${formatMoney(entry.priceMinorUnits)}`
-      : entry.label);
+    kind === 'absence'
+      ? absenceRange(entry)
+      : `${entry.date} · ${formatTime(entry.startMinute)}–${formatTime(entry.endMinute)} · ` +
+        (kind === 'booking'
+          ? `${entry.professionalName} · ${entry.serviceName} · ${formatMoney(entry.priceMinorUnits)}`
+          : entry.label);
   byId('manage-customer').textContent =
     kind === 'booking' && entry.customerDisplayName ? `Cliente: ${entry.customerDisplayName}` : '';
   byId('manage-customer').hidden = !byId('manage-customer').textContent;
-  byId('request-cancel').textContent = kind === 'block' ? 'Quitar este bloqueo' : 'Cancelar cita';
+  byId('request-cancel').textContent =
+    kind === 'absence'
+      ? 'Retirar esta ausencia'
+      : kind === 'block'
+        ? 'Quitar este bloqueo'
+        : 'Cancelar cita';
   byId('cancel-question').textContent =
-    kind === 'block'
-      ? '¿Querés retirar este bloqueo y liberar su horario?'
-      : '¿Querés cancelar esta cita y liberar su horario?';
+    kind === 'absence'
+      ? '¿Querés retirar esta ausencia y volver a ofrecer el horario? Las citas existentes, tu cuenta y tu perfil se conservan.'
+      : kind === 'block'
+        ? '¿Querés retirar este bloqueo y liberar su horario?'
+        : '¿Querés cancelar esta cita y liberar su horario?';
   byId('confirm-cancel').textContent =
-    kind === 'block' ? 'Confirmar retiro del bloqueo' : 'Confirmar cancelación';
-  byId('keep-booking').textContent = kind === 'block' ? 'Mantener bloqueo' : 'Mantener cita';
+    kind === 'absence'
+      ? 'Confirmar retiro de ausencia'
+      : kind === 'block'
+        ? 'Confirmar retiro del bloqueo'
+        : 'Confirmar cancelación';
+  byId('keep-booking').textContent =
+    kind === 'absence'
+      ? 'Mantener ausencia'
+      : kind === 'block'
+        ? 'Mantener bloqueo'
+        : 'Mantener cita';
   if (kind === 'booking') {
     const service = state.catalog.services.find((candidate) => candidate.id === entry.serviceId);
     setProfessionalOptions(
@@ -710,7 +945,14 @@ byId('walkin-service').addEventListener('change', updateWalkinService);
 byId('walkin-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (recoveryBlocked || state.operation || !form.reportValidity() || !state.catalog) return;
+  if (
+    recoveryBlocked ||
+    state.operation ||
+    !canManageShop() ||
+    !form.reportValidity() ||
+    !state.catalog
+  )
+    return;
   const startMinute = parseTime(byId('walkin-time').value);
   if (!Number.isInteger(startMinute))
     return feedback('walkin-feedback', 'Elegí una hora de inicio válida.');
@@ -739,7 +981,14 @@ byId('walkin-form').addEventListener('submit', (event) => {
 byId('block-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  if (recoveryBlocked || state.operation || !form.reportValidity() || !state.catalog) return;
+  if (
+    recoveryBlocked ||
+    state.operation ||
+    !canManageShop() ||
+    !form.reportValidity() ||
+    !state.catalog
+  )
+    return;
   const startMinute = parseTime(byId('block-start').value);
   const endMinute = parseTime(byId('block-end').value);
   if (!Number.isInteger(startMinute) || !Number.isInteger(endMinute) || endMinute <= startMinute) {
@@ -768,6 +1017,65 @@ byId('block-form').addEventListener('submit', (event) => {
   );
 });
 
+byId('absence-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (
+    recoveryBlocked ||
+    state.operation ||
+    !state.catalog ||
+    !canReportAbsence() ||
+    !form.reportValidity()
+  )
+    return;
+  const startMinute = parseTime(byId('absence-start-time').value);
+  const endMinute = parseTime(byId('absence-end-time').value);
+  const startDate = byId('absence-start-date').value;
+  const endDate = byId('absence-end-date').value;
+  if (
+    !Number.isInteger(startMinute) ||
+    !Number.isInteger(endMinute) ||
+    endDate < startDate ||
+    (endDate === startDate && endMinute <= startMinute)
+  )
+    return feedback(
+      'absence-feedback',
+      'El fin de la ausencia debe ser posterior al inicio. Revisá ambas fechas y horas.',
+    );
+  const reason = byId('absence-reason').value.trim();
+  const body = {
+    configVersion: state.catalog.configVersion,
+    professionalId: canManageShop()
+      ? byId('absence-professional').value
+      : state.session.professionalId,
+    startDate,
+    startMinute,
+    endDate,
+    endMinute,
+    ...(reason ? { reason } : {}),
+  };
+  void formMutation(
+    form,
+    'absence-feedback',
+    '/admin/absences',
+    body,
+    savedMessage('Ausencia guardada; las citas existentes se conservan'),
+    (absence) => {
+      // Show the start day so even a future or multi-day report remains visible.
+      byId('schedule-date').value = absence.startDate;
+      if (canManageShop()) byId('schedule-professional').value = absence.professionalId;
+      for (const id of ['absence-start-time', 'absence-end-time', 'absence-reason'])
+        byId(id).value = '';
+      feedback(
+        'absence-feedback',
+        absence.resolution === 'requires-resolution'
+          ? 'Ausencia guardada. Hay citas coincidentes pendientes de resolución por el propietario; siguen confirmadas.'
+          : 'Ausencia guardada. No hay citas coincidentes; no se aceptarán nuevas citas en ese período.',
+      );
+    },
+  );
+});
+
 byId('reschedule-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -776,6 +1084,7 @@ byId('reschedule-form').addEventListener('submit', (event) => {
     state.operation ||
     !form.reportValidity() ||
     !state.catalog ||
+    !canManageShop() ||
     state.managed?.kind !== 'booking'
   )
     return;
@@ -873,15 +1182,22 @@ byId('confirm-cancel').addEventListener('click', async () => {
     recoveryBlocked ||
     !state.catalog ||
     !state.managed ||
+    !canManageEntry(state.managed.kind, state.managed.entry) ||
     state.operation ||
     byId('confirm-cancel').disabled
   )
     return;
   const managed = state.managed;
   const { kind, entry } = managed;
-  const message = savedMessage(kind === 'block' ? 'Bloqueo retirado' : 'Cita cancelada');
+  const message = savedMessage(
+    kind === 'absence'
+      ? 'Ausencia retirada; las citas existentes se conservan'
+      : kind === 'block'
+        ? 'Bloqueo retirado'
+        : 'Cita cancelada',
+  );
   const operation = createOperation(
-    `/admin/${kind === 'block' ? 'blocks' : 'bookings'}/${encodeURIComponent(entry.id)}/cancel`,
+    `/admin/${kind === 'absence' ? 'absences' : kind === 'block' ? 'blocks' : 'bookings'}/${encodeURIComponent(entry.id)}/${kind === 'absence' ? 'revoke' : 'cancel'}`,
     { configVersion: state.catalog.configVersion, expectedVersion: entry.version },
   );
   if (!operation) return;
@@ -913,13 +1229,13 @@ byId('confirm-cancel').addEventListener('click', async () => {
 });
 
 byId('export-agenda').addEventListener('click', async () => {
-  if (!state.catalog || byId('export-agenda').disabled) return;
+  if (!state.catalog || !canManageShop() || byId('export-agenda').disabled) return;
   byId('export-agenda').disabled = true;
   try {
     const backup = await request('/admin/export');
     if (
       backup.format !== 'portable-agenda' ||
-      backup.version !== 1 ||
+      backup.version !== 2 ||
       !Array.isArray(backup.tables)
     ) {
       throw new ApiError(500, 'INVALID_BACKUP');
@@ -928,7 +1244,7 @@ byId('export-agenda').addEventListener('click', async () => {
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = objectUrl;
-    link.download = `agenda-backup-v1-${localDate()}.json`;
+    link.download = `agenda-backup-v2-${localDate()}.json`;
     link.hidden = true;
     document.body.append(link);
     link.click();
@@ -939,7 +1255,7 @@ byId('export-agenda').addEventListener('click', async () => {
     if (locksWorkspace(error)) setLocked(error);
     else announce(safeMessage(error));
   } finally {
-    byId('export-agenda').disabled = false;
+    renderPendingOperation();
   }
 });
 

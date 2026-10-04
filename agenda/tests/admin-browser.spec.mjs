@@ -153,10 +153,13 @@ for (const viewport of [
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Descargar respaldo', exact: true }).click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^agenda-backup-v1-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(download.suggestedFilename()).toMatch(/^agenda-backup-v2-\d{4}-\d{2}-\d{2}\.json$/);
     const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
     expect(backup.format).toBe('portable-agenda');
-    expect(backup.version).toBe(1);
+    expect(backup.version).toBe(2);
+    expect(backup.tables.map((table) => table.name)).toEqual(
+      expect.arrayContaining(['agenda_absences', 'agenda_absence_audit']),
+    );
     expect(JSON.stringify(backup.tables)).toContain(booking.id);
     expect(JSON.stringify(backup.tables)).toContain(block.id);
     const finalSchedule = await request.get(

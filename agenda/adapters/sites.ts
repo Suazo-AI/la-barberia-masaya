@@ -11,6 +11,7 @@ export interface SitesAgendaEnvironment {
   DB?: D1Binding;
   AGENDA_CONFIG_JSON?: string;
   AGENDA_ADMIN_SUBJECTS_JSON?: string;
+  AGENDA_BARBER_SUBJECTS_JSON?: string;
   AGENDA_ALLOWED_ORIGINS_JSON?: string;
 }
 
@@ -22,6 +23,7 @@ export interface PublicAsset {
 interface Settings {
   config: AgendaConfig;
   subjects: string[];
+  barberSubjects: Record<string, string>;
   origins: string[];
   store: D1Store;
 }
@@ -48,6 +50,21 @@ function settings(environment: SitesAgendaEnvironment): Settings {
     throw new Error('Verified production configuration is required.');
   const subjects = stringList(environment.AGENDA_ADMIN_SUBJECTS_JSON);
   if (!subjects.every(validSubject)) throw new Error('Invalid administrator subject allowlist.');
+  const barberSubjects: unknown = JSON.parse(environment.AGENDA_BARBER_SUBJECTS_JSON || '{}');
+  if (
+    barberSubjects === null ||
+    typeof barberSubjects !== 'object' ||
+    Array.isArray(barberSubjects) ||
+    Object.keys(barberSubjects).length > 100 ||
+    Object.entries(barberSubjects).some(
+      ([subject, professionalId]) =>
+        !validSubject(subject) ||
+        subjects.includes(subject) ||
+        typeof professionalId !== 'string' ||
+        !config.professionals.some((professional) => professional.id === professionalId),
+    )
+  )
+    throw new Error('Explicit, disjoint subject-to-professional mapping is required.');
   const origins = stringList(environment.AGENDA_ALLOWED_ORIGINS_JSON);
   for (const origin of origins) {
     const url = new URL(origin);
@@ -60,7 +77,13 @@ function settings(environment: SitesAgendaEnvironment): Settings {
     typeof environment.DB.batch !== 'function'
   )
     throw new Error('D1 is unavailable.');
-  return { config, subjects, origins, store: new D1Store(environment.DB) };
+  return {
+    config,
+    subjects,
+    barberSubjects: barberSubjects as Record<string, string>,
+    origins,
+    store: new D1Store(environment.DB),
+  };
 }
 
 // Sites dispatch authenticates and owns this header. Email is never an authorization key.
@@ -102,6 +125,7 @@ export function createSitesAgendaWorker(assets: Readonly<Record<string, PublicAs
     },
     allowedOrigins: (environment) => getSettings(environment).origins,
     adminSubjects: (environment) => getSettings(environment).subjects,
+    barberSubjects: (environment) => getSettings(environment).barberSubjects,
     identityResolver: () => sitesIdentity,
     createRateLimiter: (environment) => createSqlRateLimiter(getSettings(environment).store),
   });

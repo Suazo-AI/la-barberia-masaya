@@ -33,3 +33,7 @@ The official client creates a random 32-byte capability with WebCrypto, encodes 
 `createAgendaWorker` takes environment-to-service, rate-limiter, origin, allowlist and identity factories. It does not assume a D1 binding name, Cron, Queue, Durable Object, rate-limit binding or email runner. Hosted Worker fixture/unconfigured modes and production without the trusted identity resolver and allowlist return unavailable before initializing a service. Notifications remain a durable outbox concern with sending disabled; this transport starts no background sender. No backend has been deployed by this module.
 
 `node --test agenda/tests/http.test.ts` exercises the real Node bridge and SQLite-backed full flow as well as bounded validation, capability isolation, trusted identity, global throttling, conflict rollback and retry behavior. These local checks do not establish that a host identity integration or live notification provider works.
+
+## Staff role and absence increment
+
+See [owner/barber authority and temporary absences](../../docs/agenda/staff-absence-roles.md) for the server-owned stable-subject map, session contract, own-agenda restrictions, absence endpoints, and immutable conflict snapshots. `/admin/schedule` now returns `{bookings, blocks, absences}`. Export is owner-only and produces backup version 2. The generic trusted identity port remains unchanged; client role headers cannot assign privileges. Fixture-only `AGENDA_FIXTURE_ROLE=barber` is available for local phone-layout tests.

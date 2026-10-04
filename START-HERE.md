@@ -8,6 +8,8 @@ Earlier verified application source: `f321ab9c0db256fed92682ccad08ae15b552a628`.
 
 Cloud-only continuation from `f321ab9c0db256fed92682ccad08ae15b552a628`: [source-only Sites integration candidate](docs/agenda/sites-candidate.md) adds a separate Worker/assets build and generated D1 migration package. Reload guards prevent blind new writes after a document loses an unresolved mutation; administrative fetches have a deadline. No PC work, remote branch replacement, owner grant, actual business configuration or deployment is part of this candidate. Live D1 recovery and exact-browser visual acceptance remain separate gates.
 
+Source-only role increment from `b3abca5`: [owner/barber access and temporary absence reports](docs/agenda/staff-absence-roles.md). Barbers read only their own agenda and report/revoke their own unavailability; owners manage the shop. Existing appointments are preserved for owner resolution. Additive migrations and backup v2 are prepared only; no production grant or deployment.
+
 1. Read [AGENTS.md](AGENTS.md) for scope and publication boundaries
 2. Read [SPEC.md](SPEC.md) v0.6 and the [current agenda spec](docs/agenda/spec.md); section 10 describes the historical reservation demo
 3. Read [docs/decisions.md](docs/decisions.md) and [docs/sources.md](docs/sources.md) for decisions and asset rights

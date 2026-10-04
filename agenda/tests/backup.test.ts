@@ -15,6 +15,7 @@ import type {
   AgendaService,
   BookingReceipt,
   MutationContext,
+  SqlStore,
 } from '../core/contracts.ts';
 import { canonicalStringify, hashConfiguration } from '../core/hash.ts';
 import { localFixtureConfig } from '../fixtures/local.ts';
@@ -22,6 +23,7 @@ import { BackupError, exportBackup, restoreBackup } from '../tools/backup.ts';
 import { processOutbox } from '../tools/outbox.ts';
 import type { ConcurrencyInput } from './concurrency-worker.ts';
 
+const admin = { kind: 'admin', id: 'fixture-owner' } as const;
 const fixtureNow = '2026-10-14T18:00:00Z';
 const publicContext = (key: string): MutationContext => ({
   actor: { kind: 'public' },
@@ -99,28 +101,29 @@ test('versioned private export restores bookings, blocks, walk-ins and idempoten
   await store.run(
     "INSERT INTO agenda_rate_limits(scope, bucket, count) VALUES('fixture-scope', 100, 2)",
   );
-  const backup = await service.exportData();
-  assert.equal(backup.version, 1);
+  const backup = await service.exportData(admin);
+  assert.equal(backup.version, 2);
   const restored = await restoreBackup(backup, join(directory, 'restored.sqlite'));
   stores.push(restored.store);
   const restoredService = createAgendaService(restored.store, restored.config, {
     now: () => new Date(fixtureNow),
   });
-  assert.deepEqual((await restoredService.exportData()).tables, backup.tables);
+  assert.deepEqual((await restoredService.exportData(admin)).tables, backup.tables);
   const current = await restoredService.getBooking(first.booking.id, {
     kind: 'admin',
     id: 'fixture-owner',
   });
   assert.deepEqual(current, moved);
   assert.equal(await restoredService.authorizeCustomer(first.booking.id, 'a'.repeat(64)), true);
-  assert.equal((await restoredService.listBlocks({ date: '2026-10-14' })).length, 1);
+  assert.equal((await restoredService.listBlocks({ date: '2026-10-14' }, admin)).length, 1);
   assert.equal(
-    (await restoredService.listBookings({ date: '2026-10-14', includeCancelled: true })).length,
+    (await restoredService.listBookings({ date: '2026-10-14', includeCancelled: true }, admin))
+      .length,
     3,
   );
   const replay = await restoredService.createBooking(fixtureBooking, firstContext);
   assert.deepEqual(replay, first);
-  assert.deepEqual((await restoredService.exportData()).tables, backup.tables);
+  assert.deepEqual((await restoredService.exportData(admin)).tables, backup.tables);
   assert.equal((await restored.store.all('PRAGMA foreign_key_check')).length, 0);
   assert.equal(
     (await restored.store.all<{ integrity_check: string }>('PRAGMA integrity_check'))[0]
@@ -132,19 +135,19 @@ test('versioned private export restores bookings, blocks, walk-ins and idempoten
 test('restore never overwrites an existing database and rejects incompatible formats/table injection', async (t) => {
   const { store, service, path, directory } = await setup(t);
   await service.createBooking(fixtureBooking, publicContext('backup-existing-fixture'));
-  const backup = await service.exportData();
+  const backup = await service.exportData(admin);
   await assert.rejects(
     restoreBackup(backup, path),
     (error: unknown) =>
       typeof error === 'object' && error !== null && 'code' in error && error.code === 'EEXIST',
   );
-  const before = await service.exportData();
+  const before = await service.exportData(admin);
   const target = join(directory, 'invalid.sqlite');
-  await assert.rejects(restoreBackup({ ...backup, version: 2 }, target), BackupError);
+  await assert.rejects(restoreBackup({ ...backup, version: 3 }, target), BackupError);
   const injected = structuredClone(backup);
   injected.tables[0]!.name = 'agenda_entries; DROP TABLE agenda_configuration; --';
   await assert.rejects(restoreBackup(injected, target), BackupError);
-  assert.deepEqual((await service.exportData()).tables, before.tables);
+  assert.deepEqual((await service.exportData(admin)).tables, before.tables);
   assert.equal((await store.all('SELECT * FROM agenda_entries')).length, 1);
   await assert.rejects(
     stat(target),
@@ -156,7 +159,7 @@ test('restore never overwrites an existing database and rejects incompatible for
 test('restore rejects forged configuration, active overlaps, or orphan events and removes its new target', async (t) => {
   const { service, directory } = await setup(t);
   await service.createBooking(fixtureBooking, publicContext('backup-corrupt-fixture'));
-  const backup = await service.exportData();
+  const backup = await service.exportData(admin);
   const forged = structuredClone(backup);
   forged.config.businessName = 'Otra configuracion ficticia';
   const overlap = structuredClone(backup);
@@ -176,7 +179,7 @@ test('restore rejects forged configuration, active overlaps, or orphan events an
         typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT',
     );
   }
-  assert.deepEqual((await service.exportData()).tables, backup.tables);
+  assert.deepEqual((await service.exportData(admin)).tables, backup.tables);
 });
 
 test('restore rejects malformed cached replies, invalid scope/hash and incompatible reservation references', async (t) => {
@@ -187,7 +190,7 @@ test('restore rejects malformed cached replies, invalid scope/hash and incompati
     { ...fixtureBooking, startMinute: 900 },
     publicContext('backup-semantic-other-fixture'),
   );
-  const backup = await service.exportData();
+  const backup = await service.exportData(admin);
   const cache = (candidate: AgendaBackup) =>
     candidate.tables
       .find((table) => table.name === 'agenda_idempotency')!
@@ -258,7 +261,7 @@ test('restore rejects malformed cached replies, invalid scope/hash and incompati
         typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT',
     );
   }
-  assert.deepEqual((await service.exportData()).tables, backup.tables);
+  assert.deepEqual((await service.exportData(admin)).tables, backup.tables);
   assert.deepEqual(await service.createBooking(fixtureBooking, context), receipt);
 });
 
@@ -268,7 +271,7 @@ test('restore rejects notification payloads incompatible with the event and cach
     fixtureBooking,
     publicContext('backup-semantic-outbox-fixture'),
   );
-  const backup = await service.exportData();
+  const backup = await service.exportData(admin);
   const event = (candidate: AgendaBackup) =>
     candidate.tables.find((table) => table.name === 'agenda_outbox')!.rows[0]!;
   const reply = (candidate: AgendaBackup, alter: (value: BookingReceipt) => void) => {
@@ -316,7 +319,7 @@ test('restore rejects notification payloads incompatible with the event and cach
       BackupError,
     );
   }
-  assert.deepEqual((await service.exportData()).tables, backup.tables);
+  assert.deepEqual((await service.exportData(admin)).tables, backup.tables);
 });
 
 test('restore validates block cache identity, scope and historical active/cancelled state', async (t) => {
@@ -331,7 +334,7 @@ test('restore validates block cache identity, scope and historical active/cancel
   const context = adminContext('backup-semantic-block-fixture');
   const original = await service.createBlock(input, context);
   await service.cancelBlock(original.id, 1, adminContext('backup-semantic-unblock-fixture'));
-  const backup = await service.exportData();
+  const backup = await service.exportData(admin);
   for (const [index, response] of [
     {},
     [],
@@ -382,7 +385,7 @@ test('restored idempotency retains valid historical replies after moves, cancell
   const changedService = createAgendaService(store, changedConfig, {
     now: () => new Date('2026-10-25T18:00:00Z'),
   });
-  const backup = await changedService.exportData();
+  const backup = await changedService.exportData(admin);
   const restored = await restoreBackup(backup, join(directory, 'historical-changed-config.sqlite'));
   stores.push(restored.store);
   const restoredService = createAgendaService(restored.store, restored.config, {
@@ -397,7 +400,7 @@ test('restored idempotency retains valid historical replies after moves, cancell
     await restoredService.cancelBooking(created.booking.id, 2, cancelContext),
     cancelled,
   );
-  assert.deepEqual((await restoredService.exportData()).tables, backup.tables);
+  assert.deepEqual((await restoredService.exportData(admin)).tables, backup.tables);
 });
 
 test(
@@ -452,7 +455,7 @@ test(
       await new Promise<void>((accept) => setTimeout(accept, 3));
     }
     await completion;
-    const finalBackup = await service.exportData();
+    const finalBackup = await service.exportData(admin);
     assert.equal(
       finalBackup.tables.find((table) => table.name === 'agenda_entries')!.rows.length,
       12,
@@ -509,7 +512,10 @@ test('offline backup CLI round-trips private files without overwrite or printing
   assert.match(restored.stdout, /verified/);
   const restoredStore = new SqliteStore(restoredPath);
   connections.push(restoredStore);
-  assert.deepEqual((await exportBackup(restoredStore)).tables, (await service.exportData()).tables);
+  assert.deepEqual(
+    (await exportBackup(restoredStore)).tables,
+    (await service.exportData(admin)).tables,
+  );
   await assert.rejects(
     execute(process.execPath, ['agenda/tools/backup-cli.ts', 'export', path, backupPath], {
       cwd: root,
@@ -651,7 +657,7 @@ test('outbox failures preserve bookings, redact transport errors and retry only 
     )[0]!;
     assert.equal(row.attempts, attempt);
     assert.equal(row.last_error, 'TRANSPORT_FAILED');
-    assert.equal((await service.listBookings({ date: '2026-10-14' })).length, 1);
+    assert.equal((await service.listBookings({ date: '2026-10-14' }, admin)).length, 1);
     if (attempt < 5) {
       assert.equal(report.retried, 1);
       assert.equal((await processOutbox(store, options)).claimed, 0);
@@ -731,4 +737,308 @@ test('outbox retires an exhausted crashed lease without an additional send', asy
   assert.deepEqual(await store.all('SELECT status, last_error FROM agenda_outbox'), [
     { status: 'failed', last_error: 'DELIVERY_RETRY_LIMIT' },
   ]);
+});
+
+const fixtureAbsence = {
+  professionalId: 'a',
+  startDate: '2026-10-14',
+  startMinute: 780,
+  endDate: '2026-10-14',
+  endMinute: 900,
+  reason: 'Ausencia ficticia',
+};
+const barberContext = (key: string): MutationContext => ({
+  actor: { kind: 'barber', id: 'fixture-barber-a', professionalId: 'a' },
+  configVersion: 1,
+  idempotencyKey: key,
+});
+
+test('v2 private backup restores overlapping absences and existing affected booking/walk-in allocations unchanged', async (t) => {
+  const { store, service, directory, stores } = await setup(t);
+  const booking = await service.createBooking(
+    fixtureBooking,
+    publicContext('absence-backup-booking'),
+  );
+  const walkIn = await service.createWalkIn(
+    { ...fixtureBooking, startMinute: 810 },
+    adminContext('absence-backup-walkin'),
+  );
+  const firstContext = barberContext('absence-backup-first');
+  const first = await service.createAbsence(fixtureAbsence, firstContext);
+  const second = await service.createAbsence(
+    { ...fixtureAbsence, endMinute: 1440 },
+    adminContext('absence-backup-second'),
+  );
+  assert.equal(second.endDate, '2026-10-15');
+  assert.equal(second.endMinute, 0);
+  assert.deepEqual(first.affectedBookingIds, [booking.booking.id, walkIn.booking.id].sort());
+  assert.equal(first.resolution, 'requires-resolution');
+  // Owner blocks may coexist with an absence and are not reported as bookings.
+  await service.createBlock(
+    {
+      professionalId: 'a',
+      date: '2026-10-14',
+      startMinute: 930,
+      endMinute: 960,
+      label: 'Bloqueo ficticio',
+    },
+    adminContext('absence-backup-block'),
+  );
+  const before = await exportBackup(store, () => new Date(fixtureNow));
+  const restored = await restoreBackup(before, join(directory, 'absence-restored.sqlite'));
+  stores.push(restored.store);
+  const after = await exportBackup(restored.store, () => new Date(fixtureNow));
+  assert.deepEqual(after, before);
+  const restoredService = createAgendaService(restored.store, restored.config, {
+    now: () => new Date(fixtureNow),
+  });
+  assert.deepEqual(await restoredService.createAbsence(fixtureAbsence, firstContext), first);
+  assert.equal(
+    (await restoredService.listBookings({ date: fixtureAbsence.startDate }, admin)).length,
+    2,
+  );
+  assert.equal(
+    (await restoredService.listAbsences({ date: fixtureAbsence.startDate }, admin)).length,
+    2,
+  );
+  assert.equal(
+    before.tables.find((table) => table.name === 'agenda_absence_audit')!.rows.length,
+    2,
+  );
+  assert.equal(before.tables.find((table) => table.name === 'agenda_outbox')!.rows.length, 2);
+  await restoredService.revokeAbsence(first.id, 1, adminContext('absence-backup-revoke-first'));
+  assert.equal(
+    (
+      await restoredService.availability({
+        serviceId: 'cut',
+        professionalId: 'a',
+        date: fixtureAbsence.startDate,
+      })
+    ).slots.length,
+    0,
+  );
+});
+
+test('absence backup preserves historical affected IDs after bookings move/cancel and replays report/revoke', async (t) => {
+  const { store, service, directory, stores } = await setup(t);
+  const booking = await service.createBooking(
+    fixtureBooking,
+    publicContext('absence-history-booking'),
+  );
+  const walkIn = await service.createWalkIn(
+    { ...fixtureBooking, startMinute: 810 },
+    adminContext('absence-history-walkin'),
+  );
+  const reportedContext = barberContext('absence-history-report');
+  const reported = await service.createAbsence(fixtureAbsence, reportedContext);
+  await service.rescheduleBooking(
+    booking.booking.id,
+    { professionalId: 'b', date: '2026-10-14', startMinute: 840 },
+    1,
+    adminContext('absence-history-move'),
+  );
+  await service.cancelBooking(walkIn.booking.id, 1, adminContext('absence-history-cancel'));
+  const revokedContext = adminContext('absence-history-revoke');
+  const revoked = await service.revokeAbsence(reported.id, 1, revokedContext);
+  const backup = await exportBackup(store);
+  const restored = await restoreBackup(backup, join(directory, 'absence-history.sqlite'));
+  stores.push(restored.store);
+  const restoredService = createAgendaService(restored.store, restored.config, {
+    now: () => new Date(fixtureNow),
+  });
+  assert.deepEqual(await restoredService.createAbsence(fixtureAbsence, reportedContext), reported);
+  assert.deepEqual(await restoredService.revokeAbsence(reported.id, 1, revokedContext), revoked);
+  assert.deepEqual(revoked.affectedBookingIds, reported.affectedBookingIds);
+  assert.deepEqual((await restoredService.exportData(admin)).tables, backup.tables);
+});
+
+test('legacy v1 backups upconvert to v2 with empty absences and retain booking idempotency', async (t) => {
+  const { service, directory, stores } = await setup(t);
+  const context = publicContext('legacy-v1-booking-fixture');
+  const booking = await service.createBooking(fixtureBooking, context);
+  const current = await service.exportData(admin);
+  const legacy = {
+    ...structuredClone(current),
+    version: 1,
+    tables: current.tables.filter(
+      (table) => !['agenda_absences', 'agenda_absence_audit'].includes(table.name),
+    ),
+  };
+  const restored = await restoreBackup(legacy, join(directory, 'legacy-v1.sqlite'));
+  stores.push(restored.store);
+  const restoredService = createAgendaService(restored.store, restored.config, {
+    now: () => new Date(fixtureNow),
+  });
+  assert.deepEqual(await restoredService.createBooking(fixtureBooking, context), booking);
+  assert.deepEqual((await restoredService.exportData(admin)).tables, current.tables);
+  assert.equal(legacy.version, 1);
+  assert.equal(legacy.tables.length, 6);
+  assert.equal(
+    (await restored.store.all<{ user_version: number }>('PRAGMA user_version'))[0]!.user_version,
+    2,
+  );
+  await assert.rejects(
+    restoreBackup({ ...legacy, tables: current.tables }, join(directory, 'invalid-v1.sqlite')),
+    BackupError,
+  );
+});
+
+test('backup rejects corrupt absence snapshot references, audit authority and cached report/revoke history', async (t) => {
+  const { service, directory } = await setup(t);
+  await service.createBooking(fixtureBooking, publicContext('absence-corrupt-booking'));
+  const other = await service.createBooking(
+    { ...fixtureBooking, professionalId: 'b' },
+    publicContext('absence-corrupt-other'),
+  );
+  const reportedContext = barberContext('absence-corrupt-report');
+  const absence = await service.createAbsence(fixtureAbsence, reportedContext);
+  await service.revokeAbsence(absence.id, 1, adminContext('absence-corrupt-revoke'));
+  const backup = await service.exportData(admin);
+  const row = (candidate: AgendaBackup) =>
+    candidate.tables.find((table) => table.name === 'agenda_absences')!.rows[0]!;
+  const audit = (candidate: AgendaBackup) =>
+    candidate.tables
+      .find((table) => table.name === 'agenda_absence_audit')!
+      .rows.find((value) => value.absence_version === 1)!;
+  const cache = (candidate: AgendaBackup) =>
+    candidate.tables
+      .find((table) => table.name === 'agenda_idempotency')!
+      .rows.find((value) => value.key === reportedContext.idempotencyKey)!;
+  const corruptions: Array<(candidate: AgendaBackup) => void> = [
+    (candidate) => {
+      row(candidate).affected_booking_ids_json = 'invalid';
+    },
+    (candidate) => {
+      row(candidate).affected_booking_ids_json = '{}';
+    },
+    (candidate) => {
+      row(candidate).affected_booking_ids_json = '[1]';
+    },
+    (candidate) => {
+      row(candidate).affected_booking_ids_json = JSON.stringify([
+        absence.affectedBookingIds[0],
+        absence.affectedBookingIds[0],
+      ]);
+    },
+    (candidate) => {
+      row(candidate).affected_booking_ids_json = '["missing-booking"]';
+    },
+    (candidate) => {
+      row(candidate).affected_booking_ids_json = JSON.stringify([other.booking.id]);
+    },
+    (candidate) => {
+      row(candidate).resolution = 'none';
+    },
+    (candidate) => {
+      row(candidate).status = 'active';
+    },
+    (candidate) => {
+      row(candidate).reason = 'x'.repeat(121);
+    },
+    (candidate) => {
+      audit(candidate).actor_kind = 'public';
+    },
+    (candidate) => {
+      audit(candidate).actor_id = 'bad,subject';
+    },
+    (candidate) => {
+      audit(candidate).professional_id = 'b';
+    },
+    (candidate) => {
+      audit(candidate).absence_id = 'missing-absence';
+    },
+    (candidate) => {
+      audit(candidate).action = 'revoked';
+    },
+    (candidate) => {
+      audit(candidate).created_at = Number(audit(candidate).created_at) + 1;
+    },
+    (candidate) => {
+      candidate.tables.find((table) => table.name === 'agenda_absence_audit')!.rows.pop();
+    },
+    (candidate) => {
+      cache(candidate).scope = 'absence:create:admin:unrelated';
+    },
+    (candidate) => {
+      cache(candidate).response_json = JSON.stringify({ ...absence, timeZone: 'UTC' });
+    },
+    (candidate) => {
+      cache(candidate).response_json = JSON.stringify({ ...absence, affectedBookingIds: [] });
+    },
+    (candidate) => {
+      cache(candidate).response_json = JSON.stringify({ ...absence, endMinute: 1440 });
+    },
+    (candidate) => {
+      cache(candidate).response_json = JSON.stringify({ ...absence, status: 'revoked' });
+    },
+    (candidate) => {
+      candidate.tables.find((table) => table.name === 'agenda_idempotency')!.rows = candidate.tables
+        .find((table) => table.name === 'agenda_idempotency')!
+        .rows.filter((value) => value.key !== reportedContext.idempotencyKey);
+    },
+  ];
+  for (const [index, alter] of corruptions.entries()) {
+    const candidate = structuredClone(backup);
+    alter(candidate);
+    const target = join(directory, `absence-corrupt-${index}.sqlite`);
+    await assert.rejects(restoreBackup(candidate, target), BackupError);
+    await assert.rejects(stat(target), { code: 'ENOENT' });
+  }
+  assert.deepEqual((await service.exportData(admin)).tables, backup.tables);
+});
+
+test('restore rejects a forged empty absence snapshot even when its cached reply was also altered', async (t) => {
+  const { service, directory } = await setup(t);
+  await service.createBooking(fixtureBooking, publicContext('absence-omission-booking'));
+  const context = barberContext('absence-omission-report');
+  const absence = await service.createAbsence(fixtureAbsence, context);
+  const backup = await service.exportData(admin);
+  const row = backup.tables.find((table) => table.name === 'agenda_absences')!.rows[0]!;
+  row.affected_booking_ids_json = '[]';
+  row.resolution = 'none';
+  backup.tables
+    .find((table) => table.name === 'agenda_idempotency')!
+    .rows.find((value) => value.key === context.idempotencyKey)!.response_json = JSON.stringify({
+    ...absence,
+    affectedBookingIds: [],
+    resolution: 'none',
+  });
+  const target = join(directory, 'absence-omission.sqlite');
+  await assert.rejects(restoreBackup(backup, target), BackupError);
+  await assert.rejects(stat(target), { code: 'ENOENT' });
+});
+
+test('absence backup uses the committed snapshot rather than pre-lock wall-clock ordering', async (t) => {
+  const { store, directory, stores } = await setup(t);
+  let clock = Date.parse(fixtureNow);
+  const now = () => new Date(clock);
+  const bookingService = createAgendaService(store, localFixtureConfig, { now });
+  let winningBooking: BookingReceipt | undefined;
+  const delayedStore: SqlStore = {
+    all: (sql, params) => store.all(sql, params),
+    run: (sql, params) => store.run(sql, params),
+    async batch(statements) {
+      if (statements.some((statement) => statement.sql.includes('INSERT INTO agenda_absences'))) {
+        clock += 1000;
+        winningBooking = await bookingService.createBooking(
+          fixtureBooking,
+          publicContext('absence-delayed-winning-booking'),
+        );
+      }
+      return store.batch(statements);
+    },
+  };
+  const absenceService = createAgendaService(delayedStore, localFixtureConfig, { now });
+  const absence = await absenceService.createAbsence(
+    fixtureAbsence,
+    barberContext('absence-delayed-report'),
+  );
+  assert.deepEqual(absence.affectedBookingIds, [winningBooking!.booking.id]);
+  const backup = await exportBackup(store, now);
+  const absenceRow = backup.tables.find((table) => table.name === 'agenda_absences')!.rows[0]!;
+  const entry = backup.tables.find((table) => table.name === 'agenda_entries')!.rows[0]!;
+  assert.ok(Number(entry.created_at) > Number(absenceRow.created_at));
+  const restored = await restoreBackup(backup, join(directory, 'absence-prelock-time.sqlite'));
+  stores.push(restored.store);
+  assert.deepEqual((await exportBackup(restored.store, now)).tables, backup.tables);
 });

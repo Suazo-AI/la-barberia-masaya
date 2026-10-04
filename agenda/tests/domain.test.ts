@@ -228,7 +228,7 @@ test('customer capability is reservation scoped and response/export replies neve
     errorCode('FORBIDDEN'),
   );
   assert.deepEqual(await agenda.getBooking(id, { kind: 'customer', reservationId: id }), receipt);
-  const backup = await agenda.exportData();
+  const backup = await agenda.exportData(admin);
   for (const name of ['agenda_idempotency', 'agenda_outbox'])
     assert.ok(!JSON.stringify(backup.tables.find((table) => table.name === name)).includes(digest));
 });
@@ -268,8 +268,8 @@ test('conflicting reschedule rolls back entirely; successful move and cancel use
   );
   assert.equal(cancelled.booking.version, 3);
   assert.equal(cancelled.booking.status, 'cancelled');
-  assert.equal((await agenda.listBookings({ date: day })).length, 1);
-  assert.equal((await agenda.listBookings({ date: day, includeCancelled: true })).length, 2);
+  assert.equal((await agenda.listBookings({ date: day }, admin)).length, 1);
+  assert.equal((await agenda.listBookings({ date: day, includeCancelled: true }, admin)).length, 2);
 });
 
 test('walk-ins and blocks require admin and participate in the same conflict invariant', async (t) => {
@@ -306,8 +306,8 @@ test('walk-ins and blocks require admin and participate in the same conflict inv
     agenda.createBlock({ ...blockInput, startMinute: 810 }, context('block-conflict-0001', admin)),
     errorCode('SLOT_UNAVAILABLE'),
   );
-  assert.equal((await agenda.listBlocks({ date: day })).length, 0);
-  assert.equal((await agenda.listBlocks({ date: day, includeCancelled: true })).length, 1);
+  assert.equal((await agenda.listBlocks({ date: day }, admin)).length, 0);
+  assert.equal((await agenda.listBlocks({ date: day, includeCancelled: true }, admin)).length, 1);
   assert.deepEqual(await counts(store), { entries: 2, idempotency: 3, audit: 3, outbox: 1 });
 });
 
@@ -615,11 +615,11 @@ test('another business cannot initialize over an existing calendar or read/repla
   const before = await counts(store);
   for (const request of [
     () => second.catalog(),
-    () => second.listBookings({ date: day }),
+    () => second.listBookings({ date: day }, admin),
     () => second.getBooking(receipt.booking.id, admin),
     () => second.authorizeCustomer(receipt.booking.id, digest),
     () => second.createBooking(bookingInput, ctx),
-    () => second.exportData(),
+    () => second.exportData(admin),
   ])
     await assert.rejects(request(), errorCode('CONFIGURATION_CHANGED'));
   assert.deepEqual(await counts(store), before);
@@ -677,12 +677,12 @@ test('missing configuration with existing private data fails closed without reco
     const orphaned = createAgendaService(store, { ...config, businessId }, { now: fixedNow });
     for (const request of [
       () => orphaned.catalog(),
-      () => orphaned.listBookings({ date: day }),
+      () => orphaned.listBookings({ date: day }, admin),
       () => orphaned.getBooking(receipt.booking.id, admin),
       () => orphaned.authorizeCustomer(receipt.booking.id, digest),
       () => orphaned.createBooking(input(840, 'b'), context('orphan-attempt-0001')),
       () => orphaned.cancelBooking(receipt.booking.id, 1, context('orphan-cancel-0001', admin)),
-      () => orphaned.exportData(),
+      () => orphaned.exportData(admin),
     ])
       await assert.rejects(request(), errorCode('CONFIGURATION_CHANGED'));
   }

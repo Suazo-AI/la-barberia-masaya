@@ -239,3 +239,76 @@ test('Sites image CSP permits only exact verified configured photo origins', asy
   const closed = await worker.fetch(new Request(origin), {});
   assert.match(closed.headers.get('Content-Security-Policy')!, /img-src 'self';/);
 });
+
+test('Sites server mapping isolates barber scope and rejects ambiguous identity configuration', async (t) => {
+  const store = new SqliteStore(':memory:');
+  t.after(() => store.close());
+  await migrateSqlite(store);
+  const worker = createSitesAgendaWorker({});
+  const env = {
+    ...environment(binding(store)),
+    AGENDA_BARBER_SUBJECTS_JSON: JSON.stringify({ 'site-barber': 'a' }),
+  };
+  const headers = {
+    'oai-authenticated-user-id': 'site-barber',
+    'X-Role': 'owner',
+    'X-Professional-Id': 'b',
+  };
+  const session = await worker.fetch(new Request(`${api}/admin/session`, { headers }), env);
+  assert.equal(session.status, 200);
+  assert.deepEqual(await session.json(), {
+    role: 'barber',
+    professionalId: 'a',
+    capabilities: { manageShop: false, reportAbsence: true },
+  });
+  assert.equal(
+    (await worker.fetch(new Request(`${api}/admin/export`, { headers }), env)).status,
+    403,
+  );
+  const date = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request(`${api}/admin/schedule?date=${date}&professionalId=b`, { headers }),
+        env,
+      )
+    ).status,
+    403,
+  );
+  const own = await worker.fetch(
+    new Request(`${api}/admin/absences`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        Origin: origin,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'site-absence-own',
+      },
+      body: JSON.stringify({
+        professionalId: 'a',
+        startDate: date,
+        startMinute: 800,
+        endDate: date,
+        endMinute: 900,
+        configVersion: 1,
+      }),
+    }),
+    env,
+  );
+  assert.equal(own.status, 201);
+  assert.equal((await own.json()).status, 'active');
+  for (const value of [
+    '[]',
+    'null',
+    '{',
+    JSON.stringify({ [subject]: 'a' }),
+    JSON.stringify({ 'site-barber': 'missing' }),
+    JSON.stringify({ 'site-barber': 1 }),
+    JSON.stringify({ 'bad subject': 'a' }),
+  ]) {
+    const invalid = { ...env, AGENDA_BARBER_SUBJECTS_JSON: value };
+    const response = await worker.fetch(new Request(`${api}/catalog`), invalid);
+    assert.equal(response.status, 503, value);
+    assert.equal((await response.json()).error.code, 'CONFIGURATION_REQUIRED');
+  }
+});

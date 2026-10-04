@@ -35,6 +35,16 @@
         </p>
       </section>
       <div id="admin-workspace" hidden>
+        <section class="role-panel" aria-labelledby="role-title">
+          <div>
+            <p id="role-label" class="eyebrow"></p>
+            <h2 id="role-title">Acceso a la agenda</h2>
+            <p id="role-description" class="muted"></p>
+          </div>
+          <a id="report-absence-link" class="button button-secondary" href="#absence-title"
+            >Reportar ausencia</a
+          >
+        </section>
         <section class="schedule-section" aria-labelledby="schedule-title">
           <div class="section-heading">
             <div>
@@ -65,6 +75,13 @@
               <ul id="booking-list" class="entry-list"></ul>
             </div>
             <div class="schedule-column">
+              <section class="absence-list-section" aria-labelledby="absences-heading">
+                <h3 id="absences-heading">Ausencias temporales</h3>
+                <p id="absences-empty" class="empty-state" hidden>
+                  No hay ausencias para esta selección.
+                </p>
+                <ul id="absence-list" class="entry-list"></ul>
+              </section>
               <h3>Bloqueos</h3>
               <p id="blocks-empty" class="empty-state" hidden>
                 No hay bloqueos para esta selección.
@@ -73,7 +90,85 @@
             </div>
           </div>
         </section>
-        <div class="entry-forms">
+        <section
+          id="absence-panel"
+          class="form-panel absence-panel"
+          aria-labelledby="absence-title"
+          hidden
+        >
+          <div>
+            <p class="eyebrow">Disponibilidad del equipo</p>
+            <h2 id="absence-title" tabindex="-1">Reportar ausencia temporal</h2>
+            <p class="muted">
+              Indicá cuándo no podés atender. Durante ese período no se aceptarán nuevas citas para
+              el profesional.
+            </p>
+            <p class="absence-policy">
+              Las citas existentes se conservan. Si alguna coincide, queda pendiente de resolución
+              por el propietario. No se cancela ni se reasigna automáticamente.
+            </p>
+            <p class="field-hint">
+              Podés retirar la ausencia para volver a ofrecer ese horario. Tu cuenta y tu perfil se
+              conservan.
+            </p>
+          </div>
+          <form id="absence-form" class="stacked-form">
+            <label>
+              Profesional de la ausencia
+              <select id="absence-professional" name="professionalId" required></select>
+            </label>
+            <fieldset>
+              <legend>Inicio · America/Managua</legend>
+              <div class="field-pair">
+                <label
+                  >Fecha de inicio<input
+                    id="absence-start-date"
+                    name="startDate"
+                    type="date"
+                    required
+                /></label>
+                <label
+                  >Hora de inicio de la ausencia<input
+                    id="absence-start-time"
+                    name="startTime"
+                    type="time"
+                    required
+                /></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Fin · America/Managua</legend>
+              <div class="field-pair">
+                <label
+                  >Fecha de fin<input id="absence-end-date" name="endDate" type="date" required
+                /></label>
+                <label
+                  >Hora de fin de la ausencia<input
+                    id="absence-end-time"
+                    name="endTime"
+                    type="time"
+                    required
+                /></label>
+              </div>
+            </fieldset>
+            <label
+              >Motivo (opcional)<input
+                id="absence-reason"
+                name="reason"
+                type="text"
+                maxlength="120"
+                autocomplete="off"
+                aria-describedby="absence-reason-hint"
+            /></label>
+            <p id="absence-reason-hint" class="field-hint">
+              Hasta 120 caracteres. Evitá diagnósticos, detalles médicos u otra información
+              sensible.
+            </p>
+            <p id="absence-feedback" class="form-feedback" role="alert" hidden></p>
+            <button class="button" type="submit">Guardar ausencia</button>
+          </form>
+        </section>
+        <div class="entry-forms" data-owner-only hidden>
           <section class="form-panel" aria-labelledby="walkin-title">
             <p class="eyebrow">Cliente que llega al local</p>
             <h2 id="walkin-title">Registrar sin reserva</h2>
@@ -155,7 +250,7 @@
             </form>
           </section>
         </div>
-        <section class="backup-panel" aria-labelledby="backup-title">
+        <section class="backup-panel" aria-labelledby="backup-title" data-owner-only hidden>
           <div>
             <p class="eyebrow">Copia privada</p>
             <h2 id="backup-title">Respaldo de la agenda</h2>
@@ -168,7 +263,7 @@
       </div>
     </main>
     <footer class="admin-footer">
-      <p>Acceso administrativo verificado por el servidor. Zona horaria: America/Managua.</p>
+      <p>Rol y acceso verificados por el servidor. Zona horaria: America/Managua.</p>
     </footer>
     <dialog id="manage-dialog" aria-labelledby="manage-title">
       <div class="dialog-top">

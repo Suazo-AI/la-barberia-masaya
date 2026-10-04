@@ -31,6 +31,8 @@ export interface AgendaRouterOptions {
   mode: AgendaMode;
   allowedOrigins: readonly string[];
   adminSubjects: readonly string[];
+  /** Server-owned stable subject → professional mapping; never populated from request data. */
+  barberSubjects?: Readonly<Record<string, string>>;
   identityResolver?: TrustedIdentityResolver;
   rateLimiter?: MutationRateLimiter;
   bodyLimitBytes?: number;
