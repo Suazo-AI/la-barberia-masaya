@@ -270,10 +270,16 @@ select {
 
 .entry-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.entry-list > li,
+.entry {
+  min-width: 0;
 }
 
 .entry {
@@ -287,6 +293,7 @@ select {
 }
 
 .entry h4 {
+  overflow-wrap: anywhere;
   margin: 0 0 0.5rem;
   font-size: 1.15rem;
   font-weight: 400;
