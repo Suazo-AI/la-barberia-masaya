@@ -238,6 +238,7 @@ h3 {
 }
 
 label {
+  overflow-wrap: anywhere;
   display: grid;
   gap: 0.5rem;
   min-width: 0;
@@ -491,6 +492,10 @@ fieldset {
 }
 
 legend {
+  /* Legends retain an intrinsic text width unless explicitly bounded. At 200%
+     text the Managua timezone must wrap inside the narrow fieldset. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding-inline: 0.3rem;
   color: var(--muted);
 }

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expectViewportReflow } from './reflow-diagnostics.mjs';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
@@ -343,7 +344,7 @@ test('real committed walk-in with lost response freezes changed fields, survives
 test('admin accessibility, native focus and reflow at 320px / 200% text / reduced motion', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const catalog = await catalogFor(request);
@@ -356,9 +357,7 @@ test('admin accessibility, native focus and reflow at 320px / 200% text / reduce
   await createWalkIn(page, day, name);
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
+  await expectViewportReflow(page, testInfo);
   const opener = page
     .locator('#booking-list article')
     .filter({ hasText: name })

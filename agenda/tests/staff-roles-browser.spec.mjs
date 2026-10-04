@@ -1,5 +1,6 @@
 import { test, expect, request as apiRequest } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expectViewportReflow } from './reflow-diagnostics.mjs';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 
@@ -383,7 +384,7 @@ test('barber reload after a lost committed absence response blocks new writes wi
 
 test('barber session remains scoped at 320px, 200% text and reduced motion; unknown roles fail closed', async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const day = await freeDay('a', 4);
@@ -391,9 +392,7 @@ test('barber session remains scoped at 320px, 200% text and reduced motion; unkn
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
   });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
+  await expectViewportReflow(page, testInfo);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.locator('#absence-start-date').focus();
   await page.keyboard.press('Tab');

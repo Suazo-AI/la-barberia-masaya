@@ -72,6 +72,7 @@ jobs:
             test-results/**/*.png
             test-results/**/*.webm
             test-results/**/staff-roles-metadata.json
+            test-results/**/reflow-layout.json
             test-results/**/error-context.md
           include-hidden-files: true
           if-no-files-found: error
