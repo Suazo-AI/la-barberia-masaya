@@ -24,6 +24,7 @@ async function findFreeDay(request, catalog, offset = 3) {
   const professionalId = service.professionalIds[0];
   for (let index = offset; index < offset + 6; index++) {
     const date = dateAfter(catalog.dateRange.min, index);
+    if (date > catalog.dateRange.max) break;
     const query = new URLSearchParams({ serviceId: service.id, professionalId, date });
     const response = await request.get(`${api}/availability?${query}`);
     expect(response.status()).toBe(200);
@@ -390,7 +391,7 @@ test('admin accessibility, native focus and reflow at 320px / 200% text / reduce
   expect(controls.every((control) => control.height >= 44 && control.width >= 44)).toBe(true);
 });
 
-test('real response-loss block, move and cancel preserve exact operations through Escape and reload', async ({
+test('real response-loss block, move and cancel preserve exact operations through Escape and list refresh', async ({
   page,
   request,
 }) => {
@@ -628,4 +629,143 @@ test('real admin accepts a 10:07 walk-in and minute block while the server rejec
   await page.getByRole('button', { name: 'Quitar este bloqueo', exact: true }).click();
   await page.getByRole('button', { name: 'Confirmar retiro del bloqueo', exact: true }).click();
   await expect(page.locator('#manage-dialog')).not.toBeVisible();
+});
+
+test('real admin document reload after a committed lost response retains a non-secret write guard', async ({
+  page,
+  request,
+}) => {
+  const catalog = await catalogFor(request);
+  const day = await findFreeDay(request, catalog, 1);
+  await openAdmin(page, day.date);
+  const label = `Bloqueo ficticio de recarga ${randomUUID().slice(0, 8)}`;
+  let writes = 0;
+  let saved;
+  await page.route(`**${api}/admin/blocks`, async (route) => {
+    writes += 1;
+    const response = await route.fetch();
+    expect(response.status()).toBe(201);
+    saved = await response.json();
+    return route.abort('connectionfailed');
+  });
+  const slot = day.slots.at(-1);
+  await page.locator('#block-professional').selectOption(day.professionalId);
+  await page.locator('#block-date').fill(day.date);
+  await page.locator('#block-start').fill(time(slot.startMinute));
+  await page.locator('#block-end').fill(time(slot.endMinute));
+  await page.locator('#block-label').fill(label);
+  await page.getByRole('button', { name: 'Crear bloqueo', exact: true }).click();
+  await expect(page.locator('#block-feedback')).toContainText('No se pudo confirmar el resultado');
+  expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+    'agenda:pending:admin': '1',
+  });
+  // An actual document reload must not silently replace the original key/body.
+  await page.reload();
+  await expect(page.locator('#admin-workspace')).toBeVisible();
+  await expect(page.locator('#pending-operation')).toContainText(
+    'Al recargar se perdió el intento',
+  );
+  await expect(page.locator('#retry-operation')).not.toBeVisible();
+  await expect(page.locator('#walkin-time')).toBeDisabled();
+  await expect(page.locator('#block-start')).toBeDisabled();
+  // Dated authenticated reads remain possible; their result must not unlock writes.
+  await page.locator('#schedule-date').fill(day.date);
+  await page.getByRole('button', { name: 'Ver agenda', exact: true }).click();
+  await expect(page.locator('#block-list')).toContainText(label);
+  await expect(page.locator('#block-start')).toBeDisabled();
+  await page.getByRole('button', { name: 'Actualizar', exact: true }).click();
+  await expect(page.locator('#walkin-time')).toBeDisabled();
+  await page.locator('#block-form').evaluate((form) => form.requestSubmit());
+  expect(writes).toBe(1);
+  const listing = await (
+    await request.get(`${api}/admin/schedule?date=${day.date}&includeCancelled=true`)
+  ).json();
+  expect(listing.blocks.filter((entry) => entry.label === label)).toEqual([saved]);
+  expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+    'agenda:pending:admin': '1',
+  });
+  expect(await page.evaluate(() => ({ ...localStorage }))).toEqual({});
+});
+
+test('hanging admin read times out and can be refreshed without a stuck workspace', async ({
+  page,
+}) => {
+  test.setTimeout(40000);
+  let release;
+  const hold = new Promise((resolve) => (release = resolve));
+  await page.route(`**${api}/catalog`, async (route) => {
+    await hold;
+    await route.abort('connectionfailed');
+  });
+  await page.goto('/admin.html');
+  await expect(page.locator('#reload-agenda')).toBeDisabled();
+  await expect(page.locator('#access-title')).toHaveText('No se pudo comprobar el acceso', {
+    timeout: 25000,
+  });
+  await expect(page.locator('#reload-agenda')).toBeEnabled();
+  await expect(page.locator('#admin-workspace')).not.toBeVisible();
+  release();
+  // Drain the released callback before removing interception. Default unroute
+  // can handle the route before this callback's delayed abort reaches it.
+  await page.unrouteAll({ behavior: 'wait' });
+  await page.locator('#reload-agenda').click();
+  await expect(page.locator('#admin-workspace')).toBeVisible();
+});
+
+test('hanging committed admin mutation times out and replays the original key and body once', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(45000);
+  const catalog = await catalogFor(request);
+  const day = await findFreeDay(request, catalog, 4);
+  await openAdmin(page, day.date);
+  const name = `Cliente ficticio de timeout ${randomUUID().slice(0, 8)}`;
+  const attempts = [];
+  let release;
+  let saved;
+  const hold = new Promise((resolve) => (release = resolve));
+  await page.route(`**${api}/admin/walk-ins`, async (route) => {
+    attempts.push({
+      key: route.request().headers()['idempotency-key'],
+      body: route.request().postDataJSON(),
+    });
+    if (attempts.length !== 1) return route.continue();
+    const response = await route.fetch();
+    expect(response.status()).toBe(201);
+    saved = (await response.json()).booking;
+    await hold;
+    await route.abort('connectionfailed');
+  });
+  await page.locator('#walkin-service').selectOption(day.service.id);
+  await page.locator('#walkin-professional').selectOption(day.professionalId);
+  await page.locator('#walkin-date').fill(day.date);
+  await page.locator('#walkin-time').fill(time(day.slots[0].startMinute));
+  await page.locator('#walkin-name').fill(name);
+  await page.getByRole('button', { name: 'Registrar entrada', exact: true }).click();
+  await expect(page.locator('#walkin-feedback')).toContainText(
+    'No se pudo confirmar el resultado',
+    {
+      timeout: 25000,
+    },
+  );
+  await expect(page.locator('#walkin-form')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('#walkin-time')).toBeDisabled();
+  await expect(page.locator('#retry-operation')).toBeEnabled();
+  expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({
+    'agenda:pending:admin': '1',
+  });
+  release();
+  await page.locator('#retry-operation').click();
+  await expect(page.locator('#pending-operation')).not.toBeVisible();
+  await expect(page.locator('#booking-list')).toContainText(name);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).toEqual(attempts[0]);
+  expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual({});
+  const listing = await (
+    await request.get(`${api}/admin/schedule?date=${day.date}&includeCancelled=true`)
+  ).json();
+  expect(listing.bookings.filter((booking) => booking.customerDisplayName === name)).toEqual([
+    saved,
+  ]);
 });

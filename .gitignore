@@ -27,3 +27,6 @@ playwright-report/
 *.sqlite-journal
 *.agenda-backup.json
 node_modules
+.env
+.env.*
+!.env.example

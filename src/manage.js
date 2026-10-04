@@ -12,10 +12,13 @@ import {
   formatPrice,
   errorMessage,
   AgendaClientError,
+  mutationReloadGuard,
+  reloadRecoveryMessage,
+  reloadStorageMessage,
 } from './booking-client.js';
 
 const $ = (selector) => document.querySelector(selector);
-const capability = consumeManagementLink();
+let capability = consumeManagementLink();
 const confirmation = $('#manage-confirm-dialog');
 let receipt;
 let catalog;
@@ -27,6 +30,10 @@ let uncertain = false;
 let retryAction = 'load';
 let controller;
 let generation = 0;
+const reloadGuard = mutationReloadGuard('manage');
+const recoveryBlocked = reloadGuard.status() !== 'clear';
+const recoveryMessage =
+  reloadGuard.status() === 'unavailable' ? reloadStorageMessage : reloadRecoveryMessage;
 
 function message(text, retry = false) {
   $('#manage-message').textContent = text;
@@ -40,10 +47,10 @@ function focusVisible(node) {
 
 function setControls() {
   for (const control of document.querySelectorAll('button, input, select'))
-    control.disabled = busy || uncertain;
+    control.disabled = busy || uncertain || recoveryBlocked;
   $('#manage-retry').disabled = busy;
   $('#manage-copy').disabled = busy;
-  $('#manage-confirm-move').disabled = busy || uncertain || !slot;
+  $('#manage-confirm-move').disabled = busy || uncertain || recoveryBlocked || !slot;
   document.querySelector('main').setAttribute('aria-busy', String(busy));
 }
 
@@ -86,7 +93,9 @@ function renderReceipt() {
 async function load() {
   if (!capability) {
     message(
-      'Este enlace no permite acceder a una reserva. Abrí el enlace privado que guardaste al confirmar.',
+      recoveryBlocked
+        ? recoveryMessage
+        : 'Este enlace no permite acceder a una reserva. Abrí el enlace privado que guardaste al confirmar.',
     );
     return;
   }
@@ -103,10 +112,12 @@ async function load() {
     busy = false;
     renderReceipt();
     message(
-      catalog
-        ? 'Reserva verificada. Podés consultar su estado y gestionar cambios.'
-        : 'La agenda necesita configuración antes de permitir cambios.',
-      !catalog,
+      recoveryBlocked
+        ? recoveryMessage
+        : catalog
+          ? 'Reserva verificada. Podés consultar su estado y gestionar cambios.'
+          : 'La agenda necesita configuración antes de permitir cambios.',
+      !catalog || recoveryBlocked,
     );
     retryAction = 'load';
   } catch (error) {
@@ -118,7 +129,8 @@ async function load() {
 }
 
 function prepareReschedule() {
-  if (!catalog || receipt.booking.status !== 'confirmed') return;
+  if (recoveryBlocked || uncertain || busy || !catalog || receipt.booking.status !== 'confirmed')
+    return;
   const service = catalog.services.find(({ id }) => id === receipt.booking.serviceId);
   if (!service) {
     message(
@@ -211,7 +223,11 @@ async function loadSlots() {
 }
 
 async function commit(action) {
-  if (busy || !catalog || !receipt) return;
+  if (busy || recoveryBlocked || !catalog || !receipt) return;
+  if (!pending && reloadGuard.status() !== 'clear') {
+    message(reloadRecoveryMessage);
+    return;
+  }
   if (!pending) {
     if (action === 'reschedule' && !slot) return;
     pending = {
@@ -229,6 +245,12 @@ async function commit(action) {
           : {}),
       },
     };
+  }
+  if (!reloadGuard.arm()) {
+    if (!uncertain) pending = null;
+    confirmation.close();
+    message(reloadStorageMessage, uncertain);
+    return;
   }
   busy = true;
   setControls();
@@ -250,6 +272,7 @@ async function commit(action) {
           result.booking.professionalId !== pending.body.professionalId))
     )
       throw new AgendaClientError('INVALID_RESPONSE', 0, 'No se pudo verificar el cambio.', true);
+    reloadGuard.clear();
     receipt = result;
     busy = false;
     uncertain = false;
@@ -277,6 +300,7 @@ async function commit(action) {
       );
       return;
     }
+    reloadGuard.clear();
     pending = null;
     uncertain = false;
     setControls();
@@ -295,6 +319,7 @@ async function commit(action) {
 
 $('#manage-move').addEventListener('click', prepareReschedule);
 $('#manage-cancel').addEventListener('click', () => {
+  if (recoveryBlocked || uncertain || busy) return;
   confirmation.showModal();
   focusVisible($('#manage-confirm-heading'));
 });
@@ -334,5 +359,21 @@ $('#manage-copy').addEventListener('click', async () => {
 });
 confirmation.addEventListener('cancel', (event) => {
   if (busy) event.preventDefault();
+});
+// Pasting the retained private link into this same page may only change its
+// fragment, without loading a new document. Consume and scrub it here too.
+window.addEventListener('hashchange', () => {
+  if (!new URLSearchParams(location.hash.slice(1)).has('token')) return;
+  const next = consumeManagementLink();
+  if (busy || pending || uncertain) return;
+  capability = next;
+  receipt = null;
+  catalog = null;
+  slot = null;
+  controller?.abort();
+  generation += 1;
+  $('#manage-booking').hidden = true;
+  $('#manage-reschedule').hidden = true;
+  void load();
 });
 void load();

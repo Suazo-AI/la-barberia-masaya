@@ -1,0 +1,754 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "8b6f8605-a81c-4f1f-949c-8c0170ead6ae",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "agenda_audit": {
+      "name": "agenda_audit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_kind": {
+          "name": "actor_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "entry_version": {
+          "name": "entry_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "agenda_audit_entry": {
+          "name": "agenda_audit_entry",
+          "columns": [
+            "entry_id",
+            "created_at",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "agenda_audit_entry_id_agenda_entries_id_fk": {
+          "name": "agenda_audit_entry_id_agenda_entries_id_fk",
+          "tableFrom": "agenda_audit",
+          "tableTo": "agenda_entries",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_audit_action": {
+          "name": "agenda_audit_action",
+          "value": "action IN ('created', 'cancelled', 'rescheduled', 'blocked', 'unblocked')"
+        },
+        "agenda_audit_actor": {
+          "name": "agenda_audit_actor",
+          "value": "actor_kind IN ('public', 'admin', 'customer')"
+        },
+        "agenda_audit_entry_version": {
+          "name": "agenda_audit_entry_version",
+          "value": "entry_version >= 1"
+        }
+      }
+    },
+    "agenda_configuration": {
+      "name": "agenda_configuration",
+      "columns": {
+        "business_id": {
+          "name": "business_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "config_hash": {
+          "name": "config_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "config_json": {
+          "name": "config_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_configuration_version": {
+          "name": "agenda_configuration_version",
+          "value": "typeof(version) = 'integer' AND version >= 1"
+        },
+        "agenda_configuration_hash": {
+          "name": "agenda_configuration_hash",
+          "value": "length(config_hash) = 64"
+        },
+        "agenda_configuration_json": {
+          "name": "agenda_configuration_json",
+          "value": "json_valid(config_json)"
+        }
+      }
+    },
+    "agenda_configuration_guard": {
+      "name": "agenda_configuration_guard",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "valid": {
+          "name": "valid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_configuration_guard_id": {
+          "name": "agenda_configuration_guard_id",
+          "value": "id = 1"
+        },
+        "agenda_active_configuration": {
+          "name": "agenda_active_configuration",
+          "value": "valid = 1"
+        }
+      }
+    },
+    "agenda_entries": {
+      "name": "agenda_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "professional_id": {
+          "name": "professional_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "professional_name": {
+          "name": "professional_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "service_name": {
+          "name": "service_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_utc": {
+          "name": "start_utc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "end_utc": {
+          "name": "end_utc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "allocated_start_utc": {
+          "name": "allocated_start_utc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "allocated_end_utc": {
+          "name": "allocated_end_utc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration_minutes": {
+          "name": "duration_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "buffer_before_minutes": {
+          "name": "buffer_before_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "buffer_after_minutes": {
+          "name": "buffer_after_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "price_minor_units": {
+          "name": "price_minor_units",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'NIO'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "customer_display_name": {
+          "name": "customer_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "customer_email": {
+          "name": "customer_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "management_hash": {
+          "name": "management_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "block_label": {
+          "name": "block_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "agenda_entries_professional_time": {
+          "name": "agenda_entries_professional_time",
+          "columns": [
+            "professional_id",
+            "allocated_start_utc",
+            "allocated_end_utc"
+          ],
+          "isUnique": false,
+          "where": "status = 'confirmed'"
+        },
+        "agenda_entries_time": {
+          "name": "agenda_entries_time",
+          "columns": [
+            "start_utc",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_entries_kind": {
+          "name": "agenda_entries_kind",
+          "value": "kind IN ('booking', 'walk-in', 'block')"
+        },
+        "agenda_entries_start": {
+          "name": "agenda_entries_start",
+          "value": "typeof(start_utc) = 'integer'"
+        },
+        "agenda_entries_end": {
+          "name": "agenda_entries_end",
+          "value": "typeof(end_utc) = 'integer' AND end_utc > start_utc"
+        },
+        "agenda_entries_allocated_start": {
+          "name": "agenda_entries_allocated_start",
+          "value": "typeof(allocated_start_utc) = 'integer' AND allocated_start_utc <= start_utc"
+        },
+        "agenda_entries_allocated_end": {
+          "name": "agenda_entries_allocated_end",
+          "value": "typeof(allocated_end_utc) = 'integer' AND allocated_end_utc >= end_utc"
+        },
+        "agenda_entries_buffer_before": {
+          "name": "agenda_entries_buffer_before",
+          "value": "typeof(buffer_before_minutes) = 'integer' AND buffer_before_minutes >= 0"
+        },
+        "agenda_entries_buffer_after": {
+          "name": "agenda_entries_buffer_after",
+          "value": "typeof(buffer_after_minutes) = 'integer' AND buffer_after_minutes >= 0"
+        },
+        "agenda_entries_currency": {
+          "name": "agenda_entries_currency",
+          "value": "currency = 'NIO'"
+        },
+        "agenda_entries_status": {
+          "name": "agenda_entries_status",
+          "value": "status IN ('confirmed', 'cancelled')"
+        },
+        "agenda_entries_version": {
+          "name": "agenda_entries_version",
+          "value": "typeof(version) = 'integer' AND version >= 1"
+        },
+        "agenda_entries_management_hash": {
+          "name": "agenda_entries_management_hash",
+          "value": "management_hash IS NULL OR length(management_hash) = 64"
+        },
+        "agenda_entries_allocated_interval": {
+          "name": "agenda_entries_allocated_interval",
+          "value": "allocated_start_utc = start_utc - buffer_before_minutes * 60 AND allocated_end_utc = end_utc + buffer_after_minutes * 60"
+        },
+        "agenda_entries_kind_fields": {
+          "name": "agenda_entries_kind_fields",
+          "value": "\n    (kind = 'block' AND service_id IS NULL AND service_name IS NULL\n      AND duration_minutes IS NULL AND price_minor_units IS NULL\n      AND customer_display_name IS NULL AND customer_email IS NULL\n      AND management_hash IS NULL AND buffer_before_minutes = 0 AND buffer_after_minutes = 0 AND block_label IS NOT NULL)\n    OR\n    (kind IN ('booking', 'walk-in') AND service_id IS NOT NULL AND service_name IS NOT NULL\n      AND typeof(duration_minutes) = 'integer' AND duration_minutes > 0\n      AND end_utc - start_utc = duration_minutes * 60\n      AND typeof(price_minor_units) = 'integer' AND price_minor_units >= 0\n      AND block_label IS NULL)\n  "
+        }
+      }
+    },
+    "agenda_idempotency": {
+      "name": "agenda_idempotency",
+      "columns": {
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "response_json": {
+          "name": "response_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "agenda_idempotency_scope_key_pk": {
+          "columns": [
+            "scope",
+            "key"
+          ],
+          "name": "agenda_idempotency_scope_key_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_idempotency_response": {
+          "name": "agenda_idempotency_response",
+          "value": "json_valid(response_json)"
+        }
+      }
+    },
+    "agenda_outbox": {
+      "name": "agenda_outbox",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_version": {
+          "name": "entry_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recipient": {
+          "name": "recipient",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'disabled'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lease_until": {
+          "name": "lease_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lease_id": {
+          "name": "lease_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "agenda_outbox_delivery": {
+          "name": "agenda_outbox_delivery",
+          "columns": [
+            "status",
+            "next_attempt_at"
+          ],
+          "isUnique": false
+        },
+        "agenda_outbox_lease": {
+          "name": "agenda_outbox_lease",
+          "columns": [
+            "lease_id"
+          ],
+          "isUnique": true,
+          "where": "lease_id IS NOT NULL"
+        },
+        "agenda_outbox_entry_event_version": {
+          "name": "agenda_outbox_entry_event_version",
+          "columns": [
+            "entry_id",
+            "event_type",
+            "entry_version"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "agenda_outbox_entry_id_agenda_entries_id_fk": {
+          "name": "agenda_outbox_entry_id_agenda_entries_id_fk",
+          "tableFrom": "agenda_outbox",
+          "tableTo": "agenda_entries",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_outbox_event": {
+          "name": "agenda_outbox_event",
+          "value": "event_type IN ('booking.confirmed', 'booking.cancelled', 'booking.rescheduled')"
+        },
+        "agenda_outbox_entry_version": {
+          "name": "agenda_outbox_entry_version",
+          "value": "entry_version >= 1"
+        },
+        "agenda_outbox_payload": {
+          "name": "agenda_outbox_payload",
+          "value": "json_valid(payload_json)"
+        },
+        "agenda_outbox_status": {
+          "name": "agenda_outbox_status",
+          "value": "status IN ('disabled', 'pending', 'processing', 'sent', 'failed')"
+        },
+        "agenda_outbox_attempts": {
+          "name": "agenda_outbox_attempts",
+          "value": "attempts >= 0 AND attempts <= 5"
+        }
+      }
+    },
+    "agenda_rate_limits": {
+      "name": "agenda_rate_limits",
+      "columns": {
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "agenda_rate_limits_scope_bucket_pk": {
+          "columns": [
+            "scope",
+            "bucket"
+          ],
+          "name": "agenda_rate_limits_scope_bucket_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_rate_limits_bucket": {
+          "name": "agenda_rate_limits_bucket",
+          "value": "typeof(bucket) = 'integer'"
+        },
+        "agenda_rate_limits_count": {
+          "name": "agenda_rate_limits_count",
+          "value": "typeof(count) = 'integer' AND count > 0"
+        }
+      }
+    },
+    "agenda_write_guard": {
+      "name": "agenda_write_guard",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "affected": {
+          "name": "affected",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agenda_write_guard_id": {
+          "name": "agenda_write_guard_id",
+          "value": "id = 1"
+        },
+        "agenda_one_change": {
+          "name": "agenda_one_change",
+          "value": "affected = 1"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

@@ -1,5 +1,44 @@
 const API = '/api/agenda/v1';
 
+// Only a non-secret per-tab sentinel survives document loss. Request bodies,
+// personal data, idempotency keys and management capabilities remain in memory.
+// A marker is deliberately not a replay journal: a reload cannot safely infer
+// whether an earlier in-flight write committed, so new writes must fail closed.
+export function mutationReloadGuard(scope) {
+  if (!['create', 'manage', 'admin'].includes(scope)) throw new TypeError('Invalid scope.');
+  const key = `agenda:pending:${scope}`;
+  return {
+    status() {
+      try {
+        return sessionStorage.getItem(key) === null ? 'clear' : 'pending';
+      } catch {
+        return 'unavailable';
+      }
+    },
+    arm() {
+      try {
+        sessionStorage.setItem(key, '1');
+        return sessionStorage.getItem(key) === '1';
+      } catch {
+        return false;
+      }
+    },
+    clear() {
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        // A leftover marker must keep the next document closed to new writes.
+      }
+    },
+  };
+}
+
+export const reloadRecoveryMessage =
+  'Esta pestaña conserva una solicitud pendiente de verificar. Al recargar se perdió el intento en memoria; no se puede reenviar ni iniciar otra acción con seguridad. Si guardaste un enlace privado, reabrilo para consultar el estado. Pedí a un administrador que verifique el resultado antes de continuar. No creés otra reserva para reemplazar este intento.';
+
+export const reloadStorageMessage =
+  'El navegador no permite conservar la protección de esta pestaña al recargar. No se enviarán nuevas solicitudes sin esta protección. Habilitá el almacenamiento de sesión y volvé a consultar; cualquier resultado anterior sigue pendiente de verificar.';
+
 export class AgendaClientError extends Error {
   constructor(code, status, message, uncertain = false) {
     super(message);
