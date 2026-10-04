@@ -4,6 +4,8 @@ Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-
 
 Current authorized increment, 2026-10-04: [persistent portable agenda MVP](docs/agenda/spec.md), from `181bc7e1f379d195aea0c06e6d56e2ac75d5886e`. Standard TypeScript/SQLite domain with Node and Workers/D1 adapters, persistent booking/walk-in/block flows, scoped authorization, atomic conflict prevention, disabled notifications and a tested private backup path. Business configuration and host administrator identity remain prerequisites for activation. No merge/backend deployment or actual notification is authorized. Earlier historical no-backend statements below are superseded for this implementation only.
 
+Current application source: `f321ab9c0db256fed92682ccad08ae15b552a628`. [Verification/review](docs/evidence/agenda-review.md), [actual before/after PNGs and videos](docs/evidence/agenda/README.md), [remaining hosted-backend integration](docs/agenda/hosting-handoff.md). Local full check passed; the exact application-source CI retains the documented Lighthouse/Chrome environment failure. PR #2 stays draft, with no backend activation or merge.
+
 1. Read [AGENTS.md](AGENTS.md) for scope and publication boundaries
 2. Read [SPEC.md](SPEC.md) v0.6 and the [current agenda spec](docs/agenda/spec.md); section 10 describes the historical reservation demo
 3. Read [docs/decisions.md](docs/decisions.md) and [docs/sources.md](docs/sources.md) for decisions and asset rights

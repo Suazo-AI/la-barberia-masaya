@@ -4,6 +4,8 @@ Current authorized increment: a [persistent portable agenda](agenda/README.md), 
 
 For the current agenda, use `npm run agenda:local` after building. Fixture mode is an explicit local opt-in. `npm run check` now includes TypeScript, real SQLite domain/storage/API tests and both site and agenda browser suites. The [hosting handoff](docs/agenda/hosting-handoff.md) describes the remaining Worker/assets/migration integration; the static build alone cannot run the API.
 
+[Current agenda verification](docs/evidence/agenda-review.md) records the exact application source, checks, independent review and [50 actual PNGs / 6 WebMs](docs/evidence/agenda/README.md). Production setup and human visual acceptance remain separate.
+
 ## Historical website increments
 
 The current private increment includes a verified visit panel with address, weekly hours and Maps directions. The approved Obsidian effect awaits authentic haircut/review content; its engine is retained, with local-photo controls disabled. The premises gallery remains static. See [visit evidence](docs/evidence/visit-review.md).

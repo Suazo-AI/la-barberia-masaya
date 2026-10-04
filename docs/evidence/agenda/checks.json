@@ -1,0 +1,95 @@
+{
+  "format": "agenda-verification",
+  "version": 1,
+  "date": "2026-10-04",
+  "sourceCommit": "f321ab9c0db256fed92682ccad08ae15b552a628",
+  "beforeCommit": "181bc7e1f379d195aea0c06e6d56e2ac75d5886e",
+  "environment": {
+    "platform": "Windows",
+    "installedNode": "24.18.0",
+    "declaredNode": "24.19.0",
+    "playwright": "1.63.0",
+    "browser": "Chrome 154.0.8037.93",
+    "businessTimezone": "America/Managua"
+  },
+  "commands": [
+    {
+      "command": "npm run check",
+      "cwd": "repository root",
+      "exitCode": 0,
+      "formatHtmlTypeBuild": "passed",
+      "staticAndHistoricalModel": { "passed": 16, "failed": 0, "skipped": 0 },
+      "agendaNode": { "passed": 67, "failed": 0, "skipped": 0 },
+      "siteBrowser": { "passed": 22, "failed": 0, "skipped": 2, "flaky": 0 },
+      "agendaBrowser": { "passed": 23, "failed": 0, "skipped": 0, "flaky": 0 },
+      "localSkipReason": "Optional historical pre-Obsidian comparisons require UI_BASELINE_URL; the new real baseline181 before/after collection is separately complete."
+    },
+    {
+      "command": "node .private-evidence/agenda-final/public/capture.mjs after f321ab9c0db256fed92682ccad08ae15b552a628",
+      "cwd": "repository root",
+      "exitCode": 0,
+      "runtime": "http://127.0.0.1:4191",
+      "mode": "fixture",
+      "screenshots": 26,
+      "videos": 2
+    },
+    {
+      "command": "AGENDA_CAPTURE_COMMIT=f321ab9c0db256fed92682ccad08ae15b552a628 node .private-evidence/agenda-final/admin/capture.mjs",
+      "cwd": "repository root",
+      "exitCode": 0,
+      "runtime": "http://127.0.0.1:4191/admin.html",
+      "mode": "fixture",
+      "screenshots": 10,
+      "videos": 2,
+      "note": "Environment assignment shown conceptually; the actual Windows invocation sets the PowerShell environment variable."
+    },
+    {
+      "command": "Strict public/admin evidence exports and independent artifact verification",
+      "cwd": "repository root",
+      "exitCode": 0,
+      "png": 50,
+      "webm": 6,
+      "hashAndSizeVerified": 56,
+      "pngDimensionsVerified": 50,
+      "chromeMidpointVideoDecode": 6,
+      "administratorFullFfmpegDecode": 2
+    }
+  ],
+  "budgets": {
+    "bootstrapBytes": 6100,
+    "bootstrapLimit": 6144,
+    "optionalAgendaBytes": 36184,
+    "optionalAgendaLimit": 36864,
+    "optionalGalleryBytes": 14329,
+    "optionalGalleryLimit": 20480,
+    "modeledCoreGzipBytes": 394045,
+    "modeledCoreGzipLimit": 409600,
+    "modeledFullPageGzipBytes": 527815,
+    "modeledFullPageGzipLimit": 563200,
+    "method": "Modeled asset byte budgets plus separate browser DPR1/DPR2 resource checks; not Lighthouse scores."
+  },
+  "ci": {
+    "sourceCommit": "f321ab9c0db256fed92682ccad08ae15b552a628",
+    "run": "https://github.com/Suazo-AI/la-barberia-masaya/actions/runs/37170755609",
+    "overall": "failure",
+    "npmRunCheck": "passed before subsequent performance gate",
+    "failedStep": "npm run test:performance",
+    "error": "scripts/lighthouse.mjs:18 expected root-owned, non-writable official Chrome file /opt/google/chrome/chrome",
+    "node": "24.19.0",
+    "lighthouseScore": null
+  },
+  "independentReview": {
+    "source": "completed with no further functional blocker observed",
+    "actualSqlRateLimitRepro": "lost committed response, real429, same original request, one effect",
+    "artifactCountVerified": 56,
+    "publicCopyAndFinalDocsDelta": "Independent check of the evidence-only commit is reported in the delivery."
+  },
+  "limitations": [
+    "D1 uses local structural contract tests; no remote D1 operation or backend deployment.",
+    "Static build lacks the hosted asset-serving Worker, entrypoint and Drizzle packaging.",
+    "Verified business configuration and trusted owner identity integration remain prerequisites.",
+    "Email disabled; transport and runner not provisioned.",
+    "Capability expiry/revocation, retention, private backup destination, remote recovery and license selection unresolved.",
+    "Safari/iOS, screen reader and human visual acceptance not completed."
+  ]
+}
