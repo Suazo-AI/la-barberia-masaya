@@ -705,7 +705,9 @@ test('hanging admin read times out and can be refreshed without a stuck workspac
   await expect(page.locator('#reload-agenda')).toBeEnabled();
   await expect(page.locator('#admin-workspace')).not.toBeVisible();
   release();
-  await page.unroute(`**${api}/catalog`);
+  // Drain the released callback before removing interception. Default unroute
+  // can handle the route before this callback's delayed abort reaches it.
+  await page.unrouteAll({ behavior: 'wait' });
   await page.locator('#reload-agenda').click();
   await expect(page.locator('#admin-workspace')).toBeVisible();
 });

@@ -37,5 +37,10 @@
     "build:sites": "node scripts/build-sites.mjs",
     "test:sites": "npm run build:sites && node --test tests/sites-artifact.test.mjs",
     "db:generate": "drizzle-kit generate"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.28.2"
+    }
   }
 }

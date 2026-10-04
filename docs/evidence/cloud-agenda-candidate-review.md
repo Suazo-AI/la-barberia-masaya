@@ -2,6 +2,12 @@
 
 Date: 2026-10-04 UTC. Implementation baseline: `f321ab9c0db256fed92682ccad08ae15b552a628`. The later remote `68c362fd15e02e01ea5b25a789340af69f825842` adds documentation and actual earlier screenshots/videos only; its application source is unchanged. Those artifacts describe the prior application, not browser verification of the new reload guards.
 
+## Subsequent remote verification
+
+The source candidate was published separately in [draft PR #3](https://github.com/Suazo-AI/la-barberia-masaya/pull/3), leaving PR #2's branch unchanged. Initial exact-head [CI run 37173363055](https://github.com/Suazo-AI/la-barberia-masaya/actions/runs/37173363055) on `ceaf7b16f4d4f48b66b1fc2bfe79c7a7324853ab` passed all local-equivalent checks, 24 website browser tests and 31 of 32 agenda browser tests. The remaining test failed in route-interception cleanup (`Route is already handled`) after its request deadline assertions; it was corrected to wait for active routing handlers before removing interception. No timeout, UI or replay assertions were removed or relaxed. The next exact-head CI result is reported on the draft PR; the initial run is not claimed green.
+
+Dependency audit also identified the development-only esbuild advisory [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) through Drizzle tooling. A targeted override selects the already pinned patched esbuild `0.28.2` for that transitive dependency. After regenerating the affected lock entries and a clean `npm ci --ignore-scripts`, `npm audit` reports zero known vulnerabilities. Generation drift, types and tests are checked again; no development server or hosted runtime dependency is introduced.
+
 ## Scope
 
 - Isolated source-only Worker/assets adapter for the same Site, with exact logical `DB` binding and no assigned owner
@@ -36,7 +42,7 @@ An independent source review and focused test run found no P0/P1 issue. Review i
 
 ## Explicitly not verified
 
-No Chromium browser was launched for this candidate after the earlier cloud audit reported a sandbox startup restriction. New browser regressions are authored and registered, but are **not passed browser tests**. No before/after screenshots or video of the new blocked-reload states were captured, so human visual acceptance remains pending. No complete `npm run check` or measured Lighthouse result is claimed for this candidate.
+During the initial local-only preparation, no Chromium browser was launched after the cloud audit reported a sandbox startup restriction; the local registration count was not a browser pass. The subsequent remote CI results above supersede that local limitation. Human visual acceptance remains pending; no measured Lighthouse result is claimed, and the initial remote aggregate was not fully green.
 
 Tests using a local SQL-backed structural D1 double do not establish real D1 dispatch, migrations, concurrency limits, backups or restoration. Those remain activation gates, together with approved real business configuration, same-Site owner identity and persistent-access approval, hosted admin sign-in UI, retention/revocation policy and a private recovery destination.
 
