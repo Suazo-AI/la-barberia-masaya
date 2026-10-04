@@ -1,6 +1,6 @@
 import { test, expect, request as apiRequest } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { expectViewportReflow } from './reflow-diagnostics.mjs';
+import { expectViewportReflow, fillAndCheckAbsenceControls } from './reflow-diagnostics.mjs';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 
@@ -391,6 +391,12 @@ test('barber session remains scoped at 320px, 200% text and reduced motion; unkn
   await open(page, 'barber', day.date);
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
+  });
+  await fillAndCheckAbsenceControls(page, testInfo, {
+    'absence-start-date': day.date,
+    'absence-start-time': time(day.slot.startMinute),
+    'absence-end-date': dateAfter(day.date, 1),
+    'absence-end-time': time(day.slot.startMinute + 60),
   });
   await expectViewportReflow(page, testInfo);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

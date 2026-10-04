@@ -515,6 +515,33 @@ legend {
 }
 
 @media (max-width: 480px) {
+  /* Keep horizontal space for native date/time segments when text is enlarged.
+     Text, vertical spacing, and touch targets retain their accessible sizing. */
+  .admin-header,
+  main,
+  .admin-footer,
+  dialog {
+    width: calc(100% - 24px);
+  }
+
+  .access-panel,
+  .schedule-section,
+  .form-panel,
+  .backup-panel,
+  dialog {
+    padding-inline: 12px;
+  }
+
+  fieldset,
+  input,
+  select {
+    padding-inline: 8px;
+  }
+
+  .entry {
+    padding-inline: 12px;
+  }
+
   .role-panel .button {
     width: 100%;
     justify-content: center;

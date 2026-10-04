@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { expectViewportReflow } from './reflow-diagnostics.mjs';
+import { expectViewportReflow, fillAndCheckAbsenceControls } from './reflow-diagnostics.mjs';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
@@ -355,6 +355,12 @@ test('admin accessibility, native focus and reflow at 320px / 200% text / reduce
     document.documentElement.style.fontSize = '200%';
   });
   await createWalkIn(page, day, name);
+  await fillAndCheckAbsenceControls(page, testInfo, {
+    'absence-start-date': day.date,
+    'absence-start-time': time(day.slots[0].startMinute),
+    'absence-end-date': day.date,
+    'absence-end-time': time(day.slots[0].startMinute + 60),
+  });
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
   await expectViewportReflow(page, testInfo);
