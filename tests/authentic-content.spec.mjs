@@ -50,6 +50,9 @@ for (const viewport of [
     await page.locator('.work-section').scrollIntoViewIfNeeded();
     await page.evaluate(() => document.querySelector('.work-section').scrollIntoView());
     const frame = page.locator('.highlight-fade-viewport');
+    // At 200% text the section introduction extends beyond the viewport. Bring
+    // the real photo card near the observer instead of forcing eager loading.
+    if (viewport.width === 320) await frame.scrollIntoViewIfNeeded();
     await expect(frame.locator('img')).toBeVisible();
     await expect
       .poll(() =>
