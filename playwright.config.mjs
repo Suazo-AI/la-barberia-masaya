@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs';
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.mjs',
+  // Agenda runs afterward and owns the default test-results directory.
+  outputDir: '.private-evidence/site-test-results',
   fullyParallel: false,
   workers: 1,
   retries: 0,

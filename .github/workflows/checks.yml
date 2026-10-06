@@ -125,6 +125,8 @@ jobs:
             .private-evidence/authentic-content/*.json
             .private-evidence/public-catalog/*.png
             .private-evidence/public-catalog/*.json
+            .private-evidence/site-test-results/**/*.png
+            .private-evidence/site-test-results/**/*.webm
             .private-evidence/ui-*.png
             .private-evidence/ui-*.json
             test-results/**/*.png
