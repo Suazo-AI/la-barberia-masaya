@@ -4,6 +4,8 @@ Persistent single-business agenda with a TypeScript domain, SQL invariants and s
 
 ## Local use
 
+For actual business setup, start with the [operator runbook](../docs/agenda/setup-runbook.md) and `npm run check:setup -- .agenda-private/catalog-candidate.json`. The offline checker reports missing/invalid fields without printing their private values or modifying configuration. Exit `0` means structurally valid production input, not authority to activate bookings; `2` means incomplete/nonproduction input and `1` means unreadable/malformed input. Separate identity approval and hosted readiness gates always remain.
+
 From the repository root:
 
 ```sh

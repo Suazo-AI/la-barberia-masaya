@@ -31,6 +31,8 @@ The responsible person is the actual business owner or an explicitly authorized 
 7. Decide retention, lost-link recovery/revocation and public abuse-control policies. Choose an approved private backup destination and recovery owner
 8. Review the exact-build phone/desktop evidence, complete relevant Safari/iOS/screen-reader checks, obtain human visual acceptance and explicit release authorization
 
+Catalog update, 2026-10-06: the user has now confirmed service prices and durations; [the private candidate notes](catalog-readiness.md) supersede that subset of item 1. Preparation/cleanup buffers, service eligibility and the other activation inputs remain unresolved. This partial confirmation does not mark the complete configuration verified or authorize activation.
+
 Email delivery may remain disabled. Sender/provider/runner approval is needed only before enabling messages. License selection and copyright attribution remain necessary before distributing the reusable module as open source; a public repository is not itself a license.
 
 ## Rollback boundary
@@ -48,3 +50,15 @@ The portable Worker and Node adapters do not expose this endpoint or interpret d
 No identity allowlist, runtime setting, business configuration, external account, persistent credential, deployment or role grant is changed by this increment. The actual owner and barber accounts still need verification and explicit approval. The current deployed review Site remains unchanged.
 
 Identity navigation and `pagehide` synchronously scrub private DOM/state, the own-subject display and retained mutation body/key/retry. A page-lifetime abort/epoch guard rejects delayed old replies; it cannot clear an uncertain operation's pending sentinel. A persisted `pageshow` scrubs again and revalidates access before private data can return. Tests include an actual sign-out/Back navigation and explicit persisted lifecycle-event simulation around a committed-but-delayed synthetic mutation; they do not assert that CI admitted the page to an actual browser back/forward cache.
+
+## Offline setup increment · 2026-10-06
+
+The [operator runbook](setup-runbook.md) and `npm run check:setup -- <private-config.json>` provide a concrete, read-only next step. The checker reuses runtime validation, identifies missing input paths, omits private values and never fills defaults, contacts the host or authorizes activation. Production-shaped input can pass structural validation while all separate approval/hosted-verification gates remain. Eight regressions cover incomplete candidates, fixture rejection, runtime-validator parity, malformed/special-file input, privacy, file bounds and unchanged inputs.
+
+Local checks on this combined candidate passed on 2026-10-06: lint, TypeScript, 151 agenda tests (including eight catalog-duration and eight setup-check cases), 16 static/model tests, four built-Worker artifact tests, static/Worker builds and unchanged asset budgets. No new public UI, runtime adapter, schema/migration or production configuration is changed. Browser tests have not been rerun locally for this offline increment; exact-head CI remains authoritative. A read-only Site inspection still found v7 and no runtime entries (revision 0).
+
+### Explained performance blocker
+
+The retained CI preflight for image `20260927.320.1` reports Chrome UID 0 and mode `0777`: ownership was correct, but the installed binary was group/world writable. GitHub's [exact image provisioning source](https://github.com/actions/runner-images/blob/1275e33f5019b02660b81ecc5622fe196211fa89/images/ubuntu/scripts/build/configure-system.sh#L12-L15) recursively makes `/opt` writable, explaining the guard failure. The [published image manifest](https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md) matches the pinned Chrome version. An unchanged retry is not a demonstrated repair.
+
+No guard, security permission, runner or metric threshold was changed. A private Chrome download does not meet the present root-owned/path-specific AppArmor contract; [official Puppeteer guidance](https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu) documents that sandbox restriction. A different-platform lab would need separately reviewed integrity and sandbox verification before it could establish the three cold-run performance result. Performance remains unmeasured, not passed.

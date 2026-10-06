@@ -87,6 +87,9 @@ test('hosting metadata and generated migration tree are copied without mutation 
     '/drizzle/meta/_journal.json',
     '/.env',
     '/agenda/config.example.json',
+    '/.agenda-private/catalog-candidate.json',
+    '/.agenda-private/catalog-provenance.json',
+    '/agenda/tools/setup-check.ts',
   ]) {
     const response = await worker.fetch(new Request(`${origin}${path}`), {});
     assert.equal(response.status, 404, path);
