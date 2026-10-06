@@ -25,6 +25,23 @@ const slots = $('#booking-slots');
 const advance = $('#booking-continue');
 const progress = $('.booking-progress');
 const originalTitle = document.title;
+const team = $('#booking-team');
+team.addEventListener(
+  'toggle',
+  (event) => {
+    if (!event.target.open) return;
+    const target = event.target.querySelector('[data-team-photo]');
+    if (target && !target.querySelector('img') && event.target.matches('.team-profile'))
+      target.append(target.querySelector('template').content.cloneNode(true));
+  },
+  true,
+);
+function resetTeam() {
+  for (const details of team.querySelectorAll('details')) details.open = false;
+  team.open = false;
+  for (const image of team.querySelectorAll('img')) image.remove();
+}
+
 let state;
 let opener;
 let portfolioOpener;
@@ -327,7 +344,7 @@ function configureLabels() {
     ? 'Agenda local de prueba · servicios, precios y profesionales ficticios.'
     : 'Elegí tu servicio y consultá los horarios disponibles.';
   $('[data-panel="1"] legend').textContent = 'Servicio';
-  $('[data-panel="1"] .booking-help:last-child').textContent = fixture
+  $('#booking-service-price-note').textContent = fixture
     ? 'Duraciones y precios ficticios en córdobas (NIO).'
     : 'Duración y precio en córdobas (NIO), según el servicio.';
   $('[data-panel="2"] legend').textContent = '¿Con quién?';
@@ -416,6 +433,7 @@ async function loadCatalog(reason = '') {
 
 function reset(reason = '') {
   if (state?.submitting || state?.uncertain || state?.recoveryBlocked) return;
+  resetTeam();
   state = {
     step: 1,
     visited: 1,
@@ -716,14 +734,14 @@ dialog.addEventListener('cancel', (event) => {
 });
 dialog.addEventListener('keydown', (event) => {
   if (event.key !== 'Tab') return;
-  const controls = [...dialog.querySelectorAll('button, input, [href], [tabindex]')].filter(
-    (node) => {
-      if (node.disabled || node.tabIndex < 0 || !node.getClientRects().length) return false;
-      if (node.type !== 'radio') return true;
-      const group = [...dialog.querySelectorAll(`input[name="${node.name}"]`)];
-      return node === (group.find((input) => input.checked) || group[0]);
-    },
-  );
+  const controls = [
+    ...dialog.querySelectorAll('button, input, summary, [href], [tabindex]'),
+  ].filter((node) => {
+    if (node.disabled || node.tabIndex < 0 || !node.getClientRects().length) return false;
+    if (node.type !== 'radio') return true;
+    const group = [...dialog.querySelectorAll(`input[name="${node.name}"]`)];
+    return node === (group.find((input) => input.checked) || group[0]);
+  });
   if (
     event.shiftKey &&
     (document.activeElement === controls[0] || !controls.includes(document.activeElement))
@@ -740,6 +758,7 @@ dialog.addEventListener('close', () => {
   controller?.abort();
   generation += 1;
   portfolioOpener = null;
+  resetTeam();
   $('#booking-portfolio-works').replaceChildren();
   if (!state?.uncertain && !state?.receipt && !state?.recoveryBlocked) state = null;
   document.body.classList.remove('booking-open');

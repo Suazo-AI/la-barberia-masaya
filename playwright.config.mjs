@@ -29,6 +29,17 @@ export default defineConfig({
       url: 'http://127.0.0.1:4173',
       reuseExistingServer: !process.env.CI,
     },
+    ...(process.env.AUTHENTIC_BASELINE_URL
+      ? [
+          {
+            command: 'node scripts/preview.mjs',
+            cwd: '.private-evidence/authentic-baseline',
+            env: { PORT: '4176' },
+            url: process.env.AUTHENTIC_BASELINE_URL,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
     ...(process.env.UI_BASELINE_URL
       ? [
           {

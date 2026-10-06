@@ -149,7 +149,7 @@
             class="art-gallery"
             tabindex="0"
             role="group"
-            aria-label="Galería de dos cortes en proceso y tres fragmentos de reseñas"
+            aria-label="Galería de un corte terminado, un corte en proceso y tres fragmentos de reseñas"
             aria-describedby="gallery-instructions"
           ></div>
           <div class="gallery-pan-controls" role="group" aria-label="Mover galería">
@@ -161,32 +161,46 @@
           </div>
         </div>
         <p class="work-note">
-          Cortes en proceso publicados por el negocio. Fotos y reseñas son independientes.
+          Un corte terminado y otro en proceso, publicados por el negocio. Fotos y reseñas son
+          independientes.
         </p>
         <div class="work-grid">
-          <figure class="work-card work-photo" data-gallery-item data-label="FOTO 1 · EN PROCESO">
-            <template class="work-image-template"
-              ><img
-                src="./assets/images/barber-at-work-2026-09-17.jpg"
-                width="518"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="Barbero trabajando el contorno del cabello de un cliente en La Barbería." /></template
-            ><noscript
-              ><img
-                src="./assets/images/barber-at-work-2026-09-17.jpg"
-                width="518"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="Barbero trabajando el contorno del cabello de un cliente en La Barbería."
-            /></noscript>
+          <figure class="work-card work-photo" data-gallery-item data-label="CORTE TERMINADO · 01">
+            <div
+              class="work-photo-viewport highlight-fade-viewport"
+              data-source-crop="373,90,404,580"
+            >
+              <template class="work-image-template"
+                ><img
+                  src="./assets/images/finished-fade-highlight-2026-10-06.jpg"
+                  width="1165"
+                  height="747"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Corte terminado: degradado lateral y barba perfilada, en una historia publicada por La Barbería."
+              /></template>
+              <noscript
+                ><img
+                  src="./assets/images/finished-fade-highlight-2026-10-06.jpg"
+                  width="1165"
+                  height="747"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Corte terminado: degradado lateral y barba perfilada, en una historia publicada por La Barbería."
+              /></noscript>
+            </div>
             <figcaption>
-              <span class="section-label">CORTE EN PROCESO · 01</span
-              ><a href="https://www.instagram.com/labarberia.ni/p/DdaCjt_iS_M/" rel="noreferrer"
-                >Foto de @labarberia.ni ↗</a
-              ><time datetime="2026-09-17">17 de septiembre de 2026</time>
+              <span class="section-label">CORTE TERMINADO · 01</span>
+              <a
+                href="https://www.instagram.com/stories/highlights/18015487450805665/"
+                rel="noreferrer"
+                >Historia de @labarberia.ni ↗</a
+              >
+              <span class="work-source-detail"
+                >Fotograma de “Clientes”, consultado el
+                <time datetime="2026-10-06">6 de octubre de 2026</time>. Fecha original no
+                disponible.</span
+              >
             </figcaption>
           </figure>
           <figure class="work-card review-card" data-gallery-item data-label="RESEÑA 1 · FRAGMENTO">
@@ -371,9 +385,80 @@
               <legend class="sr-only">Servicio</legend>
               <div id="booking-services" class="booking-services"></div>
             </fieldset>
-            <p class="booking-help">
+            <p class="booking-help" id="booking-service-price-note">
               Duración y precio en córdobas (NIO), según el catálogo configurado.
             </p>
+            <details class="booking-team" id="booking-team">
+              <summary>Conocé al equipo</summary>
+              <p class="booking-help">
+                Presentaciones publicadas por La Barbería. Ver un perfil no selecciona un
+                profesional ni crea una reserva.
+              </p>
+              <div class="team-profiles">
+                <details class="team-profile">
+                  <summary><strong>Jonatan</strong><span>Ver presentación</span></summary>
+                  <div class="team-profile-content">
+                    <figure class="team-portrait">
+                      <div data-team-photo>
+                        <template
+                          ><img
+                            src="./assets/images/jonatan-at-work-2026-09-16.jpg"
+                            width="1080"
+                            height="1350"
+                            loading="lazy"
+                            decoding="async"
+                            alt="Jonatan trabajando en La Barbería, en una foto que el negocio publicó con su nombre."
+                        /></template>
+                      </div>
+                      <figcaption>
+                        Retrato durante un corte en proceso. Publicado el
+                        <time datetime="2026-09-16">16 de septiembre de 2026</time>.
+                      </figcaption>
+                    </figure>
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/p/DdXBwrqCfEQ/?img_index=4"
+                      rel="noreferrer"
+                      >Ver la foto original ↗</a
+                    >
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/reel/Dco9f0oJaR_/"
+                      rel="noreferrer"
+                      >Ver su presentación ↗</a
+                    >
+                    <p class="booking-help">
+                      Portafolio de cortes terminados pendiente. No se le atribuyen las fotos
+                      generales del negocio.
+                    </p>
+                  </div>
+                </details>
+                <details class="team-profile">
+                  <summary><strong>Manuel</strong><span>Ver presentación</span></summary>
+                  <div class="team-profile-content">
+                    <p>Presentado por su nombre en una entrevista de La Barbería.</p>
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/reel/DcZFDmoJ8sB/"
+                      rel="noreferrer"
+                      >Ver su presentación ↗</a
+                    >
+                    <p class="booking-help">Foto y portafolio de cortes terminados pendientes.</p>
+                  </div>
+                </details>
+                <details class="team-profile">
+                  <summary>
+                    <strong>Otro integrante del equipo</strong><span>Ver presentación</span>
+                  </summary>
+                  <div class="team-profile-content">
+                    <p>El negocio publicó esta entrevista. Su nombre aún no está verificado.</p>
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/reel/DcjqIB5pHjB/"
+                      rel="noreferrer"
+                      >Ver la entrevista ↗</a
+                    >
+                    <p class="booking-help">Foto y portafolio pendientes de atribución.</p>
+                  </div>
+                </details>
+              </div>
+            </details>
           </section>
           <section class="booking-step" data-panel="2" aria-labelledby="schedule-heading" hidden>
             <p class="booking-step-label">PASO 2 DE 3</p>

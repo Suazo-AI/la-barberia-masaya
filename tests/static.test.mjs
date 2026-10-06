@@ -25,7 +25,7 @@ test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /Agenda pendiente de configuración/);
   assert.match(html, /No se puede crear una cita hasta verificar/);
   assert.doesNotMatch(html, /src="https?:\/\//);
-  assert.equal((html.match(/href="https?:\/\//g) || []).length, 6);
+  assert.equal((html.match(/href="https?:\/\//g) || []).length, 10);
   assert.equal(html.includes('http-equiv="refresh"'), false);
 });
 test('static build excludes configuration, fixtures and persistent private data', async () => {
@@ -36,17 +36,32 @@ test('static build excludes configuration, fixtures and persistent private data'
   for (const entry of entries)
     assert.doesNotMatch(entry, /fixture|sqlite|backup|\.ts$|agenda\/|booking-model|legacy-booking/);
 });
-test('all output image bytes exactly match optimized inputs, with no concept or source screenshots', async () => {
+test('all output image bytes exactly match approved inputs, with no concept or private UI screenshots', async () => {
   const files = await readdir('dist/assets/images');
   assert.deepEqual(files.sort(), [
     'barber-at-work-2026-09-17.jpg',
     'cut-rear-view-2026-09-05.jpg',
+    'finished-fade-highlight-2026-10-06.jpg',
     'interior-1200.webp',
     'interior-1672.webp',
     'interior-720.webp',
+    'jonatan-at-work-2026-09-16.jpg',
     'local-overview-1000.webp',
     'local-overview-720.webp',
   ]);
+  const approvedSourceHashes = {
+    'finished-fade-highlight-2026-10-06.jpg':
+      'b6c8b4f12fc693f2430fedf2eff4c6d18ef197e78d5c86ea739baf0001d1d219',
+    'jonatan-at-work-2026-09-16.jpg':
+      '203d7fc6a8031c9a97e747d8f216a34fb05c1418bc925a630144de11e83982ed',
+  };
+  for (const [file, expectedHash] of Object.entries(approvedSourceHashes))
+    assert.equal(
+      createHash('sha256')
+        .update(await readFile(`dist/assets/images/${file}`))
+        .digest('hex'),
+      expectedHash,
+    );
   const dir = process.env.HERO_ASSET_DIR || 'src/assets/images';
   for (const file of files) {
     const hash = (data) => createHash('sha256').update(data).digest('hex');
@@ -67,7 +82,7 @@ test('fonts carry redistributable license files', async () => {
 test('approved local gallery uses four interior crops without customer-work claims', () => {
   assert.match(html, /id="space-heading" tabindex="-1">EL LOCAL<\/h2>/);
   assert.equal((html.match(/class="space-tile /g) || []).length, 4);
-  assert.equal((html.match(/loading="lazy"/g) || []).length, 8);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 9);
   assert.doesNotMatch(html, /TRABAJOS|CLIENTES|nuestros cortes|nuestros resultados/);
 });
 
@@ -97,12 +112,14 @@ test('visit facts retain exact place identity, weekly hours and dated source', (
   assert.match(html, /data-content-status="ready"/);
 });
 
-test('authentic content has two original photos and exactly three short attributed reviews', () => {
+test('authentic content has one finished cut, one process photo and three attributed reviews', () => {
   assert.equal((html.match(/data-gallery-item/g) || []).length, 5);
   assert.equal((html.match(/<blockquote>/g) || []).length, 3);
   assert.match(html, /4.2/);
   assert.match(html, /10 reseñas/);
-  assert.match(html, /cortes en proceso/);
+  assert.match(html, /CORTE TERMINADO · 01/);
+  assert.match(html, /CORTE EN PROCESO · 02/);
+  assert.match(html, /data-source-crop="373,90,404,580"/);
   assert.match(html, /no\s+representan todas/);
   assert.match(html, /Jonatham Gabriel Suazo Martinez/);
   assert.match(html, /MUNDO DARYL DEL MÁS ALLA/);
@@ -111,4 +128,17 @@ test('authentic content has two original photos and exactly three short attribut
     match[1].trim().split(/\s+/),
   );
   assert.ok(words.length <= 25);
+});
+
+test('team introductions are on demand and separate from booking identities', async () => {
+  assert.match(html, /<details class="booking-team" id="booking-team">/);
+  assert.match(html, /<strong>Jonatan<\/strong>/);
+  assert.match(html, /<strong>Manuel<\/strong>/);
+  assert.match(html, /Su nombre aún no está verificado/);
+  assert.match(html.replace(/\s+/g, ' '), /Ver un perfil no selecciona un profesional/);
+  assert.match(html, /Portafolio de cortes terminados pendiente/);
+  assert.doesNotMatch(html, /Diego|Carlos|Luis|manuel_intro_context|jonatan_intro_context/);
+  const source = await readFile('dist/booking-live.js', 'utf8');
+  assert.match(source, /event.target.matches\('\.team-profile'\)/);
+  assert.match(source, /function resetTeam\(/);
 });

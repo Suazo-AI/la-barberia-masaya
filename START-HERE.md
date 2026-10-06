@@ -2,6 +2,8 @@
 
 Website and agenda pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
 
+Authentic content candidate, 2026-10-06: [finished-cut frame and source-verified, on-demand team introductions](docs/authentic-content-2026-10-06.md). Existing visual direction and closed agenda remain. Only Jonatan’s caption-identified portrait is shipped; Manuel and the unnamed interview link to their sources. No real-person/catalog identity mapping, fabricated portfolio or booking activation. Browser evidence is prepared for exact-head CI; local Chromium could not launch.
+
 Executable setup, 2026-10-06: [operator runbook and offline readiness check](docs/agenda/setup-runbook.md). `npm run check:setup -- .agenda-private/catalog-candidate.json` identifies missing inputs with the runtime validator, never fills defaults or changes the Site, and keeps activation authorization separate from structural validity. No new public UI, runtime setting or database migration is part of this increment.
 
 Catalog confirmation, 2026-10-06: [private candidate and remaining activation inputs](docs/agenda/catalog-readiness.md). Confirmed prices/durations are preserved in an ignored, inactive candidate; unknown buffers, staff, shifts and policies are not filled from examples. Focused regressions cover independent durations and catalog snapshots. This increment changes no runtime configuration, access grant or deployed source.

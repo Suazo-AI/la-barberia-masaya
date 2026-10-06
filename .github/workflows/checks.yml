@@ -20,6 +20,7 @@ jobs:
       # Public CI may run only after these assets have explicit publication clearance.
       HERO_ASSET_DIR: src/assets/images
       UI_BASELINE_URL: http://127.0.0.1:4174
+      AUTHENTIC_BASELINE_URL: http://127.0.0.1:4176
       AGENDA_BASELINE_URL: http://127.0.0.1:4185
       AGENDA_CLOSEOUT_BASELINE_URL: http://127.0.0.1:4187
       AGENDA_SIGNIN_BASELINE_URL: http://127.0.0.1:4188
@@ -71,6 +72,15 @@ jobs:
       - name: Build pinned sign-in baseline
         run: node scripts/build.mjs
         working-directory: .private-evidence/signin-baseline
+      - name: Checkout exact pre-authentic-content application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 5bcaac53aafddd204ea9634d0b75c17140904b4e
+          path: .private-evidence/authentic-baseline
+      - name: Build pinned authentic-content baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/authentic-baseline
       - run: npm run check
       - run: npm run test:performance
       - name: Upload bounded staff sign-in evidence
@@ -101,6 +111,8 @@ jobs:
             .private-evidence/network-initial-dpr*.json
             .private-evidence/lighthouse/*.json
             .private-evidence/hero-*.png
+            .private-evidence/authentic-content/*.png
+            .private-evidence/authentic-content/*.json
             .private-evidence/ui-*.png
             .private-evidence/ui-*.json
             test-results/**/*.png

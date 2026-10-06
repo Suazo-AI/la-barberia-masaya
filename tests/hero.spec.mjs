@@ -145,8 +145,23 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
   await expect(page.locator('.gallery-tools')).toBeHidden();
   for (const card of await page.locator('.work-photo').all()) {
     const cardBox = await card.boundingBox();
+    const crop = card.locator('.work-photo-viewport');
     const imageBox = await card.locator('img').boundingBox();
-    expect(imageBox.y).toBeCloseTo(cardBox.y, 0);
+    if (await crop.count()) {
+      const cropBox = await crop.boundingBox();
+      expect(cropBox.y).toBeCloseTo(cardBox.y, 0);
+      expect(cropBox.x).toBeCloseTo(cardBox.x, 0);
+      expect(cropBox.width).toBeCloseTo(cardBox.width, 0);
+      const scale = imageBox.width / 1165;
+      const actual = [
+        (cropBox.x - imageBox.x) / scale,
+        (cropBox.y - imageBox.y) / scale,
+        cropBox.width / scale,
+        cropBox.height / scale,
+      ];
+      for (const [index, expected] of [373, 90, 404, 580].entries())
+        expect(actual[index]).toBeCloseTo(expected, 0);
+    } else expect(imageBox.y).toBeCloseTo(cardBox.y, 0);
   }
   await mkdir('.private-evidence', { recursive: true });
   await page.screenshot({ path: '.private-evidence/ui-no-js-390.png', fullPage: true });
@@ -166,6 +181,7 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
     const overflowing = await zoom.evaluate(() =>
       [...document.querySelectorAll('body *')]
         .filter((el) => {
+          if (el.matches('.work-photo-viewport img')) return false; // Only the cropped image is exempt; its clipping viewport stays checked.
           if (el.closest('.space-tile')) return false; // Intentional, clipped photographic detail crops.
           const box = el.getBoundingClientRect();
           return getComputedStyle(el).display !== 'none' && box.right > innerWidth + 1;

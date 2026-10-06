@@ -587,6 +587,29 @@ h1 span {
   height: auto;
   filter: grayscale(1);
 }
+/* Display the verified story frame without altering its source bytes.
+   Source viewport: x=373, y=90, width=404, height=580 of 1165×747.
+   The viewport excludes story controls and keeps the full haircut boundary. */
+.work-photo-viewport {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 404 / 580;
+}
+.highlight-fade-viewport img {
+  position: absolute;
+  width: 288.366337%;
+  max-width: none;
+  height: 128.793103%;
+  left: -92.326733%;
+  top: -15.517241%;
+}
+.work-photo-viewport .work-image-template {
+  height: 100%;
+}
+.work-source-detail {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
 .work-card figcaption {
   padding: 1.5rem;
   display: grid;
@@ -1397,4 +1420,64 @@ h1 span {
 }
 #manage-confirm-dialog .booking-header {
   padding: 0 0 1rem;
+}
+
+/* Business introductions stay inside the existing booking dialog, on demand. */
+.booking-team {
+  margin-top: 1.5rem;
+  border-top: 1px solid #777366;
+}
+.booking-team summary {
+  min-height: 44px;
+  padding: 0.9rem 0;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.booking-team summary:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 3px;
+}
+.team-profiles {
+  display: grid;
+  gap: 0.75rem;
+}
+.team-profile {
+  min-width: 0;
+  padding: 0 1rem;
+  border: 1px solid #777366;
+  background: #1a1916;
+}
+.team-profile summary strong {
+  font-family: 'Barlow Condensed', Arial, sans-serif;
+  font-size: 1.4rem;
+}
+.team-profile summary span {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+.team-profile-content {
+  padding-bottom: 1rem;
+  line-height: 1.5;
+}
+.team-profile-content a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  text-underline-offset: 0.25em;
+}
+.team-portrait {
+  max-width: 20rem;
+  margin: 0 0 0.75rem;
+}
+.team-portrait img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.team-portrait figcaption {
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
