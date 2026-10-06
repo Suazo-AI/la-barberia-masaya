@@ -226,9 +226,23 @@ test('identity navigation scrubs private state, rejects late mutation replies an
   await expect(page.locator('#retry-operation')).not.toBeVisible();
   await expect(page.locator('#pending-operation')).toContainText('se perdió el intento');
   expect(await page.evaluate(() => sessionStorage.getItem('agenda:pending:admin'))).toBe('1');
+  const navigationSnapshots = [];
+  await page.exposeFunction('recordIdentityNavigation', (snapshot) =>
+    navigationSnapshots.push(snapshot),
+  );
+  await page.locator('#identity-sign-out').evaluate((link) => {
+    // Registered after the app's synchronous scrub listener. Capture the old
+    // document here; DOM reads inside an intercepted navigation can deadlock.
+    link.addEventListener('click', () =>
+      window.recordIdentityNavigation({
+        subject: document.getElementById('identity-subject').value,
+        workspaceHidden: document.getElementById('admin-workspace').hidden,
+        pending: sessionStorage.getItem('agenda:pending:admin'),
+      }),
+    );
+  });
   await page.route(`**${signout}`, async (route) => {
     expect(route.request().isNavigationRequest()).toBe(true);
-    expect(await page.locator('#identity-subject').inputValue()).toBe('');
     await route.fulfill({
       status: 200,
       contentType: 'text/html',
@@ -236,6 +250,9 @@ test('identity navigation scrubs private state, rejects late mutation replies an
     });
   });
   await page.locator('#identity-sign-out').click();
+  await expect
+    .poll(() => navigationSnapshots)
+    .toEqual([{ subject: '', workspaceHidden: true, pending: '1' }]);
   await page.goBack();
   await expect(page.locator('#access-title')).toContainText('no autorizado');
   await expect(page.locator('#admin-workspace')).not.toBeVisible();
