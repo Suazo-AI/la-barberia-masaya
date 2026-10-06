@@ -104,6 +104,9 @@ for (const viewport of [
     await expect(page.locator('.team-profile').first()).toHaveAttribute('open', '');
     await checkFocusWrap();
     await expect(page.locator('#booking-team img')).toHaveCount(1);
+    // Focus-wrap checks end at the retry control below the disclosures. Scroll
+    // back to the lazy portrait before checking its decoded source dimensions.
+    await page.locator('#booking-team img').scrollIntoViewIfNeeded();
     await expect
       .poll(() =>
         page
