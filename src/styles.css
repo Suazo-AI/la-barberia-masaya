@@ -181,6 +181,100 @@ h1 span {
   max-width: 65rem;
 }
 
+/* The confirmed public offer is independent from the inactive booking API. */
+.services-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 3rem;
+  padding: clamp(3rem, 6vw, 6rem) var(--gutter);
+  border-block: 1px solid #393832;
+}
+.services-intro h2 {
+  margin: 0;
+  font:
+    400 clamp(2.5rem, 5vw, 5rem)/1.1 Anton,
+    Impact,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.services-intro > p:last-child {
+  max-width: 28rem;
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+.services-menu {
+  margin: 0;
+}
+.service-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 1.2rem 0;
+  border-bottom: 1px solid #777366;
+}
+.service-line:first-child {
+  padding-top: 0;
+}
+.service-line dt {
+  font:
+    700 1.75rem/1.2 'Barlow Condensed',
+    Arial,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.service-line dd {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  text-align: right;
+  line-height: 1.4;
+}
+.service-price {
+  font:
+    700 2.5rem/1.1 'Barlow Condensed',
+    Arial,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.booking-policy {
+  margin-top: 1.5rem;
+  line-height: 1.6;
+}
+.booking-policy summary {
+  min-height: 44px;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.booking-policy ul {
+  padding-left: 1.25rem;
+}
+.booking-policy li + li {
+  margin-top: 0.75rem;
+}
+@media (max-width: 767px) {
+  .services-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (max-width: 480px) {
+  .service-line {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+  }
+  .service-line dd {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    text-align: left;
+  }
+}
+
 .error-page {
   min-height: 100svh;
   display: grid;

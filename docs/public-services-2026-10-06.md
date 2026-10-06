@@ -1,0 +1,11 @@
+# Public services, 2026-10-06
+
+The confirmed business offer is now ordinary semantic HTML below the single hero CTA. It does not depend on a configured booking API or JavaScript. The three prices and planned durations are maintained once in `src/index.html` under `#servicios`: corte C$200/30 min, barba C$150/15 min, corte + barba C$300/45 min. The beard duration uses the conservative end of the supplied 10–15 minute estimate. Static tests protect the published values.
+
+A native disclosure describes the delegated booking rules prospectively: one hour of notice, a 14-day horizon, cancellation/rescheduling until one hour before the appointment, and five minutes after each service for preparation. Its opening sentence expressly says these rules apply only when the agenda is enabled and online booking is currently unavailable. It creates no availability, capacity, selection, customer record or reservation.
+
+The public catalog contains no professional IDs, personal account mappings, private configuration, approval history or invented biographies. The private candidate is not copied or imported. Future runtime catalog changes require a corresponding review of this public price list; publishing this section does not install that configuration. The existing authentic gallery, optional team introductions, contact and opening-hours sources remain intact.
+
+This increment changes no runtime adapter, authorization, migration or environment setting. Administrator assignment remains deliberately deferred. Source baseline for actual before/after evidence is `b69c66c44a4b96d1d20359cf499e4c75ab1cccf4`, matching review Site v9. The historical baseline has no public services section: before captures show the existing below-hero area, while after captures show the newly inserted services region.
+
+The four browser cases cover mobile, desktop, 320px/200% text, keyboard disclosure, no-JavaScript operation, persistent prices after a closed-agenda attempt and zero booking writes. They retain the exact confirmed values and future-tense policy assertions. Before/after images, video and accessibility findings belong to the exact-head CI artifact. Source checks, exact-head CI and independent pixel review remain distinct evidence; no performance measurement or real appointment activation is established by them.

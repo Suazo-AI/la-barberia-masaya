@@ -2,6 +2,8 @@
 
 Website and agenda pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
 
+Public services increment, 2026-10-06: [confirmed prices, planned durations and prospective booking rules](docs/public-services-2026-10-06.md) are readable without JavaScript or a configured booking API. This supersedes the earlier statement that public prices are absent. The private business candidate now has its approved schema inputs; administrator assignment is deliberately deferred and online reservations remain closed. No private configuration or role mapping is published.
+
 Authentic content candidate, 2026-10-06: [finished-cut frame and source-verified, on-demand team introductions](docs/authentic-content-2026-10-06.md). Existing visual direction and closed agenda remain. Only Jonatan’s caption-identified portrait is shipped; Manuel and the unnamed interview link to their sources. No real-person/catalog identity mapping, fabricated portfolio or booking activation. Browser evidence is prepared for exact-head CI; local Chromium could not launch.
 
 Executable setup, 2026-10-06: [operator runbook and offline readiness check](docs/agenda/setup-runbook.md). `npm run check:setup -- .agenda-private/catalog-candidate.json` identifies missing inputs with the runtime validator, never fills defaults or changes the Site, and keeps activation authorization separate from structural validity. No new public UI, runtime setting or database migration is part of this increment.

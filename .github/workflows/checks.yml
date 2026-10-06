@@ -21,6 +21,7 @@ jobs:
       HERO_ASSET_DIR: src/assets/images
       UI_BASELINE_URL: http://127.0.0.1:4174
       AUTHENTIC_BASELINE_URL: http://127.0.0.1:4176
+      CATALOG_BASELINE_URL: http://127.0.0.1:4177
       AGENDA_BASELINE_URL: http://127.0.0.1:4185
       AGENDA_CLOSEOUT_BASELINE_URL: http://127.0.0.1:4187
       AGENDA_SIGNIN_BASELINE_URL: http://127.0.0.1:4188
@@ -81,6 +82,15 @@ jobs:
       - name: Build pinned authentic-content baseline
         run: node scripts/build.mjs
         working-directory: .private-evidence/authentic-baseline
+      - name: Checkout exact pre-public-catalog application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: b69c66c44a4b96d1d20359cf499e4c75ab1cccf4
+          path: .private-evidence/catalog-baseline
+      - name: Build pinned public-catalog baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/catalog-baseline
       - run: npm run check
       - run: npm run test:performance
       - name: Upload bounded staff sign-in evidence
@@ -113,6 +123,8 @@ jobs:
             .private-evidence/hero-*.png
             .private-evidence/authentic-content/*.png
             .private-evidence/authentic-content/*.json
+            .private-evidence/public-catalog/*.png
+            .private-evidence/public-catalog/*.json
             .private-evidence/ui-*.png
             .private-evidence/ui-*.json
             test-results/**/*.png

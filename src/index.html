@@ -32,7 +32,7 @@
             ><span>Reservar cita</span></a
           >
           <p class="booking-preview-note" id="booking-load-status" aria-live="polite">
-            Agenda en preparación. Servicios y profesionales pendientes de configuración.
+            Consultá nuestros servicios abajo. Las reservas en línea aún no están habilitadas.
           </p>
         </div>
         <figure class="hero-scene">
@@ -47,6 +47,41 @@
               fetchpriority="high"
           /></picture>
         </figure>
+      </section>
+      <section class="services-section" id="servicios" aria-labelledby="services-heading">
+        <div class="services-intro">
+          <p class="section-label">CORTES Y BARBA</p>
+          <h2 id="services-heading">SERVICIOS.</h2>
+          <p>Precios en córdobas (NIO) y duración prevista de cada servicio.</p>
+        </div>
+        <div class="services-content">
+          <dl class="services-menu">
+            <div class="service-line" data-offer="cut">
+              <dt>Corte</dt>
+              <dd><span class="service-price">C$200</span><span>30 min</span></dd>
+            </div>
+            <div class="service-line" data-offer="beard">
+              <dt>Barba</dt>
+              <dd><span class="service-price">C$150</span><span>15 min</span></dd>
+            </div>
+            <div class="service-line" data-offer="combo">
+              <dt>Corte + barba</dt>
+              <dd><span class="service-price">C$300</span><span>45 min</span></dd>
+            </div>
+          </dl>
+          <details class="booking-policy" id="booking-policy">
+            <summary>Cómo funcionarán las reservas en línea</summary>
+            <p>
+              Estas reglas se aplicarán cuando habilitemos la agenda. Por ahora no se puede reservar
+              desde la web.
+            </p>
+            <ul>
+              <li>Podrás reservar con al menos 1 hora de anticipación y hasta 14 días antes.</li>
+              <li>Podrás cancelar o cambiar la cita hasta 1 hora antes de su inicio.</li>
+              <li>Dejaremos 5 minutos después de cada servicio para preparar el siguiente.</li>
+            </ul>
+          </details>
+        </div>
       </section>
       <section class="space-section" aria-labelledby="space-heading">
         <h2 id="space-heading" tabindex="-1">EL LOCAL</h2>
@@ -336,9 +371,8 @@
         <section id="reserva" class="booking-fallback" aria-labelledby="booking-fallback-title">
           <h2 id="booking-fallback-title">Reservas</h2>
           <p>
-            Activá JavaScript para consultar la agenda. Las reservas estarán disponibles cuando el
-            negocio configure sus servicios y profesionales. Podés consultar por teléfono en
-            contacto.
+            Los servicios, precios y horarios se pueden consultar sin JavaScript. Las reservas en
+            línea aún no están habilitadas. Podés consultar por teléfono en contacto.
           </p>
         </section>
       </noscript>
@@ -359,8 +393,8 @@
         </button>
       </div>
       <p class="booking-disclaimer" id="booking-disclaimer">
-        Agenda pendiente de configuración. No se puede crear una cita hasta verificar los servicios,
-        precios y profesionales del negocio.
+        Agenda pendiente de configuración. No se puede crear una cita hasta verificar el acceso y
+        habilitar las reservas en línea.
       </p>
       <nav class="booking-progress" aria-label="Pasos de la reserva">
         <ol>

@@ -40,6 +40,17 @@ export default defineConfig({
           },
         ]
       : []),
+    ...(process.env.CATALOG_BASELINE_URL
+      ? [
+          {
+            command: 'node scripts/preview.mjs',
+            cwd: '.private-evidence/catalog-baseline',
+            env: { PORT: '4177' },
+            url: process.env.CATALOG_BASELINE_URL,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
     ...(process.env.UI_BASELINE_URL
       ? [
           {

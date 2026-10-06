@@ -107,7 +107,8 @@ test('visit facts retain exact place identity, weekly hours and dated source', (
   assert.match(html, /Supermercado Pali, 4 cuadras al oeste/);
   assert.match(html, /datetime="2026-10-03"/);
   assert.match(html, /Puede variar en días festivos/);
-  assert.equal((html.match(/<dt>/g) || []).length, 7);
+  const hours = html.match(/<dl class="hours-list">([\s\S]*?)<\/dl>/)[1];
+  assert.equal((hours.match(/<dt>/g) || []).length, 7);
   assert.doesNotMatch(html, /abierto ahora|horario confirmado/i);
   assert.match(html, /data-content-status="ready"/);
 });
@@ -141,4 +142,27 @@ test('team introductions are on demand and separate from booking identities', as
   const source = await readFile('dist/booking-live.js', 'utf8');
   assert.match(source, /event.target.matches\('\.team-profile'\)/);
   assert.match(source, /function resetTeam\(/);
+});
+
+test('confirmed public services and future policies are readable without activating bookings', () => {
+  const section = html.match(/<section class="services-section"[\s\S]*?<\/section>/)[0];
+  assert.equal((html.match(/id="servicios"/g) || []).length, 1);
+  for (const [id, name, price, minutes] of [
+    ['cut', 'Corte', '200', '30'],
+    ['beard', 'Barba', '150', '15'],
+    ['combo', 'Corte + barba', '300', '45'],
+  ]) {
+    const row = section.match(new RegExp(`data-offer="${id}"[\\s\\S]*?<\\/div>`))[0];
+    assert.ok(row.includes(`<dt>${name}</dt>`));
+    assert.ok(row.includes(`C$${price}</span>`));
+    assert.ok(row.includes(`${minutes} min</span>`));
+  }
+  assert.match(section, /duración prevista/);
+  assert.match(section, /cuando habilitemos la agenda/);
+  assert.match(section, /no se puede\s+reservar\s+desde la web/);
+  assert.match(section, /al menos 1 hora[\s\S]*hasta 14 días/);
+  assert.match(section, /cancelar o cambiar la cita hasta 1 hora/);
+  assert.match(section, /5 minutos después de cada servicio/);
+  assert.doesNotMatch(section, /<button|<input|<form|data-booking-open/);
+  assert.doesNotMatch(html, /Servicios y profesionales pendientes de configuración/);
 });
