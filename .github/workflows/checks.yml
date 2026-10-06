@@ -73,6 +73,20 @@ jobs:
         working-directory: .private-evidence/signin-baseline
       - run: npm run check
       - run: npm run test:performance
+      - name: Upload bounded staff sign-in evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: staff-signin-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            agenda/.private-evidence/agenda-browser-results.json
+            test-results/signin-browser-*/**/*.png
+            test-results/signin-browser-*/**/*.webm
+            test-results/signin-browser-*/**/signin-metadata.json
+            test-results/signin-browser-*/**/error-context.md
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload test reports for this commit
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
