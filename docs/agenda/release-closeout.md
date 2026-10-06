@@ -36,3 +36,15 @@ Email delivery may remain disabled. Sender/provider/runner approval is needed on
 ## Rollback boundary
 
 Preserve v7 as the last deployed source and preserve all existing branches/PRs. This candidate adds no database migration or business configuration. A source rollback must never be confused with restoring a live database. No production rollback, destructive cleanup, real booking, external notification, owner grant, merge or deployment was executed in this closeout.
+
+## Staff sign-in entry increment
+
+The next source increment adds a Sites-only self-identity read before business configuration. `GET /api/agenda/v1/identity` returns only whether this request is authenticated, its own opaque per-Site subject when present, and fixed dispatch-owned sign-in/sign-out paths. It never returns email, other users, a role, a list of accounts, business configuration or private appointments. It makes no D1 call and creates no grant. It is GET-only, rejects query parameters, checks Origin/Fetch Metadata, sets no-store and provides no CORS permission.
+
+The staff page starts authentication only through a top-level link to `/signin-with-chatgpt?return_to=%2Fadmin.html`. Signed-in but unapproved staff can copy their own identifier for a separate explicit approval. Account identifiers stay in memory/the page, not URLs or browser storage. Refresh/account changes clear the previous identifier; pending-operation recovery guards remain intact. An already authorized agenda does not display the setup panel. The sign-out link uses the corresponding dispatch route.
+
+The portable Worker and Node adapters do not expose this endpoint or interpret dispatcher identity headers. Sites-specific unit tests model headers already supplied by trusted dispatch; they do not establish that a public hosted dispatcher strips forged incoming identity headers. That requires real hosted verification before any grant. Browser cases explicitly mock identity/session responses for UI coverage and intercept the sign-in navigation locally; they perform no real sign-in. Their real pre-change application is pinned at `59801861ab926343630ef6b847500ce790abc2d8`.
+
+No identity allowlist, runtime setting, business configuration, external account, persistent credential, deployment or role grant is changed by this increment. The actual owner and barber accounts still need verification and explicit approval. The current deployed review Site remains unchanged.
+
+Identity navigation and `pagehide` synchronously scrub private DOM/state, the own-subject display and retained mutation body/key/retry. A page-lifetime abort/epoch guard rejects delayed old replies; it cannot clear an uncertain operation's pending sentinel. A persisted `pageshow` scrubs again and revalidates access before private data can return. Tests include an actual sign-out/Back navigation and explicit persisted lifecycle-event simulation around a committed-but-delayed synthetic mutation; they do not assert that CI admitted the page to an actual browser back/forward cache.

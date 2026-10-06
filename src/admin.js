@@ -9,6 +9,9 @@ const byId = (id) => document.getElementById(id);
 const dialog = byId('manage-dialog');
 const reloadGuard = mutationReloadGuard('admin');
 let recoveryBlocked = reloadGuard.status() !== 'clear';
+let pageController = new AbortController();
+let pageEpoch = 0;
+let suspended = false;
 const state = {
   catalog: null,
   session: null,
@@ -20,6 +23,8 @@ const state = {
   readController: null,
   catalogController: null,
   operation: null,
+  identity: null,
+  identityController: null,
 };
 
 class ApiError extends Error {
@@ -83,7 +88,7 @@ function feedback(id, message) {
   element.hidden = !message;
 }
 
-function setLocked(error) {
+function setLocked(error, refresh = true) {
   state.catalogController?.abort();
   state.readController?.abort();
   state.catalog = null;
@@ -127,6 +132,78 @@ function setLocked(error) {
     announce('La agenda no está disponible en este momento.');
   }
   renderPendingOperation();
+  if (refresh) void refreshIdentity();
+}
+
+function suspendPrivateView() {
+  suspended = true;
+  pageEpoch += 1;
+  pageController.abort();
+  state.identityController?.abort();
+  if (state.operation) {
+    // The non-secret pending sentinel survives; an old identity's mutation
+    // payload/key/retry must never survive a navigation or bfcache restoration.
+    if (state.operation.inFlight || state.operation.uncertain) reloadGuard.arm();
+    state.operation.serialized = '';
+    state.operation.key = '';
+    state.operation.retry = null;
+  }
+  state.operation = null;
+  state.opener = null;
+  state.identity = null;
+  recoveryBlocked = reloadGuard.status() !== 'clear';
+  byId('identity-subject').value = '';
+  byId('identity-copy-status').textContent = '';
+  byId('identity-description').textContent = '';
+  byId('identity-panel').hidden = true;
+  byId('identity-details').hidden = true;
+  byId('identity-sign-in').hidden = true;
+  byId('identity-sign-out').hidden = true;
+  setLocked(undefined, false);
+  byId('access-title').textContent = 'Verificación de acceso necesaria';
+  byId('access-description').textContent =
+    'La información privada se ocultó. Volvé a verificar tu sesión antes de continuar.';
+  byId('schedule-summary').textContent = '';
+  for (const input of byId('admin-workspace').querySelectorAll('input')) input.value = '';
+  for (const select of byId('admin-workspace').querySelectorAll('select')) select.replaceChildren();
+}
+
+async function refreshIdentity() {
+  if (suspended) return;
+  state.identityController?.abort();
+  const controller = new AbortController();
+  state.identityController = controller;
+  state.identity = null;
+  byId('identity-panel').hidden = true;
+  byId('identity-sign-out').hidden = true;
+  byId('identity-subject').value = '';
+  byId('identity-copy-status').textContent = '';
+  try {
+    const identity = await request('/identity', { signal: controller.signal });
+    if (controller.signal.aborted) return;
+    if (
+      typeof identity.authenticated !== 'boolean' ||
+      identity.signInPath !== '/signin-with-chatgpt?return_to=%2Fadmin.html' ||
+      identity.signOutPath !== '/signout-with-chatgpt?return_to=%2Fadmin.html' ||
+      (identity.authenticated
+        ? typeof identity.subject !== 'string' ||
+          !/^[^\s,\u0000-\u001f\u007f]{1,256}$/.test(identity.subject)
+        : identity.subject !== undefined)
+    )
+      return;
+    state.identity = identity;
+    byId('identity-panel').hidden = !byId('admin-workspace').hidden;
+    byId('identity-sign-in').hidden = identity.authenticated;
+    byId('identity-sign-out').hidden = !identity.authenticated;
+    byId('identity-details').hidden = !identity.authenticated;
+    byId('identity-subject').value = identity.subject || '';
+    byId('identity-description').textContent = identity.authenticated
+      ? 'Tu sesión está identificada. Este identificador permite solicitar el acceso; no es una aprobación de permisos.'
+      : 'Si administrás la barbería o sos parte de su equipo, iniciá sesión para identificar tu cuenta.';
+  } catch {
+    // Generic local/portable hosts do not offer Sites sign-in. Never invent
+    // identity, fall back to browser headers or block the independent agenda.
+  }
 }
 
 function locksWorkspace(error) {
@@ -134,6 +211,9 @@ function locksWorkspace(error) {
 }
 
 async function request(path, options = {}) {
+  if (suspended) throw new DOMException('Page inactive', 'AbortError');
+  const epoch = pageEpoch;
+  const lifecycle = pageController;
   let response;
   try {
     response = await fetch(`${API}${path}`, {
@@ -142,20 +222,24 @@ async function request(path, options = {}) {
       ...options,
       headers: { Accept: 'application/json', ...options.headers },
       referrerPolicy: 'no-referrer',
-      signal: options.signal
-        ? AbortSignal.any([options.signal, AbortSignal.timeout(20000)])
-        : AbortSignal.timeout(20000),
+      signal: AbortSignal.any([
+        lifecycle.signal,
+        AbortSignal.timeout(20000),
+        ...(options.signal ? [options.signal] : []),
+      ]),
     });
   } catch (error) {
-    if (options.signal?.aborted) throw error;
+    if (options.signal?.aborted || lifecycle.signal.aborted) throw error;
     throw new ApiError(0, 'NETWORK_ERROR');
   }
   let payload;
   try {
     payload = await response.json();
   } catch {
+    if (epoch !== pageEpoch || suspended) throw new DOMException('Page inactive', 'AbortError');
     throw new ApiError(response.status || 500, 'INVALID_RESPONSE');
   }
+  if (epoch !== pageEpoch || suspended) throw new DOMException('Page inactive', 'AbortError');
   if (!response.ok) throw new ApiError(response.status, payload?.error?.code || 'REQUEST_FAILED');
   return payload;
 }
@@ -377,6 +461,7 @@ async function mutation(operation) {
     state.operation = null;
     return result;
   } catch (error) {
+    if (state.operation !== operation) throw error;
     // An absent/malformed/5xx response does not prove the transaction rolled back.
     // Once uncertain, only the exact successful replay resolves this operation.
     if (
@@ -750,6 +835,7 @@ async function loadSchedule({ announceResult = true } = {}) {
     byId('schedule-summary').textContent =
       `${active} citas activas · ${blocks} bloqueos · ${absences} ausencias`;
     byId('access-panel').hidden = true;
+    byId('identity-panel').hidden = true;
     byId('admin-workspace').hidden = false;
     byId('mode-notice').hidden = false;
     content.hidden = false;
@@ -769,6 +855,12 @@ async function loadSchedule({ announceResult = true } = {}) {
 }
 
 async function bootstrap() {
+  if (suspended) {
+    pageController = new AbortController();
+    suspended = false;
+    recoveryBlocked = reloadGuard.status() !== 'clear';
+  }
+  void refreshIdentity();
   state.catalogController?.abort();
   state.readController?.abort();
   const controller = new AbortController();
@@ -1256,6 +1348,32 @@ byId('export-agenda').addEventListener('click', async () => {
     else announce(safeMessage(error));
   } finally {
     renderPendingOperation();
+  }
+});
+
+for (const id of ['identity-sign-in', 'identity-sign-out'])
+  byId(id).addEventListener('click', suspendPrivateView);
+window.addEventListener('pagehide', suspendPrivateView);
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  suspendPrivateView();
+  void bootstrap();
+});
+
+byId('identity-copy').addEventListener('click', async () => {
+  const subject = state.identity?.authenticated ? state.identity.subject : null;
+  if (!subject) return;
+  try {
+    await navigator.clipboard.writeText(subject);
+    if (state.identity?.subject !== subject) return;
+    byId('identity-copy-status').textContent =
+      'Identificador copiado. Compartilo solo por el canal privado de configuración.';
+  } catch {
+    if (state.identity?.subject !== subject) return;
+    byId('identity-subject').focus();
+    byId('identity-subject').select();
+    byId('identity-copy-status').textContent =
+      'Seleccioná y copiá el identificador. El navegador no permitió copiarlo automáticamente.';
   }
 });
 

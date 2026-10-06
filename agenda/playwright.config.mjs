@@ -48,6 +48,22 @@ export default defineConfig({
         fixtureServer(4183, 'owner'),
         fixtureServer(4184, 'barber'),
         fixtureServer(4186, 'owner'),
+        ...(process.env.AGENDA_SIGNIN_BASELINE_URL
+          ? [
+              {
+                command: 'node agenda/local-server.ts',
+                cwd: '../.private-evidence/signin-baseline',
+                url: process.env.AGENDA_SIGNIN_BASELINE_URL,
+                env: {
+                  PORT: '4188',
+                  AGENDA_MODE: 'fixture',
+                  AGENDA_NOW: '2026-10-04T15:00:00Z',
+                  AGENDA_EPHEMERAL: '1',
+                },
+                reuseExistingServer: false,
+              },
+            ]
+          : []),
         ...(process.env.AGENDA_CLOSEOUT_BASELINE_URL
           ? [
               {

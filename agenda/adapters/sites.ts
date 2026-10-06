@@ -96,6 +96,38 @@ const sitesIdentity: TrustedIdentityResolver = {
   },
 };
 
+/** Dispatch-owned browser sign-in; this endpoint never reads DB or grants a role. */
+async function selfIdentity(request: Request): Promise<Response> {
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    Pragma: 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    Vary: 'Origin, Cookie, Authorization',
+  };
+  const reply = (body: unknown, status = 200, extra = {}) =>
+    new Response(JSON.stringify(body), { status, headers: { ...headers, ...extra } });
+  if (request.method !== 'GET')
+    return reply({ error: { code: 'METHOD_NOT_ALLOWED' } }, 405, { Allow: 'GET' });
+  const url = new URL(request.url);
+  const origin = request.headers.get('Origin');
+  const fetchSite = request.headers.get('Sec-Fetch-Site');
+  if (
+    (origin !== null && origin !== url.origin) ||
+    (fetchSite !== null && !['same-origin', 'none'].includes(fetchSite))
+  )
+    return reply({ error: { code: 'FORBIDDEN' } }, 403);
+  if (url.search || url.hash) return reply({ error: { code: 'INVALID_INPUT' } }, 400);
+  const identity = await sitesIdentity.resolve(request, { runtime: 'worker' });
+  return reply({
+    authenticated: identity !== null,
+    ...(identity ? { subject: identity.subject } : {}),
+    signInPath: '/signin-with-chatgpt?return_to=%2Fadmin.html',
+    signOutPath: '/signout-with-chatgpt?return_to=%2Fadmin.html',
+  });
+}
+
 const publicHeaders = {
   'Cache-Control': 'no-cache',
   'X-Content-Type-Options': 'nosniff',
@@ -161,6 +193,9 @@ export function createSitesAgendaWorker(assets: Readonly<Record<string, PublicAs
   return {
     async fetch(request: Request, environment: SitesAgendaEnvironment): Promise<Response> {
       const pathname = new URL(request.url).pathname;
+      // This adapter runs only behind trusted Sites dispatch. Generic Node and
+      // portable Worker hosts do not implement or trust this identity surface.
+      if (pathname === '/api/agenda/v1/identity') return selfIdentity(request);
       if (pathname === '/api/agenda/v1' || pathname.startsWith('/api/agenda/v1/'))
         return agenda.fetch(request, environment);
       if (!['GET', 'HEAD'].includes(request.method))

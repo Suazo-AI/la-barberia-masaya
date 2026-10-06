@@ -1196,3 +1196,23 @@ test('private reschedule availability requires the scoped capability and rejects
   );
   assert.equal(calls, 1);
 });
+
+test('generic hosts do not expose Sites self-identity or accept spoofed dispatcher identity headers', async () => {
+  const headers = {
+    'oai-authenticated-user-id': 'pretend-owner',
+    'oai-authenticated-user-email': 'synthetic@example.test',
+    'X-Role': 'owner',
+  };
+  const local = await router()(request('/identity', { headers }));
+  assert.equal(local.status, 404);
+  assert.doesNotMatch(await local.text(), /pretend-owner|synthetic@example/);
+  const portable = createAgendaWorker({
+    mode: () => 'fixture',
+    createService: async () => service(),
+    allowedOrigins: () => [ORIGIN],
+    adminSubjects: () => ['pretend-owner'],
+  });
+  const response = await portable.fetch(request('/identity', { headers }), {});
+  assert.equal(response.status, 503);
+  assert.doesNotMatch(await response.text(), /pretend-owner|synthetic@example/);
+});

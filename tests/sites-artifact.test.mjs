@@ -92,3 +92,17 @@ test('hosting metadata and generated migration tree are copied without mutation 
     assert.equal(response.status, 404, path);
   }
 });
+
+test('packaged Sites identity entry is no-store and does not activate the agenda', async () => {
+  const response = await worker.fetch(new Request(`${origin}/api/agenda/v1/identity`), {});
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  const identity = await response.json();
+  assert.equal(identity.authenticated, false);
+  assert.equal(identity.subject, undefined);
+  assert.equal(identity.signInPath, '/signin-with-chatgpt?return_to=%2Fadmin.html');
+  assert.equal(
+    (await worker.fetch(new Request(`${origin}/api/agenda/v1/admin/session`), {})).status,
+    503,
+  );
+});
