@@ -122,11 +122,30 @@ h1 span {
 /* Adapted from BHARGAVPATEL1244 / Uiverse great-catfish-18 (MIT).
    The skewed cover/wipe is upstream; square shape, safe palette and keyboard states are ours.
    See THIRD-PARTY-NOTICES.txt. Both fill colors retain dark, high-contrast text. */
+.magnetic-field {
+  --magnetic-field: 32px;
+  display: block;
+  padding: var(--magnetic-field);
+  margin: calc(var(--magnetic-field) * -1);
+}
+
 .hero .call-action {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   background: #c8bba2;
+}
+
+.magnetic-pill,
+.magnetic-label {
+  will-change: transform;
+}
+
+.magnetic-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
 }
 .hero .call-action span {
   position: relative;
@@ -361,6 +380,12 @@ h1 span {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .magnetic-pill,
+  .magnetic-label {
+    transform: none !important;
+    will-change: auto;
+  }
+
   .hero .call-action::before {
     transition: none;
   }
