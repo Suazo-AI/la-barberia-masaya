@@ -184,6 +184,11 @@ export interface AgendaService {
   readonly configurationMode: AgendaMode;
   catalog(): Promise<Catalog>;
   availability(query: AvailabilityQuery): Promise<Availability>;
+  rescheduleAvailability(
+    id: string,
+    query: Omit<AvailabilityQuery, 'serviceId'>,
+    actor: Actor,
+  ): Promise<Availability>;
   createBooking(input: CreateBookingInput, context: MutationContext): Promise<BookingReceipt>;
   authorizeCustomer(id: string, managementHash: string): Promise<boolean>;
   getBooking(id: string, actor: Actor): Promise<BookingReceipt>;

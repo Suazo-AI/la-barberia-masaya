@@ -446,25 +446,63 @@ export class PersistentAgenda implements AgendaService {
     assertDate(query.date);
     const service = this.service(query.serviceId);
     const professionals = this.professionals(service, query.professionalId);
+    return this.availableSlots(query.date, service, professionals);
+  }
+
+  async rescheduleAvailability(
+    id: string,
+    query: Omit<AvailabilityQuery, 'serviceId'>,
+    actor: Actor,
+  ): Promise<Availability> {
+    assertId(id);
+    assertManagement(id, actor);
+    await this.configured();
+    assertObject(query, ['date', 'professionalId']);
+    assertDate(query.date);
+    const original = await this.entry(id);
+    if (original.kind === 'block')
+      throw new AgendaError('NOT_FOUND', 404, 'Reserva no encontrada.');
+    this.assertCurrent(original, original.version);
+    this.cancellationPolicy(original, actor);
+    const service = this.rescheduleService(original);
+    const professionals = this.professionals(service, query.professionalId);
+    return this.availableSlots(query.date, service, professionals, id);
+  }
+
+  private rescheduleService(original: Entry): ServiceConfig {
+    return {
+      ...this.service(original.service_id!),
+      durationMinutes: original.duration_minutes!,
+      bufferBeforeMinutes: original.buffer_before_minutes,
+      bufferAfterMinutes: original.buffer_after_minutes,
+    };
+  }
+
+  private async availableSlots(
+    date: string,
+    service: ServiceConfig,
+    professionals: ProfessionalConfig[],
+    ignoreId?: string,
+  ): Promise<Availability> {
     const bounds = this.dateBounds();
-    if (query.date > bounds.max)
+    if (date > bounds.max)
       throw new AgendaError('INVALID_INPUT', 400, 'Fecha fuera del período de reservas.');
     const result: Availability = {
-      date: query.date,
+      date,
       timeZone: this.config.timeZone,
       mode: this.mode(),
       slots: [],
       reason: 'full',
     };
-    if (query.date < bounds.min) return { ...result, reason: 'past' };
-    const entries = await this.occupied(query.date);
+    if (date < bounds.min) return { ...result, reason: 'past' };
+    const entries = await this.occupied(date, ignoreId);
     let hasHours = false;
     let hasFuture = false;
     for (let minute = 0; minute < 1440; minute += this.config.slotStepMinutes) {
       const professionalIds: string[] = [];
       for (const professional of professionals) {
-        if (professional.weeklyHours[weekday(query.date)].length > 0) hasHours = true;
-        const allocation = this.allocation(service, professional, query.date, minute);
+        if (professional.weeklyHours[weekday(date)].length > 0) hasHours = true;
+        const allocation = this.allocation(service, professional, date, minute);
         if (!allocation) continue;
         hasFuture = true;
         if (!this.conflict(allocation, entries)) professionalIds.push(professional.id);
@@ -481,7 +519,7 @@ export class PersistentAgenda implements AgendaService {
         ? 'available'
         : !hasHours
           ? 'closed'
-          : !hasFuture && query.date === bounds.min
+          : !hasFuture && date === bounds.min
             ? 'past'
             : 'full';
     return result;
@@ -917,15 +955,9 @@ export class PersistentAgenda implements AgendaService {
     if (winner !== undefined) return winner;
     this.assertCurrent(original, expectedVersion);
     this.cancellationPolicy(original, context.actor);
-    const eligible = this.service(original.service_id!);
-    const professional = this.professionals(eligible, input.professionalId)[0];
     // A confirmed service retains its agreed price/duration/buffers on a move.
-    const service: ServiceConfig = {
-      ...eligible,
-      durationMinutes: original.duration_minutes!,
-      bufferBeforeMinutes: original.buffer_before_minutes,
-      bufferAfterMinutes: original.buffer_after_minutes,
-    };
+    const service = this.rescheduleService(original);
+    const professional = this.professionals(service, input.professionalId)[0];
     const allocation = this.allocation(service, professional, input.date, input.startMinute);
     if (!allocation || this.conflict(allocation, await this.occupied(input.date, id)))
       throw new AgendaError(

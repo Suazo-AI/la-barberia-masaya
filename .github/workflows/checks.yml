@@ -21,6 +21,7 @@ jobs:
       HERO_ASSET_DIR: src/assets/images
       UI_BASELINE_URL: http://127.0.0.1:4174
       AGENDA_BASELINE_URL: http://127.0.0.1:4185
+      AGENDA_CLOSEOUT_BASELINE_URL: http://127.0.0.1:4187
       SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -51,6 +52,15 @@ jobs:
       - name: Build pinned agenda baseline
         run: node scripts/build.mjs
         working-directory: .private-evidence/staff-role-baseline
+      - name: Checkout exact pre-closeout application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 6efd7bb4fd101949c1deee9af00b7bc601028fb9
+          path: .private-evidence/closeout-baseline
+      - name: Build pinned closeout baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/closeout-baseline
       - run: npm run check
       - run: npm run test:performance
       - name: Upload test reports for this commit
@@ -73,6 +83,7 @@ jobs:
             test-results/**/*.webm
             test-results/**/staff-roles-metadata.json
             test-results/**/reflow-layout.json
+            test-results/**/closeout-metadata.json
             test-results/**/error-context.md
           include-hidden-files: true
           if-no-files-found: error

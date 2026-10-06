@@ -1,6 +1,8 @@
 # La Barbería Masaya
 
-Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
+Website and agenda pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
+
+Latest closeout, 2026-10-06: [release candidate and activation checklist](docs/agenda/release-closeout.md). The public review Site has a deployed Worker/D1 shell but no live configuration, bookings or access grants. This candidate repairs private reschedule availability and preserves revoked-absence history; it does not activate production. Historical increment statuses below are superseded by the closeout where they differ.
 
 Current authorized increment, 2026-10-04: [persistent portable agenda MVP](docs/agenda/spec.md), from `181bc7e1f379d195aea0c06e6d56e2ac75d5886e`. Standard TypeScript/SQLite domain with Node and Workers/D1 adapters, persistent booking/walk-in/block flows, scoped authorization, atomic conflict prevention, disabled notifications and a tested private backup path. Business configuration and host administrator identity remain prerequisites for activation. No merge/backend deployment or actual notification is authorized. Earlier historical no-backend statements below are superseded for this implementation only.
 

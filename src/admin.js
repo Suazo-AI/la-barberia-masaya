@@ -689,7 +689,7 @@ function renderAbsences() {
         article.append(
           paragraph('Retirar la ausencia no cambia las citas existentes.', 'field-hint'),
         );
-      if (absence.status === 'active' && absence.resolution === 'requires-resolution')
+      if (absence.resolution === 'requires-resolution')
         article.append(
           paragraph(
             `${absence.affectedBookingIds.length} cita(s) coincidían al reportar y se señalaron para revisión del propietario. Revisá su estado actual; no se modificaron automáticamente.`,

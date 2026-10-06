@@ -12,29 +12,64 @@ import { createHash } from 'node:crypto';
 const chromePath = '/opt/google/chrome/chrome';
 const expectedChromeVersion = '154.0.8037.57';
 const policyPath = '/etc/apparmor.d/chrome';
-for (const path of [chromePath, policyPath]) {
-  const info = await stat(path);
-  if (!info.isFile() || info.uid !== 0 || info.mode & 0o022)
-    throw new Error(`Expected root-owned, non-writable official Chrome file: ${path}`);
+await mkdir('.private-evidence/lighthouse', { recursive: true });
+const preflight = {
+  observedAt: new Date().toISOString(),
+  sourceCommit: process.env.SOURCE_COMMIT || 'local-unattributed',
+  platform: process.platform,
+  node: process.version,
+  imageVersion: process.env.ImageVersion || null,
+  expectedChromeVersion,
+  files: [],
+  passed: false,
+};
+let chromeVersion;
+let appArmorPolicy;
+try {
+  for (const path of [chromePath, policyPath]) {
+    const info = await stat(path);
+    preflight.files.push({
+      path,
+      uid: info.uid,
+      mode: (info.mode & 0o7777).toString(8),
+      isFile: info.isFile(),
+    });
+    if (!info.isFile() || info.uid !== 0 || info.mode & 0o022)
+      throw new Error(`Expected root-owned, non-writable official Chrome file: ${path}`);
+  }
+  chromeVersion = execFileSync(chromePath, ['--version'], { encoding: 'utf8' }).trim();
+  if (chromeVersion !== `Google Chrome ${expectedChromeVersion}`)
+    throw new Error(`Pinned Chrome version mismatch: ${chromeVersion}`);
+  appArmorPolicy = await readFile(policyPath, 'utf8');
+  if (!appArmorPolicy.includes(chromePath) || !/\buserns\s*,/.test(appArmorPolicy))
+    throw new Error('Existing official Chrome AppArmor userns allowance is unavailable.');
+  preflight.passed = true;
+} catch (error) {
+  preflight.error = error.message;
+  throw error;
+} finally {
+  await writeFile(
+    '.private-evidence/lighthouse/preflight.json',
+    JSON.stringify(preflight, null, 2),
+  );
 }
-const chromeVersion = execFileSync(chromePath, ['--version'], { encoding: 'utf8' }).trim();
-if (chromeVersion !== `Google Chrome ${expectedChromeVersion}`)
-  throw new Error(`Pinned Chrome version mismatch: ${chromeVersion}`);
-const appArmorPolicy = await readFile(policyPath, 'utf8');
-if (!appArmorPolicy.includes(chromePath) || !/\buserns\s*,/.test(appArmorPolicy))
-  throw new Error('Existing official Chrome AppArmor userns allowance is unavailable.');
 const url = 'http://127.0.0.1:4174/';
 const server = spawn(process.execPath, ['scripts/preview.mjs'], {
   env: { ...process.env, PORT: '4174', HOST: '127.0.0.1' },
-  stdio: 'inherit',
+  stdio: ['ignore', 'pipe', 'inherit'],
+});
+let startup = '';
+server.stdout.on('data', (chunk) => {
+  startup += chunk.toString();
 });
 const runs = [];
-await mkdir('.private-evidence/lighthouse', { recursive: true });
 try {
   let ready = false;
   for (let attempt = 0; attempt < 30; attempt++) {
+    if (server.exitCode !== null || server.signalCode !== null)
+      throw new Error('Our Lighthouse preview server exited before verification.');
     try {
-      if ((await fetch(url)).ok) {
+      if (startup.includes(`Private local preview: ${url.slice(0, -1)}`) && (await fetch(url)).ok) {
         ready = true;
         break;
       }
@@ -60,7 +95,8 @@ try {
           '--disable-dev-shm-usage',
         ],
         userDataDir: profile,
-        port: 9222,
+        // A fixed debugging port could attach to an unrelated existing browser.
+        port: 0,
         logLevel: 'verbose',
       });
     } catch (error) {

@@ -247,6 +247,15 @@ for (const viewport of [
       expect((await revokedResponse).status()).toBe(200);
       await expect(page.locator('#manage-dialog')).not.toBeVisible();
       await expect(page.locator('#absence-list')).toContainText('Ausencia retirada');
+      await expect(page.locator('#absence-list')).toContainText(
+        'coincidían al reportar y se señalaron para revisión del propietario',
+      );
+      await page.locator('#absence-list').scrollIntoViewIfNeeded();
+      await evidence(page, testInfo, `revoked-history-${role}-${viewport.width}`, {
+        role,
+        requirement:
+          'Revoking an absence retains its historical affected-appointment notice without claiming current unresolved status.',
+      });
       expect((await schedule(day)).bookings.find((entry) => entry.id === booking.id)).toEqual(
         booking,
       );

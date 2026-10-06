@@ -100,6 +100,15 @@ function service(overrides: Partial<AgendaService> = {}): AgendaService {
         reason: 'closed',
       };
     },
+    async rescheduleAvailability(id, input) {
+      return {
+        date: input.date,
+        timeZone: 'America/Managua',
+        mode: 'fixture',
+        slots: [],
+        reason: 'closed',
+      };
+    },
     async createBooking() {
       return RECEIPT;
     },
@@ -1136,4 +1145,54 @@ test('barber fixture is explicit, loopback-only and cannot be selected by client
     startAgendaNodeServer({ service: agenda, mode: 'production', fixtureBarberId: 'a' }),
     /explicit fixture mode/,
   );
+});
+
+test('private reschedule availability requires the scoped capability and rejects public exclusion parameters', async () => {
+  let calls = 0;
+  const handle = router({
+    service: service({
+      async rescheduleAvailability(id, input, actor) {
+        calls++;
+        assert.equal(id, 'reservation-1');
+        assert.deepEqual(input, { date: '2026-10-05', professionalId: 'a' });
+        assert.deepEqual(actor, { kind: 'customer', reservationId: id });
+        return {
+          date: input.date,
+          timeZone: 'America/Managua',
+          mode: 'fixture',
+          reason: 'available',
+          slots: [{ startMinute: 855, endMinute: 885, professionalIds: ['a'] }],
+        };
+      },
+    }),
+  });
+  const path = '/bookings/reservation-1/availability?date=2026-10-05&professionalId=a';
+  const headers = { Authorization: `Bearer ${TOKEN}` };
+  for (const candidate of [{}, { Authorization: 'Bearer invalid' }] as Record<string, string>[]) {
+    assert.equal((await handle(request(path, { headers: candidate }))).status, 403);
+  }
+  assert.equal(
+    (await handle(request(path.replace('reservation-1', 'reservation-2'), { headers }))).status,
+    403,
+  );
+  assert.equal(calls, 0);
+  const response = await handle(request(path, { headers }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal((await response.json()).slots[0].startMinute, 855);
+  assert.equal(calls, 1);
+  assert.equal((await handle(request(`${path}&ignoreId=someone-else`, { headers }))).status, 400);
+  assert.equal((await handle(request(`${path}&token=${TOKEN}`, { headers }))).status, 400);
+  assert.equal(
+    (await handle(request(path, { headers: { ...headers, Origin: 'https://other.example.test' } })))
+      .status,
+    403,
+  );
+  assert.equal((await handle(request(path, { method: 'POST', headers }))).status, 405);
+  assert.equal(
+    (await handle(request('/availability?serviceId=cut&date=2026-10-05&ignoreId=reservation-1')))
+      .status,
+    400,
+  );
+  assert.equal(calls, 1);
 });

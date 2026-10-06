@@ -73,6 +73,7 @@ function allowedMethod(path: string): 'GET' | 'POST' | undefined {
   if (['/bookings', '/admin/walk-ins', '/admin/blocks', '/admin/absences'].includes(path))
     return 'POST';
   if (/^\/bookings\/[^/]+$/.test(path)) return 'GET';
+  if (/^\/bookings\/[^/]+\/availability$/.test(path)) return 'GET';
   if (/^\/bookings\/[^/]+\/(cancel|reschedule)$/.test(path)) return 'POST';
   if (/^\/admin\/bookings\/[^/]+\/(cancel|reschedule)$/.test(path)) return 'POST';
   if (/^\/admin\/blocks\/[^/]+\/cancel$/.test(path)) return 'POST';
@@ -392,6 +393,26 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
         }
         input.managementHash = await capabilityHash(body.managementToken);
         return response(await service.createBooking(input, mutation), 201);
+      }
+
+      const managementAvailability = path.match(/^\/bookings\/([^/]+)\/availability$/);
+      if (managementAvailability) {
+        const params = query(url, ['date', 'professionalId']);
+        const id = identifier(managementAvailability[1]);
+        checkOrigin(request, false);
+        const actor = await customer(request, id);
+        return response(
+          await service.rescheduleAvailability(
+            id,
+            {
+              date: date(params.get('date')),
+              ...(params.has('professionalId')
+                ? { professionalId: identifier(params.get('professionalId')) }
+                : {}),
+            },
+            actor,
+          ),
+        );
       }
 
       const customerRoute = path.match(/^\/bookings\/([^/]+)(?:\/(cancel|reschedule))?$/);

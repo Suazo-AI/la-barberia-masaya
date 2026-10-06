@@ -37,3 +37,7 @@ The official client creates a random 32-byte capability with WebCrypto, encodes 
 ## Staff role and absence increment
 
 See [owner/barber authority and temporary absences](../../docs/agenda/staff-absence-roles.md) for the server-owned stable-subject map, session contract, own-agenda restrictions, absence endpoints, and immutable conflict snapshots. `/admin/schedule` now returns `{bookings, blocks, absences}`. Export is owner-only and produces backup version 2. The generic trusted identity port remains unchanged; client role headers cannot assign privileges. Fixture-only `AGENDA_FIXTURE_ROLE=barber` is available for local phone-layout tests.
+
+## Private reschedule availability
+
+`GET /bookings/:id/availability?date=YYYY-MM-DD&professionalId=ID` uses the existing `Authorization: Bearer` booking capability and customer-management rate limit. `professionalId` is optional. The domain enforces reservation scope, confirmed status and the customer change deadline, then uses the original booked duration/buffers and excludes only that reservation. Current professional eligibility, shifts, lead/horizon, other allocations and absences still apply. Responses are no-store and contain no private booking data or management token. Public `/availability` never accepts an arbitrary ignore-ID parameter. Availability remains advisory; the actual reschedule requires the reviewed configuration and expected version and commits atomically.
