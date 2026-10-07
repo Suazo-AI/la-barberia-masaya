@@ -486,7 +486,9 @@ window.addEventListener('storage', (event) => {
 });
 function showRoute() {
   const admin = location.hash === '#administracion';
-  const focused = document.activeElement;
+  const needsFocus = byId(admin ? 'demo-client-pane' : 'demo-admin-pane').contains(
+    document.activeElement,
+  );
   showView(admin, 'none');
   if (editDialog.open || confirmDialog.open) {
     editing = null;
@@ -494,8 +496,7 @@ function showRoute() {
     dialogOpener = byId(admin ? 'demo-admin-tab' : 'demo-client-tab');
     if (editDialog.open) editDialog.close();
     if (confirmDialog.open) confirmDialog.close();
-  } else if (focused?.closest('[hidden]'))
-    byId(admin ? 'demo-admin-tab' : 'demo-client-tab').focus();
+  } else if (needsFocus) byId(admin ? 'demo-admin-tab' : 'demo-client-tab').focus();
 }
 window.addEventListener('popstate', showRoute);
 window.addEventListener('hashchange', showRoute);

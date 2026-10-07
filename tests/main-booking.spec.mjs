@@ -83,7 +83,9 @@ for (const width of [390, 1440]) {
     await expect(page.locator('#demo-client-tab')).toBeFocused();
     await page.goForward();
     await expect(page.locator('#demo-admin-pane')).toBeVisible();
+    await adminRecord.getByRole('button', { name: 'Reprogramar' }).focus();
     await page.goBack();
+    await expect(page.locator('#demo-client-tab')).toBeFocused();
     await page.reload();
     const ownRecord = page.locator(`#demo-client-entries [data-appointment-id="${created.id}"]`);
     await expect(ownRecord).toBeVisible();
