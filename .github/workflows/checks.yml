@@ -22,6 +22,7 @@ jobs:
       UI_BASELINE_URL: http://127.0.0.1:4174
       AUTHENTIC_BASELINE_URL: http://127.0.0.1:4176
       CATALOG_BASELINE_URL: http://127.0.0.1:4177
+      FOOTER_BASELINE_URL: http://127.0.0.1:4178
       AGENDA_BASELINE_URL: http://127.0.0.1:4185
       AGENDA_CLOSEOUT_BASELINE_URL: http://127.0.0.1:4187
       AGENDA_SIGNIN_BASELINE_URL: http://127.0.0.1:4188
@@ -91,6 +92,15 @@ jobs:
       - name: Build pinned public-catalog baseline
         run: node scripts/build.mjs
         working-directory: .private-evidence/catalog-baseline
+      - name: Checkout published v11 footer for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 9a4f3858be2078ab0ff3b4cb8d31d1beb874f851
+          path: .private-evidence/footer-baseline
+      - name: Build pinned footer comparison baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/footer-baseline
       - run: npm run check
       - run: npm run test:performance
       - name: Upload bounded staff sign-in evidence
@@ -127,6 +137,8 @@ jobs:
             .private-evidence/public-catalog/*.json
             .private-evidence/demo/*.png
             .private-evidence/demo/*.json
+            .private-evidence/footer/*.png
+            .private-evidence/footer/*.json
             .private-evidence/site-test-results/**/*.png
             .private-evidence/site-test-results/**/*.webm
             .private-evidence/ui-*.png

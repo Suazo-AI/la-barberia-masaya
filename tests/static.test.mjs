@@ -25,7 +25,7 @@ test('preview privacy and no unsupported integrations', () => {
   assert.match(html, /Agenda pendiente de configuración/);
   assert.match(html, /No se puede crear una cita hasta verificar/);
   assert.doesNotMatch(html, /src="https?:\/\//);
-  assert.equal((html.match(/href="https?:\/\//g) || []).length, 10);
+  assert.equal((html.match(/href="https?:\/\//g) || []).length, 12);
   assert.equal(html.includes('http-equiv="refresh"'), false);
 });
 test('static build excludes configuration, fixtures and persistent private data', async () => {
@@ -107,10 +107,28 @@ test('visit facts retain exact place identity, weekly hours and dated source', (
   assert.match(html, /Supermercado Pali, 4 cuadras al oeste/);
   assert.match(html, /datetime="2026-10-03"/);
   assert.match(html, /Puede variar en días festivos/);
-  const hours = html.match(/<dl class="hours-list">([\s\S]*?)<\/dl>/)[1];
+  const hours = html.match(/<dl class="lb-footer-hours-list">([\s\S]*?)<\/dl>/)[1];
   assert.equal((hours.match(/<dt>/g) || []).length, 7);
   assert.doesNotMatch(html, /abierto ahora|horario confirmado/i);
   assert.match(html, /data-content-status="ready"/);
+});
+
+test('selected hybrid footer preserves approved social links and unique business details', () => {
+  assert.equal((html.match(/<footer /g) || []).length, 1);
+  assert.match(html, /<\/main>\s*<footer class="lb-footer"/);
+  assert.match(html, /SEGUÍ EL ESTILO\./);
+  assert.match(html, /Lo que pasa en la silla, también en tus redes\./);
+  assert.match(html, /MASAYA · CAILAGUA/);
+  assert.match(html, /HABLEMOS/);
+  assert.doesNotMatch(
+    html,
+    /Buenos cortes|buenas conversaciones|class="visit-section"|class="real-contact"|class="draft-note"/i,
+  );
+  assert.equal((html.match(/<address>/g) || []).length, 1);
+  assert.equal((html.match(/query_place_id=/g) || []).length, 1);
+  for (const platform of ['instagram', 'facebook'])
+    assert.match(html, new RegExp(`href="https://www\\.${platform}\\.com/labarberia\\.ni/"`));
+  assert.match(html, /lb-footer-wordmark" aria-hidden="true">LA BARBERÍA/);
 });
 
 test('authentic content has one finished cut, one process photo and three attributed reviews', () => {

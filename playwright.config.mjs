@@ -26,6 +26,17 @@ export default defineConfig({
     video: 'on',
   },
   webServer: [
+    ...(process.env.FOOTER_BASELINE_URL
+      ? [
+          {
+            command: 'node scripts/preview.mjs',
+            cwd: '.private-evidence/footer-baseline',
+            env: { PORT: '4178' },
+            url: process.env.FOOTER_BASELINE_URL,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
     {
       command: 'npm run preview',
       url: 'http://127.0.0.1:4173',
