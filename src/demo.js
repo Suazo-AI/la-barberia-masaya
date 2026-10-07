@@ -219,7 +219,9 @@ function render() {
   renderClientSlots();
   renderEntries();
 }
-function showView(admin) {
+function showView(admin, historyMode = 'push') {
+  const hash = admin ? '#administracion' : '#reservar';
+  if (historyMode === 'push' && location.hash !== hash) history.pushState(null, '', hash);
   byId('demo-client-pane').hidden = admin;
   byId('demo-admin-pane').hidden = !admin;
   byId('demo-client-tab').setAttribute('aria-pressed', String(!admin));
@@ -482,4 +484,20 @@ window.addEventListener('storage', (event) => {
   render();
   announce('La demo cambió en otra pestaña. Revisá la agenda antes de continuar.');
 });
+function showRoute() {
+  const admin = location.hash === '#administracion';
+  const focused = document.activeElement;
+  showView(admin, 'none');
+  if (editDialog.open || confirmDialog.open) {
+    editing = null;
+    pendingConfirmation = null;
+    dialogOpener = byId(admin ? 'demo-admin-tab' : 'demo-client-tab');
+    if (editDialog.open) editDialog.close();
+    if (confirmDialog.open) confirmDialog.close();
+  } else if (focused?.closest('[hidden]'))
+    byId(admin ? 'demo-admin-tab' : 'demo-client-tab').focus();
+}
+window.addEventListener('popstate', showRoute);
+window.addEventListener('hashchange', showRoute);
 render();
+showRoute();

@@ -26,6 +26,17 @@ export default defineConfig({
     video: 'on',
   },
   webServer: [
+    ...(process.env.MAIN_BOOKING_BASELINE_URL
+      ? [
+          {
+            command: 'node scripts/preview.mjs',
+            cwd: '.private-evidence/main-booking-baseline',
+            env: { PORT: '4179' },
+            url: process.env.MAIN_BOOKING_BASELINE_URL,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
     ...(process.env.FOOTER_BASELINE_URL
       ? [
           {

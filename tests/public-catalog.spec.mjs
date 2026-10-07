@@ -18,7 +18,7 @@ async function checkOffer(page) {
     await expect(row.locator('dd')).toContainText(duration);
   }
   await expect(page.locator('#servicios input, #servicios button')).toHaveCount(0);
-  await expect(page.locator('.hero [data-booking-open]')).toHaveCount(1);
+  await expect(page.locator('.hero .call-action')).toHaveAttribute('href', './demo.html#reservar');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
@@ -74,7 +74,7 @@ for (const viewport of [
     await expect(page.locator('#booking-policy')).toHaveAttribute('open', '');
     await expect(page.locator('#booking-policy')).toContainText('cuando habilitemos la agenda');
     await expect(page.locator('#booking-policy')).toContainText(
-      'no se puede reservar desde la web',
+      'las reservas reales siguen cerradas',
     );
     await expect(page.locator('#booking-policy li')).toHaveCount(3);
     await checkOffer(page);
@@ -86,14 +86,10 @@ for (const viewport of [
     await summary.focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#booking-policy')).not.toHaveAttribute('open', '');
-    await page.locator('.hero [data-booking-open]').click();
-    await expect(page.locator('#service-heading')).toContainText('configuración');
-    await expect(page.locator('#booking-services input')).toHaveCount(0);
-    await expect(page.locator('#booking-continue')).toBeHidden();
-    await expect(page.locator('#complete-heading')).toBeHidden();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#booking-dialog')).toBeHidden();
-    await expect(page.locator('.hero [data-booking-open]')).toBeFocused();
+    await page.locator('.hero .call-action').click();
+    await expect(page).toHaveURL(/\/demo\.html#reservar$/);
+    await expect(page.locator('#demo-slots button').first()).toBeVisible();
+    await page.goBack();
     await checkOffer(page);
     expect(writes).toEqual([]);
     await writeFile(
@@ -139,7 +135,9 @@ test('public catalog and future policies work without JavaScript or API access',
   await checkOffer(page);
   await page.locator('#booking-policy > summary').click();
   await expect(page.locator('#booking-policy')).toHaveAttribute('open', '');
-  await expect(page.locator('#booking-policy')).toContainText('no se puede reservar desde la web');
+  await expect(page.locator('#booking-policy')).toContainText(
+    'las reservas reales siguen cerradas',
+  );
   await expect(page.locator('a[href="tel:+50585482197"]')).toHaveCount(1);
   expect(apiCalls).toEqual([]);
   await mkdir('.private-evidence/public-catalog', { recursive: true });

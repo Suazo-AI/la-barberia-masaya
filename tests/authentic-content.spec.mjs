@@ -76,7 +76,10 @@ for (const viewport of [
     await page.screenshot({
       path: `.private-evidence/authentic-content/after-gallery-${viewport.width}.png`,
     });
-    const opener = page.getByRole('link', { name: 'Reservar cita', exact: true });
+    const opener = page.getByRole('link', {
+      name: 'Equipo y agenda real · pendiente',
+      exact: true,
+    });
     await opener.click();
     await expect(page.locator('#service-heading')).toContainText('configuración');
     await expect(page.locator('#booking-team')).not.toHaveAttribute('open', '');

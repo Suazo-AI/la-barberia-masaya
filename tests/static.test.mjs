@@ -176,17 +176,22 @@ test('confirmed public services and future policies are readable without activat
     assert.ok(row.includes(`${minutes} min</span>`));
   }
   assert.match(section, /duración prevista/);
-  assert.match(section, /cuando habilitemos la agenda/);
-  assert.match(section, /no se puede\s+reservar\s+desde la web/);
+  assert.match(section, /cuando\s+habilitemos la agenda/);
+  assert.match(section, /las reservas reales siguen cerradas/);
   assert.match(section, /al menos 1 hora[\s\S]*hasta 14 días/);
   assert.match(section, /cancelar o cambiar la cita hasta 1 hora/);
   assert.match(section, /5 minutos después de cada servicio/);
-  assert.doesNotMatch(section, /<button|<input|<form|data-booking-open/);
+  assert.doesNotMatch(section, /<button|<input|<form/);
   assert.doesNotMatch(html, /Servicios y profesionales pendientes de configuración/);
 });
 
 test('isolated demo entry and persona disclosures never activate the production API', async () => {
-  assert.match(html, /href="\.\/demo\.html"/);
+  assert.match(html, /class="call-action" href="\.\/demo\.html#reservar"/);
+  assert.match(html, /href="\.\/demo\.html#administracion"/);
+  assert.doesNotMatch(
+    html.match(/<section class="hero"[\s\S]*?<\/section>/)[0],
+    /data-booking-open|aria-haspopup|booking-load-status/,
+  );
   const demo = await readFile('dist/demo.html', 'utf8');
   assert.match(demo, /No crea citas reales ni envía/);
   assert.match(demo, /Dueño · simulado/);

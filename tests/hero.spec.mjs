@@ -38,7 +38,7 @@ for (const viewport of viewports) {
       .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
     expect(columns).toBe(viewport.width >= 768 ? 4 : 2);
     const action = page.getByRole('link', { name: 'Reservar cita' });
-    await expect(action).toHaveAttribute('href', '#reserva');
+    await expect(action).toHaveAttribute('href', './demo.html#reservar');
     const box = await action.boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
@@ -107,10 +107,11 @@ test('keyboard, repeated agenda opening, and history', async ({ page }) => {
   expect(await action.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
   for (let attempt = 0; attempt < 3; attempt++) {
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
-    await expect(action).toBeFocused();
+    await expect(page).toHaveURL(/\/demo\.html#reservar$/);
+    await expect(page.locator('#demo-slots button').first()).toBeVisible();
+    await page.goBack();
+    await expect(action).toBeVisible();
+    await action.focus();
   }
   await expect(page.locator('h1')).toBeVisible();
   await page.goBack();
@@ -135,10 +136,12 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
   );
   await expect(page.getByRole('link', { name: 'Reservar cita' })).toHaveAttribute(
     'href',
-    '#reserva',
+    './demo.html#reservar',
   );
   await page.getByRole('link', { name: 'Reservar cita' }).click();
-  await expect(page.getByRole('heading', { name: 'Reservas', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/demo\.html#reservar$/);
+  await expect(page.locator('noscript')).toContainText('Activá JavaScript');
+  await page.goBack();
   await expect(page.locator('.work-grid img')).toHaveCount(2);
   await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
   await expect(page.locator('.work-grid')).toContainText('Moises Diaz');
