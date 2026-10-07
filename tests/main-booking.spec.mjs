@@ -77,6 +77,7 @@ for (const width of [390, 1440]) {
       path: `.private-evidence/main-booking/after-admin-${width}.png`,
       fullPage: true,
     });
+    await page.locator('#demo-persona').focus();
     await page.goBack();
     await expect(page).toHaveURL(/#reservar$/);
     await expect(page.locator('#demo-client-pane')).toBeVisible();

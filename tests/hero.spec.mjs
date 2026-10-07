@@ -140,7 +140,8 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
   );
   await page.getByRole('link', { name: 'Reservar cita' }).click();
   await expect(page).toHaveURL(/\/demo\.html#reservar$/);
-  await expect(page.locator('noscript')).toContainText('Activá JavaScript');
+  await expect(page.locator('noscript .demo-notice')).toContainText('Activá JavaScript');
+  await expect(page.locator('noscript .demo-notice')).toBeVisible();
   await page.goBack();
   await expect(page.locator('.work-grid img')).toHaveCount(2);
   await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
