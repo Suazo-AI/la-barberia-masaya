@@ -91,7 +91,7 @@ test('SQLite uses FK constraints, durable migrations and safe bound values', asy
     (await store.all<{ foreign_keys: number }>('PRAGMA foreign_keys'))[0]?.foreign_keys,
     1,
   );
-  assert.equal((await store.all('SELECT * FROM _agenda_migrations')).length, 1);
+  assert.equal((await store.all('SELECT * FROM _agenda_migrations')).length, 2);
   await store.run('CREATE TABLE fixture_values(id INTEGER PRIMARY KEY, text TEXT, bytes BLOB)');
   const text = "fixture'); DROP TABLE agenda_entries; --";
   const bytes = new Uint8Array([0, 1, 255]);
@@ -202,10 +202,13 @@ test('SQLite enforces foreign keys and refuses changed applied migrations', asyn
   );
   assert.throws(
     () =>
-      store.applyMigrations([{ name: '0001_agenda.sql', sql: 'SELECT 1;', sha256: 'modified' }]),
+      store.applyMigrations([
+        { name: '0001_agenda.sql', sql: 'SELECT 1;', sha256: 'modified' },
+        { name: '0002_staff_absences.sql', sql: 'SELECT 1;', sha256: 'modified' },
+      ]),
     /modified/,
   );
-  assert.equal((await store.all('SELECT * FROM _agenda_migrations')).length, 1);
+  assert.equal((await store.all('SELECT * FROM _agenda_migrations')).length, 2);
   await store.run('PRAGMA user_version = 999');
   await assert.rejects(migrateSqlite(store), /newer/);
   assert.equal(

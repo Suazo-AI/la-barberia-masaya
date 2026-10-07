@@ -12,6 +12,11 @@ if (!['unconfigured', 'fixture', 'production'].includes(configuredMode))
   throw new Error('AGENDA_MODE must be unconfigured, fixture or production.');
 if (configuredMode === 'fixture' && process.env.NODE_ENV === 'production')
   throw new Error('Local fixtures are unavailable in a production process.');
+if (
+  process.env.AGENDA_FIXTURE_ROLE &&
+  (configuredMode !== 'fixture' || !['owner', 'barber'].includes(process.env.AGENDA_FIXTURE_ROLE))
+)
+  throw new Error('AGENDA_FIXTURE_ROLE must be owner or barber, only in fixture mode.');
 if (configuredMode !== 'fixture' && (process.env.AGENDA_NOW || process.env.AGENDA_EPHEMERAL))
   throw new Error('Fixture clock and ephemeral storage are unavailable outside fixture mode.');
 
@@ -56,6 +61,7 @@ const running = await startAgendaNodeServer({
   mode: config.mode,
   rateLimiter: createSqlRateLimiter(store, { now }),
   fixtureAdmin: config.mode === 'fixture',
+  fixtureBarberId: process.env.AGENDA_FIXTURE_ROLE === 'barber' ? 'a' : undefined,
   port: Number(process.env.PORT ?? 4183),
   // This local runner deliberately has no production identity implementation.
   // Production mode requires explicit origins and still fails closed at the router.

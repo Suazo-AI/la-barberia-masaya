@@ -46,3 +46,7 @@ The API is `/api/agenda/v1`: `GET /catalog`, `GET /availability?serviceId&profes
 5. Root: final integration, static/site regression checks, genuine browser evidence and draft PR publication. Parent coordinates host adapter activation.
 
 Business blockers: verified services/prices/durations, named eligible staff and shifts, booking/cancel policies, owner identity allowlist, host identity contract, sender/provider/runner, private backup destination and selected open-source license. Development continues without inventing these facts.
+
+## Owner/barber role increment, 2026-10-04
+
+[Staff roles and temporary absence reporting](staff-absence-roles.md) extends this contract: verified owner-wide access, stable-subject-mapped barber own-agenda reads and self-service absence report/revoke, immutable affected-booking snapshots, additive absence storage/guards and backup v2. Existing appointments stay confirmed; their resolution policy remains pending. This source-only increment grants no live identity, deployment, external notification or automatic booking cancellation/reassignment.

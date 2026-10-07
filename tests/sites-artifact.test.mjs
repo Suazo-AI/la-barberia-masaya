@@ -39,6 +39,10 @@ test('every approved public file is served byte-for-byte including fonts and pho
     'admin.css',
     'admin.js',
     'art-gallery.js',
+    'demo.html',
+    'demo.css',
+    'demo.js',
+    'demo-store.js',
     'THIRD-PARTY-NOTICES.txt',
     'favicon.svg',
   ];
@@ -87,8 +91,25 @@ test('hosting metadata and generated migration tree are copied without mutation 
     '/drizzle/meta/_journal.json',
     '/.env',
     '/agenda/config.example.json',
+    '/.agenda-private/catalog-candidate.json',
+    '/.agenda-private/catalog-provenance.json',
+    '/agenda/tools/setup-check.ts',
   ]) {
     const response = await worker.fetch(new Request(`${origin}${path}`), {});
     assert.equal(response.status, 404, path);
   }
+});
+
+test('packaged Sites identity entry is no-store and does not activate the agenda', async () => {
+  const response = await worker.fetch(new Request(`${origin}/api/agenda/v1/identity`), {});
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  const identity = await response.json();
+  assert.equal(identity.authenticated, false);
+  assert.equal(identity.subject, undefined);
+  assert.equal(identity.signInPath, '/signin-with-chatgpt?return_to=%2Fadmin.html');
+  assert.equal(
+    (await worker.fetch(new Request(`${origin}/api/agenda/v1/admin/session`), {})).status,
+    503,
+  );
 });

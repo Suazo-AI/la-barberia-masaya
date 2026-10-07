@@ -28,11 +28,9 @@
         <div class="hero-copy">
           <h1 id="hero-heading"><span>TU ESTILO.</span> <span>BIEN HECHO.</span></h1>
           <p class="hero-description">Un espacio para tu próximo corte.</p>
-          <a class="call-action" href="#reserva" data-booking-open aria-haspopup="dialog"
-            ><span>Reservar cita</span></a
-          >
-          <p class="booking-preview-note" id="booking-load-status" aria-live="polite">
-            Agenda en preparación. Servicios y profesionales pendientes de configuración.
+          <a class="call-action" href="./demo.html#reservar"><span>Reservar cita</span></a>
+          <p class="booking-preview-note">
+            Agenda demo: creá, cambiá y cancelá citas de prueba. No son reservas reales.
           </p>
         </div>
         <figure class="hero-scene">
@@ -47,6 +45,50 @@
               fetchpriority="high"
           /></picture>
         </figure>
+      </section>
+      <section class="services-section" id="servicios" aria-labelledby="services-heading">
+        <div class="services-intro">
+          <p class="section-label">CORTES Y BARBA</p>
+          <h2 id="services-heading">SERVICIOS.</h2>
+          <p>Precios en córdobas (NIO) y duración prevista de cada servicio.</p>
+          <p class="booking-preview-note">
+            <a href="./demo.html#administracion">Abrir agenda administrativa · demo</a>
+          </p>
+          <p class="booking-preview-note">
+            <a href="#reserva" data-booking-open aria-haspopup="dialog"
+              >Equipo y agenda real · pendiente</a
+            >
+          </p>
+          <p class="booking-preview-note" id="booking-load-status" aria-live="polite"></p>
+        </div>
+        <div class="services-content">
+          <dl class="services-menu">
+            <div class="service-line" data-offer="cut">
+              <dt>Corte</dt>
+              <dd><span class="service-price">C$200</span><span>30 min</span></dd>
+            </div>
+            <div class="service-line" data-offer="beard">
+              <dt>Barba</dt>
+              <dd><span class="service-price">C$150</span><span>15 min</span></dd>
+            </div>
+            <div class="service-line" data-offer="combo">
+              <dt>Corte + barba</dt>
+              <dd><span class="service-price">C$300</span><span>45 min</span></dd>
+            </div>
+          </dl>
+          <details class="booking-policy" id="booking-policy">
+            <summary>Cómo funcionarán las reservas en línea</summary>
+            <p>
+              Podés probar estas reglas en la agenda demo. Se aplicarán a citas reales cuando
+              habilitemos la agenda. Por ahora las reservas reales siguen cerradas.
+            </p>
+            <ul>
+              <li>Podrás reservar con al menos 1 hora de anticipación y hasta 14 días antes.</li>
+              <li>Podrás cancelar o cambiar la cita hasta 1 hora antes de su inicio.</li>
+              <li>Dejaremos 5 minutos después de cada servicio para preparar el siguiente.</li>
+            </ul>
+          </details>
+        </div>
       </section>
       <section class="space-section" aria-labelledby="space-heading">
         <h2 id="space-heading" tabindex="-1">EL LOCAL</h2>
@@ -149,7 +191,7 @@
             class="art-gallery"
             tabindex="0"
             role="group"
-            aria-label="Galería de dos cortes en proceso y tres fragmentos de reseñas"
+            aria-label="Galería de un corte terminado, un corte en proceso y tres fragmentos de reseñas"
             aria-describedby="gallery-instructions"
           ></div>
           <div class="gallery-pan-controls" role="group" aria-label="Mover galería">
@@ -161,32 +203,46 @@
           </div>
         </div>
         <p class="work-note">
-          Cortes en proceso publicados por el negocio. Fotos y reseñas son independientes.
+          Un corte terminado y otro en proceso, publicados por el negocio. Fotos y reseñas son
+          independientes.
         </p>
         <div class="work-grid">
-          <figure class="work-card work-photo" data-gallery-item data-label="FOTO 1 · EN PROCESO">
-            <template class="work-image-template"
-              ><img
-                src="./assets/images/barber-at-work-2026-09-17.jpg"
-                width="518"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="Barbero trabajando el contorno del cabello de un cliente en La Barbería." /></template
-            ><noscript
-              ><img
-                src="./assets/images/barber-at-work-2026-09-17.jpg"
-                width="518"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="Barbero trabajando el contorno del cabello de un cliente en La Barbería."
-            /></noscript>
+          <figure class="work-card work-photo" data-gallery-item data-label="CORTE TERMINADO · 01">
+            <div
+              class="work-photo-viewport highlight-fade-viewport"
+              data-source-crop="373,90,404,580"
+            >
+              <template class="work-image-template"
+                ><img
+                  src="./assets/images/finished-fade-highlight-2026-10-06.jpg"
+                  width="1165"
+                  height="747"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Corte terminado: degradado lateral y barba perfilada, en una historia publicada por La Barbería."
+              /></template>
+              <noscript
+                ><img
+                  src="./assets/images/finished-fade-highlight-2026-10-06.jpg"
+                  width="1165"
+                  height="747"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Corte terminado: degradado lateral y barba perfilada, en una historia publicada por La Barbería."
+              /></noscript>
+            </div>
             <figcaption>
-              <span class="section-label">CORTE EN PROCESO · 01</span
-              ><a href="https://www.instagram.com/labarberia.ni/p/DdaCjt_iS_M/" rel="noreferrer"
-                >Foto de @labarberia.ni ↗</a
-              ><time datetime="2026-09-17">17 de septiembre de 2026</time>
+              <span class="section-label">CORTE TERMINADO · 01</span>
+              <a
+                href="https://www.instagram.com/stories/highlights/18015487450805665/"
+                rel="noreferrer"
+                >Historia de @labarberia.ni ↗</a
+              >
+              <span class="work-source-detail"
+                >Fotograma de “Clientes”, consultado el
+                <time datetime="2026-10-06">6 de octubre de 2026</time>. Fecha original no
+                disponible.</span
+              >
             </figcaption>
           </figure>
           <figure class="work-card review-card" data-gallery-item data-label="RESEÑA 1 · FRAGMENTO">
@@ -258,24 +314,68 @@
           </figure>
         </div>
       </section>
-      <section class="visit-section" aria-labelledby="visit-heading">
-        <div class="visit-location">
-          <p class="section-label">MASAYA · CAILAGUA</p>
-          <h2 id="visit-heading">NOS VEMOS<br />EN EL LOCAL.</h2>
-          <address>
-            Supermercado Pali, 4 cuadras al oeste.<br />
-            Masaya 41000, Nicaragua.
-          </address>
+      <noscript>
+        <section id="reserva" class="booking-fallback" aria-labelledby="booking-fallback-title">
+          <h2 id="booking-fallback-title">Reservas</h2>
+          <p>
+            Los servicios, precios y horarios se pueden consultar sin JavaScript. Las reservas en
+            línea aún no están habilitadas. Podés consultar por teléfono en contacto.
+          </p>
+        </section>
+      </noscript>
+    </main>
+    <footer class="lb-footer" aria-labelledby="lb-footer-title">
+      <div class="lb-footer-eyebrow">MASAYA · CAILAGUA</div>
+      <div class="lb-footer-title-row">
+        <h2 id="lb-footer-title">SEGUÍ EL ESTILO.</h2>
+        <span class="lb-footer-star" aria-hidden="true">✳</span>
+      </div>
+      <div class="lb-footer-social-line">
+        <p>Lo que pasa en la silla, también en tus redes.</p>
+        <nav class="lb-footer-pills" aria-label="Redes sociales de La Barbería">
           <a
-            class="directions-action"
+            class="lb-footer-pill"
+            href="https://www.instagram.com/labarberia.ni/"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none" /></svg
+            >Instagram <span aria-hidden="true">↗</span></a
+          ><a
+            class="lb-footer-pill"
+            href="https://www.facebook.com/labarberia.ni/"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path
+                d="M14 22v-9h3l.5-4H14V7c0-1 .3-2 2-2h2V1.5C17 1.2 16 1 15 1c-3 0-5 2-5 5v3H7v4h3v9z"
+              /></svg
+            >Facebook <span aria-hidden="true">↗</span></a
+          >
+        </nav>
+      </div>
+      <div class="lb-footer-info">
+        <section>
+          <h3>ENCONTRANOS</h3>
+          <address>Supermercado Pali, 4 cuadras al oeste.<br />Masaya 41000, Nicaragua.</address>
+          <a
+            class="lb-footer-small-link"
             href="https://www.google.com/maps/search/?api=1&amp;query=La+Barberia+Masaya&amp;query_place_id=ChIJ5VCti5kHdI8RfdKEhOxWcr4"
             rel="noreferrer"
             >Cómo llegar <span aria-hidden="true">↗</span></a
           >
-        </div>
-        <div class="visit-hours">
+        </section>
+        <section>
           <h3>HORARIO</h3>
-          <dl class="hours-list">
+          <dl class="lb-footer-hours-list">
             <div>
               <dt>Lunes</dt>
               <dd>1:00–7:00 p. m.</dd>
@@ -305,30 +405,31 @@
               <dd>10:00 a. m.–5:00 p. m.</dd>
             </div>
           </dl>
-          <p class="hours-note">
-            Hora de Nicaragua. Horario publicado en Google Maps, consultado el
-            <time datetime="2026-10-03">3 de octubre de 2026</time>. Puede variar en días festivos;
-            llamá antes de venir.
-          </p>
-        </div>
-      </section>
-      <div class="real-contact">
-        <p>Para consultar una cita real, hablá con el negocio.</p>
-        <a class="contact-action" href="tel:+50585482197"
-          >Consultar una cita real <span>+505 8548 2197</span></a
-        >
-      </div>
-      <noscript>
-        <section id="reserva" class="booking-fallback" aria-labelledby="booking-fallback-title">
-          <h2 id="booking-fallback-title">Reservas</h2>
-          <p>
-            Activá JavaScript para consultar la agenda. Las reservas estarán disponibles cuando el
-            negocio configure sus servicios y profesionales. Podés consultar por teléfono en
-            contacto.
-          </p>
         </section>
-      </noscript>
-    </main>
+        <section>
+          <h3>HABLEMOS</h3>
+          <a
+            class="lb-footer-phone"
+            aria-label="Consultar una cita real por teléfono: +505 8548 2197"
+            href="tel:+50585482197"
+            >+505 8548 2197 ↗</a
+          >
+          <p>Consultá una cita real con el negocio.</p>
+        </section>
+      </div>
+      <div class="lb-footer-wordmark" aria-hidden="true">LA BARBERÍA</div>
+      <div class="lb-footer-fine">
+        <span>LA BARBERÍA · MASAYA, NICARAGUA</span
+        ><span>HORA DE NICARAGUA · HORARIO SUJETO A CAMBIOS EN FESTIVOS</span>
+      </div>
+      <p class="lb-footer-disclosure">
+        Horario publicado en Google Maps, consultado el
+        <time datetime="2026-10-03">3 de octubre de 2026</time>. Puede variar en días festivos;
+        llamá antes de venir. Las imágenes del interior en el hero y “El local” fueron mejoradas con
+        IA a partir de fotos de 2023; el aspecto actual puede variar.
+      </p>
+    </footer>
+
     <dialog
       class="booking-dialog"
       id="booking-dialog"
@@ -345,8 +446,8 @@
         </button>
       </div>
       <p class="booking-disclaimer" id="booking-disclaimer">
-        Agenda pendiente de configuración. No se puede crear una cita hasta verificar los servicios,
-        precios y profesionales del negocio.
+        Agenda pendiente de configuración. No se puede crear una cita hasta verificar el acceso y
+        habilitar las reservas en línea.
       </p>
       <nav class="booking-progress" aria-label="Pasos de la reserva">
         <ol>
@@ -371,9 +472,80 @@
               <legend class="sr-only">Servicio</legend>
               <div id="booking-services" class="booking-services"></div>
             </fieldset>
-            <p class="booking-help">
+            <p class="booking-help" id="booking-service-price-note">
               Duración y precio en córdobas (NIO), según el catálogo configurado.
             </p>
+            <details class="booking-team" id="booking-team">
+              <summary>Conocé al equipo</summary>
+              <p class="booking-help">
+                Presentaciones publicadas por La Barbería. Ver un perfil no selecciona un
+                profesional ni crea una reserva.
+              </p>
+              <div class="team-profiles">
+                <details class="team-profile">
+                  <summary><strong>Jonatan</strong><span>Ver presentación</span></summary>
+                  <div class="team-profile-content">
+                    <figure class="team-portrait">
+                      <div data-team-photo>
+                        <template
+                          ><img
+                            src="./assets/images/jonatan-at-work-2026-09-16.jpg"
+                            width="1080"
+                            height="1350"
+                            loading="lazy"
+                            decoding="async"
+                            alt="Jonatan trabajando en La Barbería, en una foto que el negocio publicó con su nombre."
+                        /></template>
+                      </div>
+                      <figcaption>
+                        Retrato durante un corte en proceso. Publicado el
+                        <time datetime="2026-09-16">16 de septiembre de 2026</time>.
+                      </figcaption>
+                    </figure>
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/p/DdXBwrqCfEQ/?img_index=4"
+                      rel="noreferrer"
+                      >Ver la foto original ↗</a
+                    >
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/reel/Dco9f0oJaR_/"
+                      rel="noreferrer"
+                      >Ver su presentación ↗</a
+                    >
+                    <p class="booking-help">
+                      Portafolio de cortes terminados pendiente. No se le atribuyen las fotos
+                      generales del negocio.
+                    </p>
+                  </div>
+                </details>
+                <details class="team-profile">
+                  <summary><strong>Manuel</strong><span>Ver presentación</span></summary>
+                  <div class="team-profile-content">
+                    <p>Presentado por su nombre en una entrevista de La Barbería.</p>
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/reel/DcZFDmoJ8sB/"
+                      rel="noreferrer"
+                      >Ver su presentación ↗</a
+                    >
+                    <p class="booking-help">Foto y portafolio de cortes terminados pendientes.</p>
+                  </div>
+                </details>
+                <details class="team-profile">
+                  <summary>
+                    <strong>Otro integrante del equipo</strong><span>Ver presentación</span>
+                  </summary>
+                  <div class="team-profile-content">
+                    <p>El negocio publicó esta entrevista. Su nombre aún no está verificado.</p>
+                    <a
+                      href="https://www.instagram.com/labarberia.ni/reel/DcjqIB5pHjB/"
+                      rel="noreferrer"
+                      >Ver la entrevista ↗</a
+                    >
+                    <p class="booking-help">Foto y portafolio pendientes de atribución.</p>
+                  </div>
+                </details>
+              </div>
+            </details>
           </section>
           <section class="booking-step" data-panel="2" aria-labelledby="schedule-heading" hidden>
             <p class="booking-step-label">PASO 2 DE 3</p>
@@ -519,11 +691,5 @@
         </button>
       </div>
     </dialog>
-    <footer class="draft-note">
-      <p>
-        Las imágenes del interior en el hero y “El local” fueron mejoradas con IA a partir de fotos
-        de 2023. El aspecto actual del local puede variar.
-      </p>
-    </footer>
   </body>
 </html>

@@ -239,3 +239,184 @@ test('Sites image CSP permits only exact verified configured photo origins', asy
   const closed = await worker.fetch(new Request(origin), {});
   assert.match(closed.headers.get('Content-Security-Policy')!, /img-src 'self';/);
 });
+
+test('Sites server mapping isolates barber scope and rejects ambiguous identity configuration', async (t) => {
+  const store = new SqliteStore(':memory:');
+  t.after(() => store.close());
+  await migrateSqlite(store);
+  const worker = createSitesAgendaWorker({});
+  const env = {
+    ...environment(binding(store)),
+    AGENDA_BARBER_SUBJECTS_JSON: JSON.stringify({ 'site-barber': 'a' }),
+  };
+  const headers = {
+    'oai-authenticated-user-id': 'site-barber',
+    'X-Role': 'owner',
+    'X-Professional-Id': 'b',
+  };
+  const session = await worker.fetch(new Request(`${api}/admin/session`, { headers }), env);
+  assert.equal(session.status, 200);
+  assert.deepEqual(await session.json(), {
+    role: 'barber',
+    professionalId: 'a',
+    capabilities: { manageShop: false, reportAbsence: true },
+  });
+  assert.equal(
+    (await worker.fetch(new Request(`${api}/admin/export`, { headers }), env)).status,
+    403,
+  );
+  const date = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request(`${api}/admin/schedule?date=${date}&professionalId=b`, { headers }),
+        env,
+      )
+    ).status,
+    403,
+  );
+  const own = await worker.fetch(
+    new Request(`${api}/admin/absences`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        Origin: origin,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'site-absence-own',
+      },
+      body: JSON.stringify({
+        professionalId: 'a',
+        startDate: date,
+        startMinute: 800,
+        endDate: date,
+        endMinute: 900,
+        configVersion: 1,
+      }),
+    }),
+    env,
+  );
+  assert.equal(own.status, 201);
+  assert.equal((await own.json()).status, 'active');
+  for (const value of [
+    '[]',
+    'null',
+    '{',
+    JSON.stringify({ [subject]: 'a' }),
+    JSON.stringify({ 'site-barber': 'missing' }),
+    JSON.stringify({ 'site-barber': 1 }),
+    JSON.stringify({ 'bad subject': 'a' }),
+  ]) {
+    const invalid = { ...env, AGENDA_BARBER_SUBJECTS_JSON: value };
+    const response = await worker.fetch(new Request(`${api}/catalog`), invalid);
+    assert.equal(response.status, 503, value);
+    assert.equal((await response.json()).error.code, 'CONFIGURATION_REQUIRED');
+  }
+});
+
+test('Sites self-identity is available before configuration without DB access or role grants', async () => {
+  let calls = 0;
+  const DB = {
+    prepare() {
+      calls++;
+      throw new Error('must not read DB');
+    },
+    async batch() {
+      calls++;
+      throw new Error('must not write DB');
+    },
+  };
+  const worker = createSitesAgendaWorker({});
+  const env = { DB };
+  const anonymous = await worker.fetch(new Request(`${api}/identity`), env);
+  assert.equal(anonymous.status, 200);
+  assert.deepEqual(await anonymous.json(), {
+    authenticated: false,
+    signInPath: '/signin-with-chatgpt?return_to=%2Fadmin.html',
+    signOutPath: '/signout-with-chatgpt?return_to=%2Fadmin.html',
+  });
+  const signedIn = await worker.fetch(
+    new Request(`${api}/identity`, {
+      headers: {
+        'oai-authenticated-user-id': 'self-only-site-subject',
+        'oai-authenticated-user-email': 'synthetic@example.test',
+        'X-Role': 'owner',
+      },
+    }),
+    env,
+  );
+  assert.equal(signedIn.status, 200);
+  assert.equal(signedIn.headers.get('Cache-Control'), 'no-store');
+  assert.equal(signedIn.headers.get('Pragma'), 'no-cache');
+  assert.equal(signedIn.headers.get('Referrer-Policy'), 'no-referrer');
+  assert.equal(signedIn.headers.get('Access-Control-Allow-Origin'), null);
+  const own = await signedIn.json();
+  assert.deepEqual(own, {
+    authenticated: true,
+    subject: 'self-only-site-subject',
+    signInPath: '/signin-with-chatgpt?return_to=%2Fadmin.html',
+    signOutPath: '/signout-with-chatgpt?return_to=%2Fadmin.html',
+  });
+  assert.doesNotMatch(JSON.stringify(own), /synthetic@example|owner|barber|role|email/);
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request(`${api}/admin/session`, {
+          headers: { 'oai-authenticated-user-id': own.subject },
+        }),
+        env,
+      )
+    ).status,
+    503,
+  );
+  assert.equal(calls, 0);
+});
+
+test('Sites self-identity ignores fallback identity/email/role headers and rejects malformed dispatcher subjects', async () => {
+  const worker = createSitesAgendaWorker({});
+  for (const headers of [
+    {
+      'x-user-id': subject,
+      'x-role': 'owner',
+      'oai-authenticated-user-email': 'synthetic@example.test',
+    },
+    { 'oai-authenticated-user-id': 'one,two' },
+    { 'oai-authenticated-user-id': 'a'.repeat(257) },
+    { 'oai-authenticated-user-id': '' },
+  ] as Record<string, string>[]) {
+    const response = await worker.fetch(new Request(`${api}/identity`, { headers }), {});
+    const body = await response.json();
+    assert.equal(body.authenticated, false);
+    assert.equal(body.subject, undefined);
+    assert.equal(body.email, undefined);
+  }
+});
+
+test('Sites self-identity is GET-only, no-store and same-origin with no query-based identity', async () => {
+  const worker = createSitesAgendaWorker({});
+  const cases = [
+    new Request(`${api}/identity`, { method: 'POST' }),
+    new Request(`${api}/identity`, { headers: { Origin: 'https://other.example.test' } }),
+    new Request(`${api}/identity`, { headers: { Origin: 'null' } }),
+    new Request(`${api}/identity`, { headers: { 'Sec-Fetch-Site': 'cross-site' } }),
+    new Request(`${api}/identity`, { headers: { 'Sec-Fetch-Site': 'same-site' } }),
+    new Request(`${api}/identity?subject=someone-else`),
+  ];
+  for (const [index, request] of cases.entries()) {
+    const response = await worker.fetch(request, {});
+    assert.equal(response.status, index === 0 ? 405 : index === 5 ? 400 : 403);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), null);
+    assert.equal((await response.json()).subject, undefined);
+  }
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request(`${api}/identity`, {
+          headers: { Origin: origin, 'Sec-Fetch-Site': 'same-origin' },
+        }),
+        {},
+      )
+    ).status,
+    200,
+  );
+});

@@ -23,14 +23,35 @@ const total =
   galleryImage +
   (await gzip('favicon.svg'));
 const workPhotoBytes =
-  (await gzip('assets/images/barber-at-work-2026-09-17.jpg')) +
+  (await gzip('assets/images/finished-fade-highlight-2026-10-06.jpg')) +
   (await gzip('assets/images/cut-rear-view-2026-09-05.jpg'));
+const teamPhotoBytes = await gzip('assets/images/jonatan-at-work-2026-09-16.jpg');
+const pageBeforeTeamBytes = total + workPhotoBytes + bookingJsGzipBytes;
+const demoJsBytes =
+  (await readFile('dist/demo.js')).length + (await readFile('dist/demo-store.js')).length;
+const demoRouteGzipBytes =
+  (await gzip('demo.html')) +
+  (await gzip('demo.css')) +
+  (await gzip('demo.js')) +
+  (await gzip('demo-store.js'));
 const report = {
+  optionalDemoJsBytes: demoJsBytes,
+  optionalDemoJsBudget: 48 * 1024,
+  optionalDemoRouteGzipBytes: demoRouteGzipBytes,
+  optionalDemoRouteGzipBudget: 32 * 1024,
+  optionalDemoReason:
+    'Separate browser-local synthetic demo route, loaded only when opened. Existing homepage and live API budgets are unchanged.',
   lazyWorkPhotoGzipBytes: workPhotoBytes,
-  fullPageAssetGzipBytes: total + workPhotoBytes + bookingJsGzipBytes,
-  fullPageBudget: 550 * 1024,
+  modeledPageBeforeTeamGzipBytes: pageBeforeTeamBytes,
+  pageBeforeTeamBudget: 550 * 1024,
+  optionalTeamPhotoGzipBytes: teamPhotoBytes,
+  optionalTeamPhotoBudget: 160 * 1024,
+  modeledPageIncludingTeamGzipBytes: pageBeforeTeamBytes + teamPhotoBytes,
+  pageIncludingTeamBudget: 710 * 1024,
+  optionalTeamBudgetReason:
+    'One intact, caption-identified source portrait, requested only after opening its profile. The initial/core and pre-profile page caps are unchanged.',
   method:
-    'Modeled core assets only, not observed initial requests: hero + local view + fonts + HTML/CSS/JS/favicon. JPGs separately included in full-page total. Browser tests measure actual initial requests.',
+    'Modeled core assets only, not observed initial requests: hero + local view + fonts + HTML/CSS/JS/favicon. Gallery JPGs and booking code are included in the pre-profile page total; the one on-demand team portrait has a separate enforced allowance. Optional gallery engine is reported separately. Browser tests measure actual initial requests.',
   node: process.version,
   markupGzipBytes: markup,
   fontGzipBytes: fontBytes,
@@ -57,8 +78,12 @@ await mkdir('.private-evidence', { recursive: true });
 await writeFile('.private-evidence/budgets.json', JSON.stringify(report, null, 2));
 console.log(report);
 if (
+  demoJsBytes > report.optionalDemoJsBudget ||
+  demoRouteGzipBytes > report.optionalDemoRouteGzipBudget ||
   markup > report.markupBudget ||
-  report.fullPageAssetGzipBytes > report.fullPageBudget ||
+  report.modeledPageBeforeTeamGzipBytes > report.pageBeforeTeamBudget ||
+  report.optionalTeamPhotoGzipBytes > report.optionalTeamPhotoBudget ||
+  report.modeledPageIncludingTeamGzipBytes > report.pageIncludingTeamBudget ||
   total > report.coreBudget ||
   applicationJsBytes > report.applicationJsBudget ||
   bookingJsBytes > report.optionalBookingBudget ||

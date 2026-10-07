@@ -10,7 +10,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-// The portable schema in agenda/migrations/0001_agenda.sql is the behavioral
+// The portable schema in agenda/migrations/*.sql is the behavioral
 // reference. Drizzle owns Sites schema deployment; runtime code never migrates.
 // SQLite trigger bodies live in the append-only custom migration because
 // drizzle-kit snapshots do not model triggers.
@@ -229,5 +229,87 @@ export const agendaRateLimits = sqliteTable(
     primaryKey({ columns: [table.scope, table.bucket] }),
     check('agenda_rate_limits_bucket', sql`typeof(bucket) = 'integer'`),
     check('agenda_rate_limits_count', sql`typeof(count) = 'integer' AND count > 0`),
+  ],
+);
+
+export const agendaAbsences = sqliteTable(
+  'agenda_absences',
+  {
+    id: text('id').primaryKey().notNull(),
+    professionalId: text('professional_id').notNull(),
+    startUtc: integer('start_utc').notNull(),
+    endUtc: integer('end_utc').notNull(),
+    reason: text('reason'),
+    status: text('status').notNull(),
+    version: integer('version').notNull(),
+    affectedBookingIdsJson: text('affected_booking_ids_json').notNull(),
+    resolution: text('resolution').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    index('agenda_absences_professional_time')
+      .on(table.professionalId, table.startUtc, table.endUtc)
+      .where(sql`status = 'active'`),
+    index('agenda_absences_time').on(table.startUtc, table.id),
+    check('agenda_absences_start', sql`typeof(start_utc) = 'integer'`),
+    check('agenda_absences_end', sql`typeof(end_utc) = 'integer' AND end_utc > start_utc`),
+    check(
+      'agenda_absences_reason',
+      sql`reason IS NULL OR (length(trim(reason)) > 0 AND length(reason) <= 120)`,
+    ),
+    check('agenda_absences_status', sql`status IN ('active', 'revoked')`),
+    check(
+      'agenda_absences_version',
+      sql`typeof(version) = 'integer' AND ((status = 'active' AND version = 1) OR (status = 'revoked' AND version = 2))`,
+    ),
+    check(
+      'agenda_absences_snapshot',
+      sql`json_valid(affected_booking_ids_json) AND json_type(affected_booking_ids_json) = 'array'`,
+    ),
+    check(
+      'agenda_absences_resolution',
+      sql`(resolution = 'none' AND json_array_length(affected_booking_ids_json) = 0) OR (resolution = 'requires-resolution' AND json_array_length(affected_booking_ids_json) > 0)`,
+    ),
+    check('agenda_absences_created_at', sql`typeof(created_at) = 'integer' AND created_at >= 0`),
+    check(
+      'agenda_absences_updated_at',
+      sql`typeof(updated_at) = 'integer' AND updated_at >= created_at`,
+    ),
+  ],
+);
+
+export const agendaAbsenceAudit = sqliteTable(
+  'agenda_absence_audit',
+  {
+    id: text('id').primaryKey().notNull(),
+    absenceId: text('absence_id')
+      .notNull()
+      .references(() => agendaAbsences.id),
+    action: text('action').notNull(),
+    actorKind: text('actor_kind').notNull(),
+    actorId: text('actor_id').notNull(),
+    professionalId: text('professional_id'),
+    absenceVersion: integer('absence_version').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    unique('agenda_absence_audit_absence_version').on(table.absenceId, table.absenceVersion),
+    index('agenda_absence_audit_absence').on(table.absenceId, table.createdAt, table.id),
+    check('agenda_absence_audit_action', sql`action IN ('reported', 'revoked')`),
+    check('agenda_absence_audit_actor', sql`actor_kind IN ('admin', 'barber')`),
+    check('agenda_absence_audit_actor_id', sql`length(actor_id) > 0 AND length(actor_id) <= 256`),
+    check(
+      'agenda_absence_audit_professional',
+      sql`(actor_kind = 'admin' AND professional_id IS NULL) OR (actor_kind = 'barber' AND professional_id IS NOT NULL)`,
+    ),
+    check(
+      'agenda_absence_audit_version',
+      sql`typeof(absence_version) = 'integer' AND ((action = 'reported' AND absence_version = 1) OR (action = 'revoked' AND absence_version = 2))`,
+    ),
+    check(
+      'agenda_absence_audit_created_at',
+      sql`typeof(created_at) = 'integer' AND created_at >= 0`,
+    ),
   ],
 );

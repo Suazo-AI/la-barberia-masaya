@@ -1,6 +1,7 @@
 import { AgendaError } from '../core/contracts.ts';
 import type {
   Actor,
+  CreateAbsenceInput,
   CreateBlockInput,
   CreateBookingInput,
   ListQuery,
@@ -63,13 +64,20 @@ export function agendaUnavailableResponse(): Response {
 }
 
 function allowedMethod(path: string): 'GET' | 'POST' | undefined {
-  if (['/catalog', '/availability', '/admin/schedule', '/admin/export'].includes(path))
+  if (
+    ['/catalog', '/availability', '/admin/session', '/admin/schedule', '/admin/export'].includes(
+      path,
+    )
+  )
     return 'GET';
-  if (['/bookings', '/admin/walk-ins', '/admin/blocks'].includes(path)) return 'POST';
+  if (['/bookings', '/admin/walk-ins', '/admin/blocks', '/admin/absences'].includes(path))
+    return 'POST';
   if (/^\/bookings\/[^/]+$/.test(path)) return 'GET';
+  if (/^\/bookings\/[^/]+\/availability$/.test(path)) return 'GET';
   if (/^\/bookings\/[^/]+\/(cancel|reschedule)$/.test(path)) return 'POST';
   if (/^\/admin\/bookings\/[^/]+\/(cancel|reschedule)$/.test(path)) return 'POST';
   if (/^\/admin\/blocks\/[^/]+\/cancel$/.test(path)) return 'POST';
+  if (/^\/admin\/absences\/[^/]+\/revoke$/.test(path)) return 'POST';
   return undefined;
 }
 
@@ -241,6 +249,21 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
   const { service, mode, identityResolver, rateLimiter } = options;
   const origins = new Set(options.allowedOrigins.map(canonicalOrigin));
   const subjects = new Set(options.adminSubjects.filter((subject) => subject.length > 0));
+  const barbers = new Map(Object.entries(options.barberSubjects ?? {}));
+  const validSubject = (subject: string) => /^[^\s,\u0000-\u001f\u007f]{1,256}$/.test(subject);
+  if (
+    options.adminSubjects.some((subject) => !validSubject(subject)) ||
+    subjects.size !== options.adminSubjects.length ||
+    barbers.size > 100 ||
+    [...barbers].some(
+      ([subject, professionalId]) =>
+        !validSubject(subject) ||
+        subjects.has(subject) ||
+        typeof professionalId !== 'string' ||
+        !IDENTIFIER.test(professionalId),
+    )
+  )
+    throw new Error('Explicit, disjoint server-owned staff identities are required.');
   const bodyLimit = options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT;
   if (!Number.isInteger(bodyLimit) || bodyLimit < 512 || bodyLimit > 65_536) {
     throw new Error('Body limit must be between 512 and 65536 bytes.');
@@ -272,12 +295,19 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
     }
   }
 
-  async function admin(request: Request, context: AgendaRequestContext): Promise<Actor> {
-    if (!identityResolver || subjects.size === 0) fail('CONFIGURATION_REQUIRED', 503);
+  async function staff(request: Request, context: AgendaRequestContext): Promise<Actor> {
+    if (!identityResolver || (subjects.size === 0 && barbers.size === 0))
+      fail('CONFIGURATION_REQUIRED', 503);
     checkOrigin(request, false);
     const identity = await identityResolver.resolve(request, context);
-    if (!identity || !subjects.has(identity.subject)) fail('FORBIDDEN', 403);
-    return adminActor(identity.subject);
+    if (!identity) fail('FORBIDDEN', 403);
+    if (subjects.has(identity.subject)) return adminActor(identity.subject);
+    const professionalId = barbers.get(identity.subject);
+    if (!professionalId) fail('FORBIDDEN', 403);
+    const catalog = await service.catalog();
+    if (!catalog.professionals.some((professional) => professional.id === professionalId))
+      fail('CONFIGURATION_REQUIRED', 503);
+    return { kind: 'barber', id: identity.subject, professionalId };
   }
 
   async function customer(request: Request, id: string): Promise<Actor> {
@@ -365,6 +395,26 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
         return response(await service.createBooking(input, mutation), 201);
       }
 
+      const managementAvailability = path.match(/^\/bookings\/([^/]+)\/availability$/);
+      if (managementAvailability) {
+        const params = query(url, ['date', 'professionalId']);
+        const id = identifier(managementAvailability[1]);
+        checkOrigin(request, false);
+        const actor = await customer(request, id);
+        return response(
+          await service.rescheduleAvailability(
+            id,
+            {
+              date: date(params.get('date')),
+              ...(params.has('professionalId')
+                ? { professionalId: identifier(params.get('professionalId')) }
+                : {}),
+            },
+            actor,
+          ),
+        );
+      }
+
       const customerRoute = path.match(/^\/bookings\/([^/]+)(?:\/(cancel|reschedule))?$/);
       if (customerRoute) {
         query(url, []);
@@ -397,21 +447,38 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
 
       if (path.startsWith('/admin/')) {
         productionReady();
-        const actor = await admin(request, context);
+        const actor = await staff(request, context);
+        if (path === '/admin/session' && method === 'GET') {
+          query(url, []);
+          return response({
+            role: actor.kind === 'admin' ? 'owner' : 'barber',
+            ...(actor.kind === 'barber' ? { professionalId: actor.professionalId } : {}),
+            capabilities: { manageShop: actor.kind === 'admin', reportAbsence: true },
+          });
+        }
         if (path === '/admin/schedule' && method === 'GET') {
           const filter = listQuery(url);
-          const [bookings, blocks] = await Promise.all([
-            service.listBookings(filter),
-            service.listBlocks(filter),
+          if (actor.kind === 'barber') {
+            if (filter.professionalId && filter.professionalId !== actor.professionalId)
+              fail('FORBIDDEN', 403);
+            filter.professionalId = actor.professionalId;
+          }
+          const [bookings, blocks, absences] = await Promise.all([
+            service.listBookings(filter, actor),
+            service.listBlocks(filter, actor),
+            service.listAbsences(filter, actor),
           ]);
-          return response({ bookings, blocks });
+          return response({ bookings, blocks, absences });
         }
+        const absenceRoute =
+          path === '/admin/absences' || /^\/admin\/absences\/[^/]+\/revoke$/.test(path);
+        if (actor.kind !== 'admin' && !absenceRoute) fail('FORBIDDEN', 403);
         if (path === '/admin/export' && method === 'GET') {
           query(url, []);
           await consume('admin-mutation');
-          const backup = await service.exportData();
+          const backup = await service.exportData(actor);
           return response(backup, 200, {
-            'Content-Disposition': 'attachment; filename="agenda-backup-v1.json"',
+            'Content-Disposition': `attachment; filename="agenda-backup-v${backup.version}.json"`,
           });
         }
         if (method === 'POST') {
@@ -420,6 +487,35 @@ export function createAgendaRouter(options: AgendaRouterOptions): AgendaHandler 
           await consume('admin-mutation');
           const rawBody = await jsonBody(request, bodyLimit);
           const mutation = mutationContext(request, actor, rawBody);
+          if (path === '/admin/absences') {
+            const body = object(rawBody, [
+              'professionalId',
+              'startDate',
+              'startMinute',
+              'endDate',
+              'endMinute',
+              'reason',
+              'configVersion',
+            ]);
+            const input: CreateAbsenceInput = {
+              professionalId: identifier(body.professionalId),
+              startDate: date(body.startDate),
+              startMinute: integer(body.startMinute, 0, 1439),
+              endDate: date(body.endDate),
+              endMinute: integer(body.endMinute, 0, 1440),
+              ...(body.reason === undefined ? {} : { reason: text(body.reason, 120) }),
+            };
+            if (actor.kind === 'barber' && input.professionalId !== actor.professionalId)
+              fail('FORBIDDEN', 403);
+            return response(await service.createAbsence(input, mutation), 201);
+          }
+          const revoke = path.match(/^\/admin\/absences\/([^/]+)\/revoke$/);
+          if (revoke) {
+            const body = object(rawBody, ['expectedVersion', 'configVersion']);
+            return response(
+              await service.revokeAbsence(identifier(revoke[1]), expectedVersion(body), mutation),
+            );
+          }
           if (path === '/admin/walk-ins') {
             const body = object(rawBody, [
               'serviceId',

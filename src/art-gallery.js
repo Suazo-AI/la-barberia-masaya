@@ -196,11 +196,27 @@ export async function mountArtGallery(container, sourceImages, onFailure) {
         const img = new Image();
         img.src = photo.currentSrc || photo.src;
         await img.decode();
-        // Contain the full photograph: retain both original branding strips.
-        const scale = Math.min(tileSize / img.width, tileSize / img.height);
-        const width = img.width * scale;
-        const height = img.height * scale;
-        ctx.drawImage(img, (tileSize - width) / 2, (tileSize - height) / 2, width, height);
+        // Match the static CSS viewport for source screenshots. This is display-only;
+        // original image bytes remain intact. Other photos retain their branding strips.
+        const crop = source
+          .querySelector('[data-source-crop]')
+          ?.dataset.sourceCrop.split(',')
+          .map(Number) || [0, 0, img.width, img.height];
+        const [sx, sy, sw, sh] = crop;
+        const scale = Math.min(tileSize / sw, tileSize / sh);
+        const width = sw * scale;
+        const height = sh * scale;
+        ctx.drawImage(
+          img,
+          sx,
+          sy,
+          sw,
+          sh,
+          (tileSize - width) / 2,
+          (tileSize - height) / 2,
+          width,
+          height,
+        );
       } else {
         ctx.fillStyle = '#f4efe3';
         ctx.font = '20px Barlow, sans-serif';

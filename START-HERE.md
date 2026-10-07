@@ -1,12 +1,26 @@
 # La Barbería Masaya
 
-Website-only pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
+Website and agenda pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
+
+Current delivery, 2026-10-07: [complete isolated browser-local demo](docs/demo-2026-10-07.md), with booking, changes/cancellation and Dueño/Jonathan simulated administration. Real production activation is outside this delivery; the production API, identities, configuration and data remain unchanged. No real administrator account information is needed to use this demo.
+
+Public services increment, 2026-10-06: [confirmed prices, planned durations and prospective booking rules](docs/public-services-2026-10-06.md) are readable without JavaScript or a configured booking API. This supersedes the earlier statement that public prices are absent. The private business candidate now has its approved schema inputs; administrator assignment is deliberately deferred and online reservations remain closed. No private configuration or role mapping is published.
+
+Authentic content candidate, 2026-10-06: [finished-cut frame and source-verified, on-demand team introductions](docs/authentic-content-2026-10-06.md). Existing visual direction and closed agenda remain. Only Jonatan’s caption-identified portrait is shipped; Manuel and the unnamed interview link to their sources. No real-person/catalog identity mapping, fabricated portfolio or booking activation. Browser evidence is prepared for exact-head CI; local Chromium could not launch.
+
+Executable setup, 2026-10-06: [operator runbook and offline readiness check](docs/agenda/setup-runbook.md). `npm run check:setup -- .agenda-private/catalog-candidate.json` identifies missing inputs with the runtime validator, never fills defaults or changes the Site, and keeps activation authorization separate from structural validity. No new public UI, runtime setting or database migration is part of this increment.
+
+Catalog confirmation, 2026-10-06: [private candidate and remaining activation inputs](docs/agenda/catalog-readiness.md). Confirmed prices/durations are preserved in an ignored, inactive candidate; unknown buffers, staff, shifts and policies are not filled from examples. Focused regressions cover independent durations and catalog snapshots. This increment changes no runtime configuration, access grant or deployed source.
+
+Latest closeout, 2026-10-06: [release candidate and activation checklist](docs/agenda/release-closeout.md). The public review Site has a deployed Worker/D1 shell but no live configuration, bookings or access grants. This candidate repairs private reschedule availability and preserves revoked-absence history; it does not activate production. Historical increment statuses below are superseded by the closeout where they differ.
 
 Current authorized increment, 2026-10-04: [persistent portable agenda MVP](docs/agenda/spec.md), from `181bc7e1f379d195aea0c06e6d56e2ac75d5886e`. Standard TypeScript/SQLite domain with Node and Workers/D1 adapters, persistent booking/walk-in/block flows, scoped authorization, atomic conflict prevention, disabled notifications and a tested private backup path. Business configuration and host administrator identity remain prerequisites for activation. No merge/backend deployment or actual notification is authorized. Earlier historical no-backend statements below are superseded for this implementation only.
 
 Earlier verified application source: `f321ab9c0db256fed92682ccad08ae15b552a628`. [Verification/review](docs/evidence/agenda-review.md), [actual before/after PNGs and videos](docs/evidence/agenda/README.md), [remaining hosted-backend integration](docs/agenda/hosting-handoff.md). Local full check passed; the exact application-source CI retains the documented Lighthouse/Chrome environment failure. PR #2 stays draft, with no backend activation or merge.
 
 Cloud-only continuation from `f321ab9c0db256fed92682ccad08ae15b552a628`: [source-only Sites integration candidate](docs/agenda/sites-candidate.md) adds a separate Worker/assets build and generated D1 migration package. Reload guards prevent blind new writes after a document loses an unresolved mutation; administrative fetches have a deadline. No PC work, remote branch replacement, owner grant, actual business configuration or deployment is part of this candidate. Live D1 recovery and exact-browser visual acceptance remain separate gates.
+
+Source-only role increment from `b3abca5`: [owner/barber access and temporary absence reports](docs/agenda/staff-absence-roles.md). Barbers read only their own agenda and report/revoke their own unavailability; owners manage the shop. Existing appointments are preserved for owner resolution. Additive migrations and backup v2 are prepared only; no production grant or deployment.
 
 1. Read [AGENTS.md](AGENTS.md) for scope and publication boundaries
 2. Read [SPEC.md](SPEC.md) v0.6 and the [current agenda spec](docs/agenda/spec.md); section 10 describes the historical reservation demo

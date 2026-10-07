@@ -1,5 +1,24 @@
 import { defineConfig } from '@playwright/test';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
+
+const fixtureRun = randomUUID();
+const fixtureDatabase = (group) =>
+  resolve(import.meta.dirname, '../.local-agenda', `${group}-${fixtureRun}.sqlite`);
+const fixtureServer = (port, role) => ({
+  command: 'node agenda/local-server.ts',
+  cwd: '..',
+  url: `http://127.0.0.1:${port}/health`,
+  env: {
+    PORT: String(port),
+    AGENDA_MODE: 'fixture',
+    AGENDA_NOW: '2026-10-04T15:00:00Z',
+    AGENDA_DB: fixtureDatabase(port === 4183 ? 'agenda-browser' : 'staff-browser'),
+    AGENDA_FIXTURE_ROLE: role,
+  },
+  reuseExistingServer: false,
+});
 
 export default defineConfig({
   testDir: './tests',
@@ -25,16 +44,57 @@ export default defineConfig({
   },
   webServer: process.env.AGENDA_EXTERNAL_SERVER
     ? undefined
-    : {
-        command: 'node agenda/local-server.ts',
-        cwd: '..',
-        url: 'http://127.0.0.1:4183/health',
-        env: {
-          PORT: '4183',
-          AGENDA_MODE: 'fixture',
-          AGENDA_NOW: '2026-10-04T15:00:00Z',
-          AGENDA_EPHEMERAL: '1',
-        },
-        reuseExistingServer: false,
-      },
+    : [
+        fixtureServer(4183, 'owner'),
+        fixtureServer(4184, 'barber'),
+        fixtureServer(4186, 'owner'),
+        ...(process.env.AGENDA_SIGNIN_BASELINE_URL
+          ? [
+              {
+                command: 'node agenda/local-server.ts',
+                cwd: '../.private-evidence/signin-baseline',
+                url: process.env.AGENDA_SIGNIN_BASELINE_URL,
+                env: {
+                  PORT: '4188',
+                  AGENDA_MODE: 'fixture',
+                  AGENDA_NOW: '2026-10-04T15:00:00Z',
+                  AGENDA_EPHEMERAL: '1',
+                },
+                reuseExistingServer: false,
+              },
+            ]
+          : []),
+        ...(process.env.AGENDA_CLOSEOUT_BASELINE_URL
+          ? [
+              {
+                command: 'node agenda/local-server.ts',
+                cwd: '../.private-evidence/closeout-baseline',
+                url: process.env.AGENDA_CLOSEOUT_BASELINE_URL,
+                env: {
+                  PORT: '4187',
+                  AGENDA_MODE: 'fixture',
+                  AGENDA_NOW: '2026-10-04T15:00:00Z',
+                  AGENDA_EPHEMERAL: '1',
+                },
+                reuseExistingServer: false,
+              },
+            ]
+          : []),
+        ...(process.env.AGENDA_BASELINE_URL
+          ? [
+              {
+                command: 'node agenda/local-server.ts',
+                cwd: '../.private-evidence/staff-role-baseline',
+                url: process.env.AGENDA_BASELINE_URL,
+                env: {
+                  PORT: '4185',
+                  AGENDA_MODE: 'fixture',
+                  AGENDA_NOW: '2026-10-04T15:00:00Z',
+                  AGENDA_EPHEMERAL: '1',
+                },
+                reuseExistingServer: false,
+              },
+            ]
+          : []),
+      ],
 });

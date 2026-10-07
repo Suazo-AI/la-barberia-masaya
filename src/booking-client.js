@@ -175,8 +175,22 @@ export async function readAvailability(input, signal) {
   if (input.professionalId && input.professionalId !== 'any')
     query.set('professionalId', input.professionalId);
   const availability = await request(`/availability?${query}`, { signal });
+  return verifiedAvailability(availability, input.date);
+}
+
+export async function readRescheduleAvailability(id, input, token, signal) {
+  const query = new URLSearchParams({ date: input.date });
+  if (input.professionalId) query.set('professionalId', input.professionalId);
+  const availability = await request(`/bookings/${encodeURIComponent(id)}/availability?${query}`, {
+    token,
+    signal,
+  });
+  return verifiedAvailability(availability, input.date);
+}
+
+function verifiedAvailability(availability, date) {
   if (
-    availability?.date !== input.date ||
+    availability?.date !== date ||
     availability.timeZone !== 'America/Managua' ||
     !Array.isArray(availability.slots) ||
     !availability.slots.every(

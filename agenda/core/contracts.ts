@@ -50,7 +50,10 @@ export interface AgendaConfig {
   cancellationLeadMinutes: number;
 }
 export type Actor =
-  { kind: 'public' } | { kind: 'admin'; id: string } | { kind: 'customer'; reservationId: string };
+  | { kind: 'public' }
+  | { kind: 'admin'; id: string }
+  | { kind: 'barber'; id: string; professionalId: string }
+  | { kind: 'customer'; reservationId: string };
 export interface MutationContext {
   idempotencyKey: string;
   actor: Actor;
@@ -148,13 +151,30 @@ export interface ScheduleBlock extends CreateBlockInput {
   status: 'active' | 'cancelled';
   version: number;
 }
+export interface CreateAbsenceInput {
+  professionalId: string;
+  startDate: string;
+  startMinute: number;
+  endDate: string;
+  endMinute: number;
+  reason?: string;
+}
+/** Existing appointments are preserved; affected IDs are the immutable report-time snapshot. */
+export interface ScheduleAbsence extends CreateAbsenceInput {
+  id: string;
+  status: 'active' | 'revoked';
+  version: number;
+  affectedBookingIds: string[];
+  resolution: 'requires-resolution' | 'none';
+  timeZone: 'America/Managua';
+}
 export interface BackupTable {
   name: string;
   rows: Record<string, SqlValue>[];
 }
 export interface AgendaBackup {
   format: 'portable-agenda';
-  version: 1;
+  version: 2;
   exportedAt: string;
   config: AgendaConfig;
   tables: BackupTable[];
@@ -164,10 +184,15 @@ export interface AgendaService {
   readonly configurationMode: AgendaMode;
   catalog(): Promise<Catalog>;
   availability(query: AvailabilityQuery): Promise<Availability>;
+  rescheduleAvailability(
+    id: string,
+    query: Omit<AvailabilityQuery, 'serviceId'>,
+    actor: Actor,
+  ): Promise<Availability>;
   createBooking(input: CreateBookingInput, context: MutationContext): Promise<BookingReceipt>;
   authorizeCustomer(id: string, managementHash: string): Promise<boolean>;
   getBooking(id: string, actor: Actor): Promise<BookingReceipt>;
-  listBookings(query: ListQuery): Promise<Booking[]>;
+  listBookings(query: ListQuery, actor: Actor): Promise<Booking[]>;
   cancelBooking(
     id: string,
     expectedVersion: number,
@@ -181,13 +206,20 @@ export interface AgendaService {
   ): Promise<BookingReceipt>;
   createWalkIn(input: CreateBookingInput, context: MutationContext): Promise<BookingReceipt>;
   createBlock(input: CreateBlockInput, context: MutationContext): Promise<ScheduleBlock>;
-  listBlocks(query: ListQuery): Promise<ScheduleBlock[]>;
+  listBlocks(query: ListQuery, actor: Actor): Promise<ScheduleBlock[]>;
   cancelBlock(
     id: string,
     expectedVersion: number,
     context: MutationContext,
   ): Promise<ScheduleBlock>;
-  exportData(): Promise<AgendaBackup>;
+  createAbsence(input: CreateAbsenceInput, context: MutationContext): Promise<ScheduleAbsence>;
+  listAbsences(query: ListQuery, actor: Actor): Promise<ScheduleAbsence[]>;
+  revokeAbsence(
+    id: string,
+    expectedVersion: number,
+    context: MutationContext,
+  ): Promise<ScheduleAbsence>;
+  exportData(actor: Actor): Promise<AgendaBackup>;
 }
 export class AgendaError extends Error {
   code: string;

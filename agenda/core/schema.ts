@@ -2,9 +2,11 @@
 export const BACKUP_TABLES = [
   'agenda_configuration',
   'agenda_entries',
+  'agenda_absences',
+  'agenda_absence_audit',
   'agenda_idempotency',
   'agenda_audit',
   'agenda_outbox',
   'agenda_rate_limits',
 ] as const;
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;

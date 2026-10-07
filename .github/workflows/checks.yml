@@ -20,6 +20,13 @@ jobs:
       # Public CI may run only after these assets have explicit publication clearance.
       HERO_ASSET_DIR: src/assets/images
       UI_BASELINE_URL: http://127.0.0.1:4174
+      AUTHENTIC_BASELINE_URL: http://127.0.0.1:4176
+      CATALOG_BASELINE_URL: http://127.0.0.1:4177
+      FOOTER_BASELINE_URL: http://127.0.0.1:4178
+      MAIN_BOOKING_BASELINE_URL: http://127.0.0.1:4179
+      AGENDA_BASELINE_URL: http://127.0.0.1:4185
+      AGENDA_CLOSEOUT_BASELINE_URL: http://127.0.0.1:4187
+      AGENDA_SIGNIN_BASELINE_URL: http://127.0.0.1:4188
       SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -41,8 +48,85 @@ jobs:
       - name: Build pinned real baseline
         run: node scripts/build.mjs
         working-directory: .baseline-source
+      - name: Checkout real pre-role agenda for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: b3abca5b67ac2de7247c3f2d37801467c525473b
+          path: .private-evidence/staff-role-baseline
+      - name: Build pinned agenda baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/staff-role-baseline
+      - name: Checkout exact pre-closeout application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 6efd7bb4fd101949c1deee9af00b7bc601028fb9
+          path: .private-evidence/closeout-baseline
+      - name: Build pinned closeout baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/closeout-baseline
+      - name: Checkout exact pre-sign-in application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 59801861ab926343630ef6b847500ce790abc2d8
+          path: .private-evidence/signin-baseline
+      - name: Build pinned sign-in baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/signin-baseline
+      - name: Checkout exact pre-authentic-content application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 5bcaac53aafddd204ea9634d0b75c17140904b4e
+          path: .private-evidence/authentic-baseline
+      - name: Build pinned authentic-content baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/authentic-baseline
+      - name: Checkout exact pre-public-catalog application for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: b69c66c44a4b96d1d20359cf499e4c75ab1cccf4
+          path: .private-evidence/catalog-baseline
+      - name: Build pinned public-catalog baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/catalog-baseline
+      - name: Checkout published v11 footer for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 9a4f3858be2078ab0ff3b4cb8d31d1beb874f851
+          path: .private-evidence/footer-baseline
+      - name: Build pinned footer comparison baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/footer-baseline
+      - name: Checkout published v12 booking entry for comparison
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: d6b9f2121ce71c585ba6e52d08cd6c80d5f8190a
+          path: .private-evidence/main-booking-baseline
+      - name: Build pinned main-booking baseline
+        run: node scripts/build.mjs
+        working-directory: .private-evidence/main-booking-baseline
       - run: npm run check
       - run: npm run test:performance
+      - name: Upload bounded staff sign-in evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: staff-signin-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            agenda/.private-evidence/agenda-browser-results.json
+            test-results/signin-browser-*/**/*.png
+            test-results/signin-browser-*/**/*.webm
+            test-results/signin-browser-*/**/signin-metadata.json
+            test-results/signin-browser-*/**/error-context.md
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload test reports for this commit
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -57,10 +141,26 @@ jobs:
             .private-evidence/network-initial-dpr*.json
             .private-evidence/lighthouse/*.json
             .private-evidence/hero-*.png
+            .private-evidence/authentic-content/*.png
+            .private-evidence/authentic-content/*.json
+            .private-evidence/public-catalog/*.png
+            .private-evidence/public-catalog/*.json
+            .private-evidence/demo/*.png
+            .private-evidence/demo/*.json
+            .private-evidence/main-booking/*.png
+            .private-evidence/main-booking/*.json
+            .private-evidence/footer/*.png
+            .private-evidence/footer/*.json
+            .private-evidence/site-test-results/**/*.png
+            .private-evidence/site-test-results/**/*.webm
             .private-evidence/ui-*.png
             .private-evidence/ui-*.json
             test-results/**/*.png
             test-results/**/*.webm
+            test-results/**/staff-roles-metadata.json
+            test-results/**/reflow-layout.json
+            test-results/**/closeout-metadata.json
+            test-results/**/signin-metadata.json
             test-results/**/error-context.md
           include-hidden-files: true
           if-no-files-found: error

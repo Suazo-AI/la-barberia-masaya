@@ -21,7 +21,10 @@ for (const viewport of [
         });
       });
     await page.goto('/');
-    const opener = page.getByRole('link', { name: 'Reservar cita', exact: true });
+    const opener = page.getByRole('link', {
+      name: 'Equipo y agenda real · pendiente',
+      exact: true,
+    });
     await opener.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();

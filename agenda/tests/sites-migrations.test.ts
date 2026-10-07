@@ -15,10 +15,14 @@ import type { Actor, MutationContext, SqlStatement, SqlValue } from '../core/con
 import type { ConcurrencyInput } from './concurrency-worker.ts';
 
 const directory = new URL('../../drizzle/', import.meta.url);
-const portableSql = await readFile(
-  new URL('../migrations/0001_agenda.sql', import.meta.url),
-  'utf8',
-);
+const portableSql = (
+  await Promise.all(
+    (await readdir(new URL('../migrations/', import.meta.url)))
+      .filter((name) => /^\d+_.*\.sql$/.test(name))
+      .sort()
+      .map((name) => readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8')),
+  )
+).join('\n');
 const journal: {
   version: string;
   dialect: string;
@@ -144,7 +148,7 @@ function block(id: string, professional = 'a', start = 1000, end = 2000): Record
 test('Sites migrations have generated journal entries, chained snapshots and whole trigger statements', async (t) => {
   assert.equal(journal.dialect, 'sqlite');
   assert.equal(journal.version, '7');
-  assert.equal(journal.entries.length, 2);
+  assert.equal(journal.entries.length, 4);
   const names = (await readdir(directory)).filter((name) => name.endsWith('.sql')).sort();
   assert.deepEqual(
     names,
@@ -165,7 +169,10 @@ test('Sites migrations have generated journal entries, chained snapshots and who
     }),
   );
   assert.equal(snapshots[0].prevId, '00000000-0000-0000-0000-000000000000');
-  assert.equal(snapshots[1].prevId, snapshots[0].id);
+  for (let index = 1; index < snapshots.length; index++)
+    assert.equal(snapshots[index].prevId, snapshots[index - 1].id);
+  assert.deepEqual(snapshots[3].tables, snapshots[2].tables);
+  assert.equal(Object.keys(snapshots[3].tables).length, 10);
   assert.deepEqual(snapshots[1].tables, snapshots[0].tables);
   assert.equal(Object.keys(snapshots[0].tables).length, 8);
   assert.equal(
@@ -181,9 +188,12 @@ test('Sites migrations have generated journal entries, chained snapshots and who
     statements,
   );
   const triggers = statements.filter((sql) => /CREATE TRIGGER/.test(sql));
-  assert.equal(triggers.length, 2);
+  assert.equal(triggers.length, 6);
   for (const trigger of triggers) {
-    assert.match(trigger, /BEGIN\s+SELECT RAISE\(ABORT, 'AGENDA_SLOT_CONFLICT'\);\s+END;$/);
+    assert.match(
+      trigger,
+      /BEGIN\s+SELECT RAISE\(ABORT, 'AGENDA_(?:SLOT_CONFLICT|ABSENCE_IMMUTABLE|ABSENCE_SNAPSHOT_INVALID)'\);\s+END;$/,
+    );
     assert.equal(trigger.match(/CREATE TRIGGER/g)?.length, 1);
   }
   assert.ok(
@@ -196,7 +206,7 @@ test('Sites migrations have generated journal entries, chained snapshots and who
   const db = database(t, 'sites');
   assert.equal(
     db.prepare("SELECT count(*) AS count FROM sqlite_schema WHERE type = 'trigger'").get()?.count,
-    2,
+    6,
   );
 });
 
@@ -204,7 +214,7 @@ test('Sites tables, CHECK expressions, indexes, foreign keys and triggers match 
   const portable = database(t, 'portable');
   const sites = database(t, 'sites');
   const tables = tableNames(portable);
-  assert.equal(tables.length, 8);
+  assert.equal(tables.length, 10);
   assert.deepEqual(tableNames(sites), tables);
   for (const name of tables) {
     const columns = (db: DatabaseSync) =>
@@ -563,8 +573,8 @@ test('agenda core runs booking, idempotency, cancellation, walk-in, block and ex
     context('sites-block-0001', admin),
   );
   await agenda.cancelBlock(blocked.id, 1, context('sites-unblock-0001', admin));
-  const exported = await agenda.exportData();
-  assert.equal(exported.version, 1);
+  const exported = await agenda.exportData(admin);
+  assert.equal(exported.version, 2);
   assert.equal(exported.tables.find((table) => table.name === 'agenda_entries')?.rows.length, 3);
   assert.equal(exported.tables.find((table) => table.name === 'agenda_audit')?.rows.length, 6);
   assert.equal(exported.tables.find((table) => table.name === 'agenda_outbox')?.rows.length, 4);

@@ -238,6 +238,7 @@ h3 {
 }
 
 label {
+  overflow-wrap: anywhere;
   display: grid;
   gap: 0.5rem;
   min-width: 0;
@@ -269,10 +270,16 @@ select {
 
 .entry-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.entry-list > li,
+.entry {
+  min-width: 0;
 }
 
 .entry {
@@ -286,6 +293,7 @@ select {
 }
 
 .entry h4 {
+  overflow-wrap: anywhere;
   margin: 0 0 0.5rem;
   font-size: 1.15rem;
   font-weight: 400;
@@ -433,5 +441,109 @@ dialog::backdrop {
   *::before,
   *::after {
     scroll-behavior: auto !important;
+  }
+}
+
+/* The verified role determines which actions exist in the visible workspace. */
+.role-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.role-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.role-panel .button {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.absence-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 2rem;
+  margin-block: 1.5rem;
+}
+
+.absence-panel .stacked-form {
+  margin-top: 0;
+}
+
+.absence-policy,
+.resolution-notice {
+  padding: 1rem;
+  background: #303029;
+  border-left: 3px solid #e2ca8e;
+}
+
+.absence-list-section {
+  margin-bottom: 1.5rem;
+}
+
+.role-panel > div,
+.absence-panel > * {
+  min-width: 0;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--edge);
+}
+
+legend {
+  /* Legends retain an intrinsic text width unless explicitly bounded. At 200%
+     text the Managua timezone must wrap inside the narrow fieldset. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding-inline: 0.3rem;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .absence-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Keep horizontal space for native date/time segments when text is enlarged.
+     Text, vertical spacing, and touch targets retain their accessible sizing. */
+  .admin-header,
+  main,
+  .admin-footer,
+  dialog {
+    width: calc(100% - 24px);
+  }
+
+  .access-panel,
+  .schedule-section,
+  .form-panel,
+  .backup-panel,
+  dialog {
+    padding-inline: 12px;
+  }
+
+  fieldset,
+  input,
+  select {
+    padding-inline: 8px;
+  }
+
+  .entry {
+    padding-inline: 12px;
+  }
+
+  .role-panel .button {
+    width: 100%;
+    justify-content: center;
   }
 }

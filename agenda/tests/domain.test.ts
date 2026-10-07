@@ -228,7 +228,7 @@ test('customer capability is reservation scoped and response/export replies neve
     errorCode('FORBIDDEN'),
   );
   assert.deepEqual(await agenda.getBooking(id, { kind: 'customer', reservationId: id }), receipt);
-  const backup = await agenda.exportData();
+  const backup = await agenda.exportData(admin);
   for (const name of ['agenda_idempotency', 'agenda_outbox'])
     assert.ok(!JSON.stringify(backup.tables.find((table) => table.name === name)).includes(digest));
 });
@@ -268,8 +268,8 @@ test('conflicting reschedule rolls back entirely; successful move and cancel use
   );
   assert.equal(cancelled.booking.version, 3);
   assert.equal(cancelled.booking.status, 'cancelled');
-  assert.equal((await agenda.listBookings({ date: day })).length, 1);
-  assert.equal((await agenda.listBookings({ date: day, includeCancelled: true })).length, 2);
+  assert.equal((await agenda.listBookings({ date: day }, admin)).length, 1);
+  assert.equal((await agenda.listBookings({ date: day, includeCancelled: true }, admin)).length, 2);
 });
 
 test('walk-ins and blocks require admin and participate in the same conflict invariant', async (t) => {
@@ -306,8 +306,8 @@ test('walk-ins and blocks require admin and participate in the same conflict inv
     agenda.createBlock({ ...blockInput, startMinute: 810 }, context('block-conflict-0001', admin)),
     errorCode('SLOT_UNAVAILABLE'),
   );
-  assert.equal((await agenda.listBlocks({ date: day })).length, 0);
-  assert.equal((await agenda.listBlocks({ date: day, includeCancelled: true })).length, 1);
+  assert.equal((await agenda.listBlocks({ date: day }, admin)).length, 0);
+  assert.equal((await agenda.listBlocks({ date: day, includeCancelled: true }, admin)).length, 1);
   assert.deepEqual(await counts(store), { entries: 2, idempotency: 3, audit: 3, outbox: 1 });
 });
 
@@ -615,11 +615,11 @@ test('another business cannot initialize over an existing calendar or read/repla
   const before = await counts(store);
   for (const request of [
     () => second.catalog(),
-    () => second.listBookings({ date: day }),
+    () => second.listBookings({ date: day }, admin),
     () => second.getBooking(receipt.booking.id, admin),
     () => second.authorizeCustomer(receipt.booking.id, digest),
     () => second.createBooking(bookingInput, ctx),
-    () => second.exportData(),
+    () => second.exportData(admin),
   ])
     await assert.rejects(request(), errorCode('CONFIGURATION_CHANGED'));
   assert.deepEqual(await counts(store), before);
@@ -677,12 +677,12 @@ test('missing configuration with existing private data fails closed without reco
     const orphaned = createAgendaService(store, { ...config, businessId }, { now: fixedNow });
     for (const request of [
       () => orphaned.catalog(),
-      () => orphaned.listBookings({ date: day }),
+      () => orphaned.listBookings({ date: day }, admin),
       () => orphaned.getBooking(receipt.booking.id, admin),
       () => orphaned.authorizeCustomer(receipt.booking.id, digest),
       () => orphaned.createBooking(input(840, 'b'), context('orphan-attempt-0001')),
       () => orphaned.cancelBooking(receipt.booking.id, 1, context('orphan-cancel-0001', admin)),
-      () => orphaned.exportData(),
+      () => orphaned.exportData(admin),
     ])
       await assert.rejects(request(), errorCode('CONFIGURATION_CHANGED'));
   }
@@ -710,5 +710,142 @@ test('a legitimate empty calendar can configure on its first POST after a rate-l
   assert.equal(
     (await store.all<{ count: number }>('SELECT count FROM agenda_rate_limits'))[0].count,
     1,
+  );
+});
+
+test('private reschedule availability excludes only its own allocation and preserves other conflicts', async (t) => {
+  const { agenda, store } = await fixture(t);
+  const original = await agenda.createBooking(
+    { ...input(780, 'a'), managementHash: digest },
+    context('move-slots-original'),
+  );
+  const actor: Actor = { kind: 'customer', reservationId: original.booking.id };
+  const query = { date: day, professionalId: 'a' };
+  const publicSlots = await agenda.availability({ ...query, serviceId: 'cut' });
+  assert.equal(
+    publicSlots.slots.some((slot) => slot.startMinute === 795),
+    false,
+  );
+  const before = await counts(store);
+  const ownSlots = await agenda.rescheduleAvailability(original.booking.id, query, actor);
+  assert.ok(ownSlots.slots.some((slot) => slot.startMinute === 795 && slot.endMinute === 825));
+  assert.deepEqual(
+    await counts(store),
+    before,
+    'Availability must not mutate the reservation or events',
+  );
+  await agenda.createBooking(input(825, 'a'), context('move-slots-other'));
+  const occupied = await agenda.rescheduleAvailability(original.booking.id, query, actor);
+  assert.ok(occupied.slots.some((slot) => slot.startMinute === 795));
+  assert.equal(
+    occupied.slots.some((slot) => slot.startMinute === 810),
+    false,
+  );
+  const moved = await agenda.rescheduleBooking(
+    original.booking.id,
+    { ...query, startMinute: 795 },
+    1,
+    context('move-slots-confirm', actor),
+  );
+  assert.equal(moved.booking.startMinute, 795);
+  assert.equal(moved.booking.priceMinorUnits, original.booking.priceMinorUnits);
+});
+
+test('private reschedule availability uses the original duration and buffers after configuration migration', async (t) => {
+  const { agenda, store, config } = await fixture(t);
+  const original = await agenda.createBooking(input(780, 'a'), context('snapshot-slots-original'));
+  const changed = structuredClone(config);
+  changed.version = 2;
+  changed.services[0].durationMinutes = 60;
+  changed.services[0].bufferAfterMinutes = 30;
+  await store.run('UPDATE agenda_configuration SET version = ?, config_hash = ?, config_json = ?', [
+    2,
+    await hashConfiguration(changed),
+    canonicalStringify(changed),
+  ]);
+  const current = createAgendaService(store, changed, { now: fixedNow });
+  const query = { date: day, professionalId: 'a' };
+  const slots = await current.rescheduleAvailability(original.booking.id, query, admin);
+  assert.ok(slots.slots.some((slot) => slot.startMinute === 1110 && slot.endMinute === 1140));
+  assert.equal(
+    (await current.availability({ ...query, serviceId: 'cut' })).slots.some(
+      (slot) => slot.startMinute === 1110,
+    ),
+    false,
+  );
+  const moved = await current.rescheduleBooking(
+    original.booking.id,
+    { ...query, startMinute: 1110 },
+    1,
+    { ...context('snapshot-slots-confirm', admin), configVersion: 2 },
+  );
+  assert.equal(moved.booking.durationMinutes, original.booking.durationMinutes);
+  assert.equal(moved.booking.priceMinorUnits, original.booking.priceMinorUnits);
+});
+
+test('private reschedule availability rejects foreign/public/barber actors and respects cancellations and policy', async (t) => {
+  const { agenda } = await fixture(t);
+  const original = await agenda.createBooking(input(780, 'a'), context('protected-slots-original'));
+  const query = { date: day, professionalId: 'a' };
+  for (const actor of [
+    publicActor,
+    { kind: 'customer', reservationId: 'someone-else' },
+    { kind: 'barber', id: 'barber-a', professionalId: 'a' },
+  ] as Actor[]) {
+    await assert.rejects(
+      agenda.rescheduleAvailability(original.booking.id, query, actor),
+      errorCode('FORBIDDEN'),
+    );
+  }
+  await agenda.cancelBooking(original.booking.id, 1, context('protected-slots-cancel', admin));
+  await assert.rejects(
+    agenda.rescheduleAvailability(original.booking.id, query, admin),
+    errorCode('VERSION_CONFLICT'),
+  );
+  const late = await fixture(t, undefined, () => new Date('2026-10-05T18:15:00Z'));
+  const booking = await late.agenda.createBooking(
+    input(780, 'a'),
+    context('deadline-slots-original'),
+  );
+  await assert.rejects(
+    late.agenda.rescheduleAvailability(booking.booking.id, query, {
+      kind: 'customer',
+      reservationId: booking.booking.id,
+    }),
+    errorCode('POLICY_RESTRICTION'),
+  );
+  assert.ok(
+    (await late.agenda.rescheduleAvailability(booking.booking.id, query, admin)).slots.length > 0,
+  );
+});
+
+test('private reschedule availability honors absences and refuses arbitrary ignore IDs', async (t) => {
+  const { agenda } = await fixture(t);
+  const original = await agenda.createBooking(input(780, 'a'), context('absence-slots-original'));
+  await agenda.createAbsence(
+    { professionalId: 'a', startDate: day, startMinute: 810, endDate: day, endMinute: 870 },
+    context('absence-slots-report', admin),
+  );
+  const slots = await agenda.rescheduleAvailability(
+    original.booking.id,
+    { date: day, professionalId: 'a' },
+    admin,
+  );
+  assert.equal(
+    slots.slots.some((slot) => slot.startMinute === 795),
+    false,
+  );
+  assert.ok(slots.slots.some((slot) => slot.startMinute === 780));
+  await assert.rejects(
+    agenda.rescheduleAvailability(
+      original.booking.id,
+      { date: day, ignoreId: 'another-booking' } as never,
+      admin,
+    ),
+    errorCode('INVALID_INPUT'),
+  );
+  await assert.rejects(
+    agenda.availability({ date: day, serviceId: 'cut', ignoreId: original.booking.id } as never),
+    errorCode('INVALID_INPUT'),
   );
 });

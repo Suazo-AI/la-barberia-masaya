@@ -11,6 +11,7 @@ export interface SitesAgendaEnvironment {
   DB?: D1Binding;
   AGENDA_CONFIG_JSON?: string;
   AGENDA_ADMIN_SUBJECTS_JSON?: string;
+  AGENDA_BARBER_SUBJECTS_JSON?: string;
   AGENDA_ALLOWED_ORIGINS_JSON?: string;
 }
 
@@ -22,6 +23,7 @@ export interface PublicAsset {
 interface Settings {
   config: AgendaConfig;
   subjects: string[];
+  barberSubjects: Record<string, string>;
   origins: string[];
   store: D1Store;
 }
@@ -48,6 +50,21 @@ function settings(environment: SitesAgendaEnvironment): Settings {
     throw new Error('Verified production configuration is required.');
   const subjects = stringList(environment.AGENDA_ADMIN_SUBJECTS_JSON);
   if (!subjects.every(validSubject)) throw new Error('Invalid administrator subject allowlist.');
+  const barberSubjects: unknown = JSON.parse(environment.AGENDA_BARBER_SUBJECTS_JSON || '{}');
+  if (
+    barberSubjects === null ||
+    typeof barberSubjects !== 'object' ||
+    Array.isArray(barberSubjects) ||
+    Object.keys(barberSubjects).length > 100 ||
+    Object.entries(barberSubjects).some(
+      ([subject, professionalId]) =>
+        !validSubject(subject) ||
+        subjects.includes(subject) ||
+        typeof professionalId !== 'string' ||
+        !config.professionals.some((professional) => professional.id === professionalId),
+    )
+  )
+    throw new Error('Explicit, disjoint subject-to-professional mapping is required.');
   const origins = stringList(environment.AGENDA_ALLOWED_ORIGINS_JSON);
   for (const origin of origins) {
     const url = new URL(origin);
@@ -60,7 +77,13 @@ function settings(environment: SitesAgendaEnvironment): Settings {
     typeof environment.DB.batch !== 'function'
   )
     throw new Error('D1 is unavailable.');
-  return { config, subjects, origins, store: new D1Store(environment.DB) };
+  return {
+    config,
+    subjects,
+    barberSubjects: barberSubjects as Record<string, string>,
+    origins,
+    store: new D1Store(environment.DB),
+  };
 }
 
 // Sites dispatch authenticates and owns this header. Email is never an authorization key.
@@ -72,6 +95,38 @@ const sitesIdentity: TrustedIdentityResolver = {
     return validSubject(subject) ? { subject } : null;
   },
 };
+
+/** Dispatch-owned browser sign-in; this endpoint never reads DB or grants a role. */
+async function selfIdentity(request: Request): Promise<Response> {
+  const headers = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    Pragma: 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    Vary: 'Origin, Cookie, Authorization',
+  };
+  const reply = (body: unknown, status = 200, extra = {}) =>
+    new Response(JSON.stringify(body), { status, headers: { ...headers, ...extra } });
+  if (request.method !== 'GET')
+    return reply({ error: { code: 'METHOD_NOT_ALLOWED' } }, 405, { Allow: 'GET' });
+  const url = new URL(request.url);
+  const origin = request.headers.get('Origin');
+  const fetchSite = request.headers.get('Sec-Fetch-Site');
+  if (
+    (origin !== null && origin !== url.origin) ||
+    (fetchSite !== null && !['same-origin', 'none'].includes(fetchSite))
+  )
+    return reply({ error: { code: 'FORBIDDEN' } }, 403);
+  if (url.search || url.hash) return reply({ error: { code: 'INVALID_INPUT' } }, 400);
+  const identity = await sitesIdentity.resolve(request, { runtime: 'worker' });
+  return reply({
+    authenticated: identity !== null,
+    ...(identity ? { subject: identity.subject } : {}),
+    signInPath: '/signin-with-chatgpt?return_to=%2Fadmin.html',
+    signOutPath: '/signout-with-chatgpt?return_to=%2Fadmin.html',
+  });
+}
 
 const publicHeaders = {
   'Cache-Control': 'no-cache',
@@ -102,6 +157,7 @@ export function createSitesAgendaWorker(assets: Readonly<Record<string, PublicAs
     },
     allowedOrigins: (environment) => getSettings(environment).origins,
     adminSubjects: (environment) => getSettings(environment).subjects,
+    barberSubjects: (environment) => getSettings(environment).barberSubjects,
     identityResolver: () => sitesIdentity,
     createRateLimiter: (environment) => createSqlRateLimiter(getSettings(environment).store),
   });
@@ -137,6 +193,9 @@ export function createSitesAgendaWorker(assets: Readonly<Record<string, PublicAs
   return {
     async fetch(request: Request, environment: SitesAgendaEnvironment): Promise<Response> {
       const pathname = new URL(request.url).pathname;
+      // This adapter runs only behind trusted Sites dispatch. Generic Node and
+      // portable Worker hosts do not implement or trust this identity surface.
+      if (pathname === '/api/agenda/v1/identity') return selfIdentity(request);
       if (pathname === '/api/agenda/v1' || pathname.startsWith('/api/agenda/v1/'))
         return agenda.fetch(request, environment);
       if (!['GET', 'HEAD'].includes(request.method))

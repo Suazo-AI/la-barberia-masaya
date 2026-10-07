@@ -10,12 +10,14 @@ import type {
   Booking,
   BookingReceipt,
   Catalog,
+  CreateAbsenceInput,
   CreateBlockInput,
   CreateBookingInput,
   ListQuery,
   MutationContext,
   ProfessionalConfig,
   RescheduleInput,
+  ScheduleAbsence,
   ScheduleBlock,
   ServiceConfig,
   SqlStatement,
@@ -23,7 +25,7 @@ import type {
 } from './contracts.ts';
 import { assertConfigured } from './config.ts';
 import { canonicalStringify, hashConfiguration, hashValue } from './hash.ts';
-import { BACKUP_TABLES } from './schema.ts';
+import { BACKUP_TABLES, SCHEMA_VERSION } from './schema.ts';
 import {
   addDays,
   assertDate,
@@ -39,6 +41,8 @@ import {
   assertContext,
   assertId,
   assertManagement,
+  assertProfessionalScope,
+  assertStaff,
   assertMinute,
   assertObject,
   assertVersion,
@@ -71,6 +75,23 @@ interface Entry {
   created_at: number;
   updated_at: number;
 }
+interface AbsenceRow {
+  id: string;
+  professional_id: string;
+  start_utc: number;
+  end_utc: number;
+  reason: string | null;
+  status: 'active' | 'revoked';
+  version: number;
+  affected_booking_ids_json: string;
+  resolution: 'requires-resolution' | 'none';
+  created_at: number;
+  updated_at: number;
+}
+type OccupiedInterval = Pick<
+  Entry,
+  'professional_id' | 'allocated_start_utc' | 'allocated_end_utc'
+>;
 interface IdempotencyRecord {
   request_hash: string;
   response_json: string;
@@ -117,6 +138,8 @@ const writeAssertion: SqlStatement = {
 const backupOrder: Record<(typeof BACKUP_TABLES)[number], string> = {
   agenda_configuration: 'business_id',
   agenda_entries: 'id',
+  agenda_absences: 'id',
+  agenda_absence_audit: 'id',
   agenda_idempotency: 'scope, key',
   agenda_audit: 'id',
   agenda_outbox: 'id',
@@ -243,7 +266,7 @@ export class PersistentAgenda implements AgendaService {
           // Configuration cannot be reconstructed over orphaned private data.
           // Keep the ownership and empty-data checks in the same transaction;
           // rate buckets and ephemeral guards may legitimately precede setup.
-          sql: 'INSERT INTO agenda_configuration(business_id, version, config_hash, config_json) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM agenda_configuration) AND NOT EXISTS (SELECT 1 FROM agenda_entries) AND NOT EXISTS (SELECT 1 FROM agenda_idempotency) AND NOT EXISTS (SELECT 1 FROM agenda_audit) AND NOT EXISTS (SELECT 1 FROM agenda_outbox)',
+          sql: 'INSERT INTO agenda_configuration(business_id, version, config_hash, config_json) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM agenda_configuration) AND NOT EXISTS (SELECT 1 FROM agenda_entries) AND NOT EXISTS (SELECT 1 FROM agenda_idempotency) AND NOT EXISTS (SELECT 1 FROM agenda_audit) AND NOT EXISTS (SELECT 1 FROM agenda_outbox) AND NOT EXISTS (SELECT 1 FROM agenda_absences) AND NOT EXISTS (SELECT 1 FROM agenda_absence_audit)',
           params: [
             this.config.businessId,
             this.config.version,
@@ -376,14 +399,21 @@ export class PersistentAgenda implements AgendaService {
     };
   }
 
-  private async occupied(date: string, ignoreId?: string): Promise<Entry[]> {
-    return this.read<Entry>(
-      "SELECT * FROM agenda_entries WHERE status = 'confirmed' AND allocated_start_utc < ? AND allocated_end_utc > ? AND (? IS NULL OR id != ?)",
-      [toUtcSeconds(date, 1440), toUtcSeconds(date, 0), ignoreId ?? null, ignoreId ?? null],
+  private async occupied(date: string, ignoreId?: string): Promise<OccupiedInterval[]> {
+    return this.read<OccupiedInterval>(
+      "SELECT professional_id, allocated_start_utc, allocated_end_utc FROM agenda_entries WHERE status = 'confirmed' AND allocated_start_utc < ? AND allocated_end_utc > ? AND (? IS NULL OR id != ?) UNION ALL SELECT professional_id, start_utc AS allocated_start_utc, end_utc AS allocated_end_utc FROM agenda_absences WHERE status = 'active' AND start_utc < ? AND end_utc > ?",
+      [
+        toUtcSeconds(date, 1440),
+        toUtcSeconds(date, 0),
+        ignoreId ?? null,
+        ignoreId ?? null,
+        toUtcSeconds(date, 1440),
+        toUtcSeconds(date, 0),
+      ],
     );
   }
 
-  private conflict(allocation: Allocation, entries: Entry[]): boolean {
+  private conflict(allocation: Allocation, entries: OccupiedInterval[]): boolean {
     return entries.some(
       (entry) =>
         entry.professional_id === allocation.professional.id &&
@@ -416,25 +446,63 @@ export class PersistentAgenda implements AgendaService {
     assertDate(query.date);
     const service = this.service(query.serviceId);
     const professionals = this.professionals(service, query.professionalId);
+    return this.availableSlots(query.date, service, professionals);
+  }
+
+  async rescheduleAvailability(
+    id: string,
+    query: Omit<AvailabilityQuery, 'serviceId'>,
+    actor: Actor,
+  ): Promise<Availability> {
+    assertId(id);
+    assertManagement(id, actor);
+    await this.configured();
+    assertObject(query, ['date', 'professionalId']);
+    assertDate(query.date);
+    const original = await this.entry(id);
+    if (original.kind === 'block')
+      throw new AgendaError('NOT_FOUND', 404, 'Reserva no encontrada.');
+    this.assertCurrent(original, original.version);
+    this.cancellationPolicy(original, actor);
+    const service = this.rescheduleService(original);
+    const professionals = this.professionals(service, query.professionalId);
+    return this.availableSlots(query.date, service, professionals, id);
+  }
+
+  private rescheduleService(original: Entry): ServiceConfig {
+    return {
+      ...this.service(original.service_id!),
+      durationMinutes: original.duration_minutes!,
+      bufferBeforeMinutes: original.buffer_before_minutes,
+      bufferAfterMinutes: original.buffer_after_minutes,
+    };
+  }
+
+  private async availableSlots(
+    date: string,
+    service: ServiceConfig,
+    professionals: ProfessionalConfig[],
+    ignoreId?: string,
+  ): Promise<Availability> {
     const bounds = this.dateBounds();
-    if (query.date > bounds.max)
+    if (date > bounds.max)
       throw new AgendaError('INVALID_INPUT', 400, 'Fecha fuera del período de reservas.');
     const result: Availability = {
-      date: query.date,
+      date,
       timeZone: this.config.timeZone,
       mode: this.mode(),
       slots: [],
       reason: 'full',
     };
-    if (query.date < bounds.min) return { ...result, reason: 'past' };
-    const entries = await this.occupied(query.date);
+    if (date < bounds.min) return { ...result, reason: 'past' };
+    const entries = await this.occupied(date, ignoreId);
     let hasHours = false;
     let hasFuture = false;
     for (let minute = 0; minute < 1440; minute += this.config.slotStepMinutes) {
       const professionalIds: string[] = [];
       for (const professional of professionals) {
-        if (professional.weeklyHours[weekday(query.date)].length > 0) hasHours = true;
-        const allocation = this.allocation(service, professional, query.date, minute);
+        if (professional.weeklyHours[weekday(date)].length > 0) hasHours = true;
+        const allocation = this.allocation(service, professional, date, minute);
         if (!allocation) continue;
         hasFuture = true;
         if (!this.conflict(allocation, entries)) professionalIds.push(professional.id);
@@ -451,7 +519,7 @@ export class PersistentAgenda implements AgendaService {
         ? 'available'
         : !hasHours
           ? 'closed'
-          : !hasFuture && query.date === bounds.min
+          : !hasFuture && date === bounds.min
             ? 'past'
             : 'full';
     return result;
@@ -593,13 +661,14 @@ export class PersistentAgenda implements AgendaService {
     context: MutationContext,
     hash: string,
     response: T,
+    now: number,
     statements: SqlStatement[],
   ): Promise<T> {
     const guard = await this.configurationGuard();
     try {
       await this.store.batch([
         guard,
-        this.idem(scope, context, hash, response, this.now()),
+        this.idem(scope, context, hash, response, now),
         ...statements,
       ]);
       return response;
@@ -619,7 +688,7 @@ export class PersistentAgenda implements AgendaService {
   ): Promise<BookingReceipt> {
     assertContext(context);
     if (kind === 'walk-in') assertAdmin(context.actor);
-    else if (context.actor.kind === 'customer')
+    else if (context.actor.kind === 'customer' || context.actor.kind === 'barber')
       throw new AgendaError('FORBIDDEN', 403, 'Acceso no autorizado.');
     await this.configured();
     const normal = this.normalBooking(input);
@@ -686,7 +755,7 @@ export class PersistentAgenda implements AgendaService {
       };
       const response = this.receipt(entry);
       try {
-        return await this.mutation(scope, context, hash, response, [
+        return await this.mutation(scope, context, hash, response, now, [
           this.insert(entry),
           this.audit(entry, 'created', context, now),
           this.outbox(entry, 'booking.confirmed', now),
@@ -738,9 +807,12 @@ export class PersistentAgenda implements AgendaService {
 
   async getBooking(id: string, actor: Actor): Promise<BookingReceipt> {
     assertId(id);
-    assertManagement(id, actor);
+    if (actor?.kind === 'barber') assertStaff(actor);
+    else assertManagement(id, actor);
     await this.configured();
-    return this.receipt(await this.entry(id));
+    const entry = await this.entry(id);
+    if (actor.kind === 'barber') assertProfessionalScope(entry.professional_id, actor);
+    return this.receipt(entry);
   }
 
   private listQuery(query: ListQuery): void {
@@ -751,9 +823,20 @@ export class PersistentAgenda implements AgendaService {
       throw new AgendaError('INVALID_INPUT', 400, 'Filtro inválido.');
   }
 
-  private async listEntries(query: ListQuery, blocks: boolean): Promise<Entry[]> {
-    await this.configured();
+  private scopedQuery(query: ListQuery, actor: Actor): ListQuery {
+    assertStaff(actor);
     this.listQuery(query);
+    if (actor.kind === 'barber') {
+      this.professional(actor.professionalId);
+      if (query.professionalId !== undefined) assertProfessionalScope(query.professionalId, actor);
+      return { ...query, professionalId: actor.professionalId };
+    }
+    return query;
+  }
+
+  private async listEntries(query: ListQuery, blocks: boolean, actor: Actor): Promise<Entry[]> {
+    query = this.scopedQuery(query, actor);
+    await this.configured();
     return this.read<Entry>(
       `SELECT * FROM agenda_entries WHERE ${blocks ? "kind = 'block'" : "kind IN ('booking', 'walk-in')"} AND start_utc >= ? AND start_utc < ? AND (? IS NULL OR professional_id = ?) AND (? = 1 OR status = 'confirmed') ORDER BY start_utc, id`,
       [
@@ -766,11 +849,13 @@ export class PersistentAgenda implements AgendaService {
     );
   }
 
-  async listBookings(query: ListQuery): Promise<Booking[]> {
-    return (await this.listEntries(query, false)).map((entry) => this.receipt(entry).booking);
+  async listBookings(query: ListQuery, actor: Actor): Promise<Booking[]> {
+    return (await this.listEntries(query, false, actor)).map(
+      (entry) => this.receipt(entry).booking,
+    );
   }
-  async listBlocks(query: ListQuery): Promise<ScheduleBlock[]> {
-    return (await this.listEntries(query, true)).map((entry) => this.block(entry));
+  async listBlocks(query: ListQuery, actor: Actor): Promise<ScheduleBlock[]> {
+    return (await this.listEntries(query, true, actor)).map((entry) => this.block(entry));
   }
 
   private assertCurrent(entry: Entry, expectedVersion: number): void {
@@ -825,7 +910,7 @@ export class PersistentAgenda implements AgendaService {
       updated_at: now,
     };
     const response = this.receipt(updated);
-    return this.mutation(scope, context, hash, response, [
+    return this.mutation(scope, context, hash, response, now, [
       {
         sql: "UPDATE agenda_entries SET status = 'cancelled', version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND status = 'confirmed' AND kind IN ('booking', 'walk-in')",
         params: [now, id, expectedVersion],
@@ -870,15 +955,9 @@ export class PersistentAgenda implements AgendaService {
     if (winner !== undefined) return winner;
     this.assertCurrent(original, expectedVersion);
     this.cancellationPolicy(original, context.actor);
-    const eligible = this.service(original.service_id!);
-    const professional = this.professionals(eligible, input.professionalId)[0];
     // A confirmed service retains its agreed price/duration/buffers on a move.
-    const service: ServiceConfig = {
-      ...eligible,
-      durationMinutes: original.duration_minutes!,
-      bufferBeforeMinutes: original.buffer_before_minutes,
-      bufferAfterMinutes: original.buffer_after_minutes,
-    };
+    const service = this.rescheduleService(original);
+    const professional = this.professionals(service, input.professionalId)[0];
     const allocation = this.allocation(service, professional, input.date, input.startMinute);
     if (!allocation || this.conflict(allocation, await this.occupied(input.date, id)))
       throw new AgendaError(
@@ -899,7 +978,7 @@ export class PersistentAgenda implements AgendaService {
       updated_at: now,
     };
     const response = this.receipt(updated);
-    return this.mutation(scope, context, hash, response, [
+    return this.mutation(scope, context, hash, response, now, [
       {
         sql: "UPDATE agenda_entries SET professional_id = ?, professional_name = ?, start_utc = ?, end_utc = ?, allocated_start_utc = ?, allocated_end_utc = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND status = 'confirmed' AND kind IN ('booking', 'walk-in')",
         params: [
@@ -969,7 +1048,7 @@ export class PersistentAgenda implements AgendaService {
       updated_at: now,
     };
     const response = this.block(entry);
-    return this.mutation(scope, context, hash, response, [
+    return this.mutation(scope, context, hash, response, now, [
       this.insert(entry),
       this.audit(entry, 'blocked', context, now),
     ]);
@@ -1004,7 +1083,7 @@ export class PersistentAgenda implements AgendaService {
       updated_at: now,
     };
     const response = this.block(updated);
-    return this.mutation(scope, context, hash, response, [
+    return this.mutation(scope, context, hash, response, now, [
       {
         sql: "UPDATE agenda_entries SET status = 'cancelled', version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND status = 'confirmed' AND kind = 'block'",
         params: [now, id, expectedVersion],
@@ -1014,7 +1093,223 @@ export class PersistentAgenda implements AgendaService {
     ]);
   }
 
-  async exportData(): Promise<AgendaBackup> {
+  private absence(row: AbsenceRow): ScheduleAbsence {
+    const start = fromUtcSeconds(row.start_utc);
+    const end = fromUtcSeconds(row.end_utc);
+    return {
+      id: row.id,
+      professionalId: row.professional_id,
+      startDate: start.date,
+      startMinute: start.minute,
+      endDate: end.date,
+      endMinute: end.minute,
+      ...(row.reason === null ? {} : { reason: row.reason }),
+      status: row.status,
+      version: row.version,
+      affectedBookingIds: JSON.parse(row.affected_booking_ids_json) as string[],
+      resolution: row.resolution,
+      timeZone: 'America/Managua',
+    };
+  }
+
+  private absenceAudit(
+    id: string,
+    version: number,
+    action: 'reported' | 'revoked',
+    context: MutationContext,
+    now: number,
+  ): SqlStatement {
+    assertStaff(context.actor);
+    return {
+      sql: 'INSERT INTO agenda_absence_audit(id, absence_id, action, actor_kind, actor_id, professional_id, absence_version, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
+      params: [
+        this.id(),
+        id,
+        action,
+        context.actor.kind,
+        context.actor.id,
+        context.actor.kind === 'barber' ? context.actor.professionalId : null,
+        version,
+        now,
+      ],
+    };
+  }
+
+  async createAbsence(
+    input: CreateAbsenceInput,
+    context: MutationContext,
+  ): Promise<ScheduleAbsence> {
+    assertContext(context);
+    assertStaff(context.actor);
+    await this.configured();
+    assertObject(input, [
+      'professionalId',
+      'startDate',
+      'startMinute',
+      'endDate',
+      'endMinute',
+      'reason',
+    ]);
+    assertId(input.professionalId);
+    assertProfessionalScope(input.professionalId, context.actor);
+    assertDate(input.startDate);
+    assertDate(input.endDate);
+    assertMinute(input.startMinute);
+    assertMinute(input.endMinute, true);
+    const reason = cleanText(input.reason, 120, false);
+    const startUtc = toUtcSeconds(input.startDate, input.startMinute);
+    const endUtc = toUtcSeconds(input.endDate, input.endMinute);
+    if (endUtc <= startUtc)
+      throw new AgendaError('INVALID_INPUT', 400, 'Intervalo de ausencia inválido.');
+    // Midnight has one representation in receipts and idempotent requests.
+    const end = fromUtcSeconds(endUtc);
+    const normal: CreateAbsenceInput = {
+      professionalId: input.professionalId,
+      startDate: input.startDate,
+      startMinute: input.startMinute,
+      endDate: end.date,
+      endMinute: end.minute,
+      ...(reason === undefined ? {} : { reason }),
+    };
+    const scope = `absence:create:${actorScope(context.actor)}`;
+    const hash = await this.requestHash(normal, context);
+    const replay = await this.replay<ScheduleAbsence>(scope, context, hash);
+    if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
+    this.professional(normal.professionalId);
+    this.assertBookableDate(normal.startDate);
+    const bounds = this.dateBounds();
+    if (endUtc > toUtcSeconds(bounds.max, 1440) || endUtc <= this.now())
+      throw new AgendaError('INVALID_INPUT', 400, 'Ausencia fuera del período permitido.');
+    const id = this.id();
+    const now = this.now();
+    try {
+      const results = await this.store.batch([
+        await this.configurationGuard(),
+        {
+          // The transaction acquires the write lock before this snapshot. A
+          // booking committed first is captured; one committed later is blocked
+          // by the absence trigger. Existing appointments are never changed.
+          sql: `INSERT INTO agenda_absences(id, professional_id, start_utc, end_utc, reason, status, version, affected_booking_ids_json, resolution, created_at, updated_at)
+            SELECT ?, ?, ?, ?, ?, 'active', 1, snapshot,
+              CASE WHEN json_array_length(snapshot) > 0 THEN 'requires-resolution' ELSE 'none' END, ?, ?
+            FROM (SELECT json_group_array(id) AS snapshot FROM (
+              SELECT id FROM agenda_entries WHERE professional_id = ?
+              AND kind IN ('booking', 'walk-in') AND status = 'confirmed'
+              AND allocated_start_utc < ? AND allocated_end_utc > ? ORDER BY id
+            ))`,
+          params: [
+            id,
+            normal.professionalId,
+            startUtc,
+            endUtc,
+            reason ?? null,
+            now,
+            now,
+            normal.professionalId,
+            endUtc,
+            startUtc,
+          ],
+        },
+        this.absenceAudit(id, 1, 'reported', context, now),
+        {
+          // Cache the response from the actual transactional snapshot, never
+          // from an advisory pre-read. No customer notification is enqueued.
+          sql: `INSERT INTO agenda_idempotency(scope, key, request_hash, response_json, created_at)
+            SELECT ?, ?, ?, json_patch(json_object(
+              'id', id, 'professionalId', professional_id, 'startDate', ?, 'startMinute', ?,
+              'endDate', ?, 'endMinute', ?, 'status', status, 'version', version,
+              'affectedBookingIds', json(affected_booking_ids_json), 'resolution', resolution,
+              'timeZone', 'America/Managua'
+            ), CASE WHEN reason IS NULL THEN '{}' ELSE json_object('reason', reason) END), ?
+            FROM agenda_absences WHERE id = ?`,
+          params: [
+            scope,
+            context.idempotencyKey,
+            hash,
+            normal.startDate,
+            normal.startMinute,
+            normal.endDate,
+            normal.endMinute,
+            now,
+            id,
+          ],
+        },
+        writeAssertion,
+        {
+          sql: 'SELECT response_json FROM agenda_idempotency WHERE scope = ? AND key = ?',
+          params: [scope, context.idempotencyKey],
+        },
+      ]);
+      const response = results.at(-1)?.rows[0]?.response_json;
+      if (typeof response !== 'string')
+        throw new AgendaError('STORAGE_UNAVAILABLE', 503, 'Respuesta de ausencia no disponible.');
+      return JSON.parse(response) as ScheduleAbsence;
+    } catch (error) {
+      const winner = await this.replay<ScheduleAbsence>(scope, context, hash);
+      if (winner !== undefined) return winner;
+      throw mapStorageError(error);
+    }
+  }
+
+  async listAbsences(query: ListQuery, actor: Actor): Promise<ScheduleAbsence[]> {
+    query = this.scopedQuery(query, actor);
+    await this.configured();
+    const rows = await this.read<AbsenceRow>(
+      `SELECT * FROM agenda_absences WHERE start_utc < ? AND end_utc > ?
+        AND (? IS NULL OR professional_id = ?) AND (? = 1 OR status = 'active')
+        ORDER BY start_utc, id`,
+      [
+        toUtcSeconds(query.date, 1440),
+        toUtcSeconds(query.date, 0),
+        query.professionalId ?? null,
+        query.professionalId ?? null,
+        query.includeCancelled ? 1 : 0,
+      ],
+    );
+    return rows.map((row) => this.absence(row));
+  }
+
+  async revokeAbsence(
+    id: string,
+    expectedVersion: number,
+    context: MutationContext,
+  ): Promise<ScheduleAbsence> {
+    assertContext(context);
+    assertStaff(context.actor);
+    assertId(id);
+    assertVersion(expectedVersion);
+    await this.configured();
+    const rows = await this.read<AbsenceRow>('SELECT * FROM agenda_absences WHERE id = ?', [id]);
+    const original = rows[0];
+    if (!original) throw new AgendaError('NOT_FOUND', 404, 'Ausencia no encontrada.');
+    assertProfessionalScope(original.professional_id, context.actor);
+    const scope = `absence:revoke:${id}:${actorScope(context.actor)}`;
+    const hash = await this.requestHash({ id, expectedVersion }, context);
+    const replay = await this.replay<ScheduleAbsence>(scope, context, hash);
+    if (replay !== undefined) return replay;
+    this.assertConfigVersion(context);
+    if (original.status !== 'active' || original.version !== expectedVersion)
+      throw new AgendaError('VERSION_CONFLICT', 409, 'La ausencia cambió. Actualizá la agenda.');
+    const now = this.now();
+    const response = this.absence({
+      ...original,
+      status: 'revoked',
+      version: expectedVersion + 1,
+      updated_at: now,
+    });
+    return this.mutation(scope, context, hash, response, now, [
+      {
+        sql: "UPDATE agenda_absences SET status = 'revoked', version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND status = 'active'",
+        params: [now, id, expectedVersion],
+      },
+      writeAssertion,
+      this.absenceAudit(id, expectedVersion + 1, 'revoked', context, now),
+    ]);
+  }
+
+  async exportData(actor: Actor): Promise<AgendaBackup> {
+    assertAdmin(actor);
     await this.configured();
     try {
       // All private tables belong to one transaction/snapshot in both hosts.
@@ -1044,7 +1339,7 @@ export class PersistentAgenda implements AgendaService {
       const config = JSON.parse(configRow.config_json) as AgendaConfig;
       return {
         format: 'portable-agenda',
-        version: 1,
+        version: SCHEMA_VERSION,
         exportedAt: isoInstant(this.now()),
         config,
         tables,

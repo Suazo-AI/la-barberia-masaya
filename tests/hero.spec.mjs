@@ -38,7 +38,7 @@ for (const viewport of viewports) {
       .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
     expect(columns).toBe(viewport.width >= 768 ? 4 : 2);
     const action = page.getByRole('link', { name: 'Reservar cita' });
-    await expect(action).toHaveAttribute('href', '#reserva');
+    await expect(action).toHaveAttribute('href', './demo.html#reservar');
     const box = await action.boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
@@ -107,10 +107,11 @@ test('keyboard, repeated agenda opening, and history', async ({ page }) => {
   expect(await action.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
   for (let attempt = 0; attempt < 3; attempt++) {
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
-    await expect(action).toBeFocused();
+    await expect(page).toHaveURL(/\/demo\.html#reservar$/);
+    await expect(page.locator('#demo-slots button').first()).toBeVisible();
+    await page.goBack();
+    await expect(action).toBeVisible();
+    await action.focus();
   }
   await expect(page.locator('h1')).toBeVisible();
   await page.goBack();
@@ -135,18 +136,36 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
   );
   await expect(page.getByRole('link', { name: 'Reservar cita' })).toHaveAttribute(
     'href',
-    '#reserva',
+    './demo.html#reservar',
   );
   await page.getByRole('link', { name: 'Reservar cita' }).click();
-  await expect(page.getByRole('heading', { name: 'Reservas', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/demo\.html#reservar$/);
+  await expect(page.locator('noscript .demo-notice')).toContainText('Activá JavaScript');
+  await expect(page.locator('noscript .demo-notice')).toBeVisible();
+  await page.goBack();
   await expect(page.locator('.work-grid img')).toHaveCount(2);
   await expect(page.locator('.work-grid blockquote')).toHaveCount(3);
   await expect(page.locator('.work-grid')).toContainText('Moises Diaz');
   await expect(page.locator('.gallery-tools')).toBeHidden();
   for (const card of await page.locator('.work-photo').all()) {
     const cardBox = await card.boundingBox();
+    const crop = card.locator('.work-photo-viewport');
     const imageBox = await card.locator('img').boundingBox();
-    expect(imageBox.y).toBeCloseTo(cardBox.y, 0);
+    if (await crop.count()) {
+      const cropBox = await crop.boundingBox();
+      expect(cropBox.y).toBeCloseTo(cardBox.y, 0);
+      expect(cropBox.x).toBeCloseTo(cardBox.x, 0);
+      expect(cropBox.width).toBeCloseTo(cardBox.width, 0);
+      const scale = imageBox.width / 1165;
+      const actual = [
+        (cropBox.x - imageBox.x) / scale,
+        (cropBox.y - imageBox.y) / scale,
+        cropBox.width / scale,
+        cropBox.height / scale,
+      ];
+      for (const [index, expected] of [373, 90, 404, 580].entries())
+        expect(actual[index]).toBeCloseTo(expected, 0);
+    } else expect(imageBox.y).toBeCloseTo(cardBox.y, 0);
   }
   await mkdir('.private-evidence', { recursive: true });
   await page.screenshot({ path: '.private-evidence/ui-no-js-390.png', fullPage: true });
@@ -166,6 +185,7 @@ test('no JavaScript, enlarged text, reduced motion, and missing image remain usa
     const overflowing = await zoom.evaluate(() =>
       [...document.querySelectorAll('body *')]
         .filter((el) => {
+          if (el.matches('.work-photo-viewport img')) return false; // Only the cropped image is exempt; its clipping viewport stays checked.
           if (el.closest('.space-tile')) return false; // Intentional, clipped photographic detail crops.
           const box = el.getBoundingClientRect();
           return getComputedStyle(el).display !== 'none' && box.right > innerWidth + 1;

@@ -58,11 +58,12 @@ export function assertActor(actor: Actor): void {
     throw new AgendaError('FORBIDDEN', 403, 'Acceso no autorizado.');
   if (actor.kind === 'public') return;
   if (
-    actor.kind === 'admin' &&
+    (actor.kind === 'admin' ||
+      (actor.kind === 'barber' &&
+        typeof actor.professionalId === 'string' &&
+        identifierPattern.test(actor.professionalId))) &&
     typeof actor.id === 'string' &&
-    actor.id.length > 0 &&
-    actor.id.length <= 254 &&
-    !/[\u0000-\u001f\u007f]/.test(actor.id)
+    /^[^\s,\u0000-\u001f\u007f]{1,256}$/.test(actor.id)
   )
     return;
   if (
@@ -93,6 +94,21 @@ export function assertAdmin(actor: Actor): void {
     throw new AgendaError('FORBIDDEN', 403, 'Se requiere un administrador autorizado.');
 }
 
+/** Staff identity and professional mapping come only from a trusted host adapter. */
+export function assertStaff(
+  actor: Actor,
+): asserts actor is Extract<Actor, { kind: 'admin' | 'barber' }> {
+  assertActor(actor);
+  if (actor.kind !== 'admin' && actor.kind !== 'barber')
+    throw new AgendaError('FORBIDDEN', 403, 'Se requiere acceso autorizado a la agenda.');
+}
+
+export function assertProfessionalScope(professionalId: string, actor: Actor): void {
+  assertStaff(actor);
+  if (actor.kind === 'barber' && actor.professionalId !== professionalId)
+    throw new AgendaError('FORBIDDEN', 403, 'Acceso no autorizado a esta agenda.');
+}
+
 /** Actors are supplied by a trusted HTTP identity/capability adapter, never headers. */
 export function assertManagement(id: string, actor: Actor): void {
   assertActor(actor);
@@ -105,5 +121,7 @@ export function actorScope(actor: Actor): string {
     ? 'public'
     : actor.kind === 'admin'
       ? `admin:${actor.id}`
-      : `customer:${actor.reservationId}`;
+      : actor.kind === 'barber'
+        ? `barber:${actor.id}:${actor.professionalId}`
+        : `customer:${actor.reservationId}`;
 }

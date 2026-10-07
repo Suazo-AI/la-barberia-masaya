@@ -213,7 +213,7 @@ function actorScope(audit: BackupRow, entry: BackupRow): string {
     audit.actor_kind === 'admin' &&
     typeof audit.actor_id === 'string' &&
     audit.actor_id.length > 0 &&
-    audit.actor_id.length <= 254 &&
+    audit.actor_id.length <= 256 &&
     !/[\u0000-\u001f\u007f]/.test(audit.actor_id)
   )
     return `admin:${audit.actor_id}`;
@@ -236,6 +236,193 @@ function expectedScope(audit: BackupRow, entry: BackupRow): string {
   if (audit.action === 'cancelled') return `booking:cancel:${String(entry.id)}:${actor}`;
   if (audit.action === 'rescheduled') return `booking:reschedule:${String(entry.id)}:${actor}`;
   fail();
+}
+
+/** Absence receipts retain their original affected-booking snapshot after revocation. */
+function absenceSnapshot(value: unknown, absence: BackupRow): number {
+  if (
+    !shape(
+      value,
+      [
+        'id',
+        'professionalId',
+        'startDate',
+        'startMinute',
+        'endDate',
+        'endMinute',
+        'status',
+        'version',
+        'affectedBookingIds',
+        'resolution',
+        'timeZone',
+      ],
+      ['reason'],
+    ) ||
+    value.id !== absence.id ||
+    value.professionalId !== absence.professional_id ||
+    !validDate(value.startDate) ||
+    !validDate(value.endDate) ||
+    !integer(value.startMinute, 0, 1439) ||
+    !integer(value.endMinute, 0, 1439) ||
+    value.timeZone !== 'America/Managua' ||
+    !integer(value.version, 1, 2) ||
+    value.version > Number(absence.version) ||
+    value.status !== (value.version === 1 ? 'active' : 'revoked') ||
+    value.resolution !== absence.resolution ||
+    canonicalStringify(value.affectedBookingIds) !==
+      canonicalStringify(parseJson(absence.affected_booking_ids_json)) ||
+    (absence.reason === null ? Object.hasOwn(value, 'reason') : value.reason !== absence.reason)
+  )
+    fail();
+  try {
+    if (
+      toUtcSeconds(value.startDate, value.startMinute) !== absence.start_utc ||
+      toUtcSeconds(value.endDate, value.endMinute) !== absence.end_utc
+    )
+      fail();
+  } catch {
+    fail();
+  }
+  return value.version;
+}
+
+function absenceActorScope(audit: BackupRow, absence: BackupRow): string {
+  if (
+    typeof audit.actor_id !== 'string' ||
+    audit.actor_id.length === 0 ||
+    audit.actor_id.length > 256 ||
+    /[\s,\u0000-\u001f\u007f]/.test(audit.actor_id)
+  )
+    fail();
+  if (audit.actor_kind === 'admin' && audit.professional_id === null)
+    return `admin:${audit.actor_id}`;
+  if (
+    audit.actor_kind === 'barber' &&
+    identifier(audit.professional_id) &&
+    audit.professional_id === absence.professional_id
+  )
+    return `barber:${audit.actor_id}:${audit.professional_id}`;
+  fail();
+}
+
+function validateAbsenceHistory(
+  backup: AgendaBackup,
+  entries: Map<string, BackupRow>,
+  outbox: Map<string, BookingReceipt>,
+): { absences: Map<string, BackupRow>; audits: Map<string, BackupRow> } {
+  const absences = new Map<string, BackupRow>();
+  const audits = new Map<string, BackupRow>();
+  const professionals = new Set(backup.config.professionals.map((professional) => professional.id));
+  const histories = new Map<string, BookingReceipt[]>();
+  for (const receipt of outbox.values()) {
+    const history = histories.get(receipt.booking.id) ?? [];
+    history.push(receipt);
+    histories.set(receipt.booking.id, history);
+  }
+  for (const absence of backup.tables.find((table) => table.name === 'agenda_absences')!.rows) {
+    if (
+      !shape(absence, [
+        'id',
+        'professional_id',
+        'start_utc',
+        'end_utc',
+        'reason',
+        'status',
+        'version',
+        'affected_booking_ids_json',
+        'resolution',
+        'created_at',
+        'updated_at',
+      ]) ||
+      !identifier(absence.id) ||
+      absences.has(absence.id) ||
+      !identifier(absence.professional_id) ||
+      !professionals.has(absence.professional_id) ||
+      !integer(absence.start_utc, 0) ||
+      !integer(absence.end_utc, absence.start_utc + 1) ||
+      (absence.reason !== null && !text(absence.reason, 120)) ||
+      !integer(absence.version, 1, 2) ||
+      absence.status !== (absence.version === 1 ? 'active' : 'revoked') ||
+      !integer(absence.created_at, 0) ||
+      !integer(absence.updated_at, absence.created_at) ||
+      (absence.status === 'active' && absence.updated_at !== absence.created_at)
+    )
+      fail();
+    const affected = parseJson(absence.affected_booking_ids_json);
+    if (
+      !Array.isArray(affected) ||
+      affected.some((id) => !identifier(id)) ||
+      canonicalStringify(affected) !== canonicalStringify([...new Set(affected)].sort()) ||
+      absence.resolution !== (affected.length ? 'requires-resolution' : 'none')
+    )
+      fail();
+    for (const id of affected as string[]) {
+      const entry = entries.get(id);
+      const history = histories.get(id);
+      if (
+        !entry ||
+        entry.kind === 'block' ||
+        !history ||
+        !history.some((receipt) => {
+          const booking = receipt.booking;
+          // Wall-clock timestamps are captured before transaction locks. They
+          // cannot establish commit order, especially across concurrent writers.
+          return (
+            booking.status === 'confirmed' &&
+            booking.professionalId === absence.professional_id &&
+            toUtcSeconds(booking.date, booking.startMinute) -
+              Number(entry.buffer_before_minutes) * 60 <
+              Number(absence.end_utc) &&
+            toUtcSeconds(booking.date, booking.endMinute) +
+              Number(entry.buffer_after_minutes) * 60 >
+              Number(absence.start_utc)
+          );
+        })
+      )
+        fail();
+    }
+    absences.set(absence.id, absence);
+  }
+  const auditIds = new Set<string>();
+  for (const audit of backup.tables.find((table) => table.name === 'agenda_absence_audit')!.rows) {
+    if (
+      !shape(audit, [
+        'id',
+        'absence_id',
+        'action',
+        'actor_kind',
+        'actor_id',
+        'professional_id',
+        'absence_version',
+        'created_at',
+      ]) ||
+      !identifier(audit.id) ||
+      auditIds.has(audit.id) ||
+      !identifier(audit.absence_id) ||
+      !integer(audit.absence_version, 1, 2) ||
+      !integer(audit.created_at, 0)
+    )
+      fail();
+    const absence = absences.get(audit.absence_id);
+    const key = versionKey(audit.absence_id, audit.absence_version);
+    if (
+      !absence ||
+      audits.has(key) ||
+      audit.absence_version > Number(absence.version) ||
+      audit.action !== (audit.absence_version === 1 ? 'reported' : 'revoked') ||
+      audit.created_at !== (audit.absence_version === 1 ? absence.created_at : absence.updated_at)
+    )
+      fail();
+    absenceActorScope(audit, absence);
+    auditIds.add(audit.id);
+    audits.set(key, audit);
+  }
+  for (const [id, absence] of absences) {
+    for (let version = 1; version <= Number(absence.version); version += 1) {
+      if (!audits.has(versionKey(id, version))) fail();
+    }
+  }
+  return { absences, audits };
 }
 
 /** Cached replies and notifications are typed event snapshots, not arbitrary valid JSON. */
@@ -341,6 +528,8 @@ function validateEventSnapshots(backup: AgendaBackup): void {
       fail();
     outbox.set(key, receipt);
   }
+  const { absences, audits: absenceAudits } = validateAbsenceHistory(backup, entries, outbox);
+  const cachedAbsences = new Set<string>();
   const cached = new Set<string>();
   for (const row of table('agenda_idempotency')) {
     if (
@@ -356,6 +545,19 @@ function validateEventSnapshots(backup: AgendaBackup): void {
     if (!record(response)) fail();
     const raw = record(response.booking) ? response.booking : response;
     if (!identifier(raw.id)) fail();
+    if (row.scope.startsWith('absence:')) {
+      const absence = absences.get(raw.id);
+      if (!absence) fail();
+      const version = absenceSnapshot(response, absence);
+      const key = versionKey(raw.id, version);
+      const audit = absenceAudits.get(key);
+      if (!audit || cachedAbsences.has(key) || row.created_at !== audit.created_at) fail();
+      const actor = absenceActorScope(audit, absence);
+      const scope = version === 1 ? `absence:create:${actor}` : `absence:revoke:${raw.id}:${actor}`;
+      if (row.scope !== scope) fail();
+      cachedAbsences.add(key);
+      continue;
+    }
     const entry = entries.get(raw.id);
     if (!entry) fail();
     const snapshot =
@@ -379,6 +581,9 @@ function validateEventSnapshots(backup: AgendaBackup): void {
       fail();
     cached.add(key);
   }
+  for (const key of absenceAudits.keys()) {
+    if (!cachedAbsences.has(key)) fail();
+  }
   for (const [id, entry] of entries) {
     for (const audit of histories.get(id) ?? []) {
       const key = versionKey(id, Number(audit.entry_version));
@@ -390,6 +595,8 @@ function validateEventSnapshots(backup: AgendaBackup): void {
 const backupOrder: Record<(typeof BACKUP_TABLES)[number], string> = {
   agenda_configuration: 'business_id',
   agenda_entries: 'id',
+  agenda_absences: 'id',
+  agenda_absence_audit: 'id',
   agenda_idempotency: 'scope, key',
   agenda_audit: 'id',
   agenda_outbox: 'id',
@@ -428,12 +635,12 @@ export function validateBackup(value: unknown): AgendaBackup {
   if (
     !record(value) ||
     value.format !== 'portable-agenda' ||
-    value.version !== SCHEMA_VERSION ||
+    (value.version !== 1 && value.version !== SCHEMA_VERSION) ||
     typeof value.exportedAt !== 'string' ||
     !Number.isFinite(Date.parse(value.exportedAt)) ||
     !record(value.config) ||
     !Array.isArray(value.tables) ||
-    value.tables.length !== BACKUP_TABLES.length
+    value.tables.length !== (value.version === 1 ? BACKUP_TABLES.length - 2 : BACKUP_TABLES.length)
   )
     fail();
   const config = value.config as unknown as AgendaConfig;
@@ -445,6 +652,8 @@ export function validateBackup(value: unknown): AgendaBackup {
       !record(table) ||
       typeof table.name !== 'string' ||
       !BACKUP_TABLES.some((name) => name === table.name) ||
+      (value.version === 1 &&
+        (table.name === 'agenda_absences' || table.name === 'agenda_absence_audit')) ||
       names.has(table.name) ||
       !Array.isArray(table.rows)
     )
@@ -468,6 +677,18 @@ export function validateBackup(value: unknown): AgendaBackup {
   }
   // Copy caller-owned data so it cannot change during asynchronous restore checks.
   const backup = structuredClone(value) as unknown as AgendaBackup;
+  if (value.version === 1) {
+    backup.version = SCHEMA_VERSION;
+    backup.tables.push(
+      { name: 'agenda_absences', rows: [] },
+      { name: 'agenda_absence_audit', rows: [] },
+    );
+    backup.tables.sort(
+      (a, b) =>
+        BACKUP_TABLES.indexOf(a.name as (typeof BACKUP_TABLES)[number]) -
+        BACKUP_TABLES.indexOf(b.name as (typeof BACKUP_TABLES)[number]),
+    );
+  }
   validateEventSnapshots(backup);
   return backup;
 }
@@ -541,6 +762,14 @@ async function verifyDatabase(store: SqliteStore, config: AgendaConfig): Promise
     UNION ALL SELECT a.id FROM agenda_audit a JOIN agenda_entries e ON e.id = a.entry_id
     WHERE a.entry_version > e.version LIMIT 1`);
   if (invalidEvents.length > 0) fail();
+  // Existing conflicts are legitimate only when recorded by the creation
+  // snapshot. Insert entries before absences during restore to preserve them.
+  const unrecordedConflicts =
+    await store.all(`SELECT a.id FROM agenda_absences a JOIN agenda_entries e
+    ON a.professional_id = e.professional_id AND a.start_utc < e.allocated_end_utc AND a.end_utc > e.allocated_start_utc
+    WHERE a.status = 'active' AND e.status = 'confirmed' AND e.kind IN ('booking', 'walk-in')
+    AND NOT EXISTS (SELECT 1 FROM json_each(a.affected_booking_ids_json) WHERE value = e.id) LIMIT 1`);
+  if (unrecordedConflicts.length > 0) fail();
 }
 
 /** Restores only to an exclusively created database; the source is never replaced. */

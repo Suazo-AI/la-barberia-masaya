@@ -21,6 +21,8 @@ export interface AgendaNodeServerOptions extends Omit<
   adminSubjects?: readonly string[];
   /** Explicit local/test opt-in. Refused for every mode except fixture. */
   fixtureAdmin?: boolean;
+  /** Optional barber fixture principal. Requires fixtureAdmin and fixture mode. */
+  fixtureBarberId?: string;
   fallback?: AgendaHandler;
 }
 
@@ -107,6 +109,12 @@ export async function startAgendaNodeServer(
   if (options.fixtureAdmin && options.mode !== 'fixture') {
     throw new Error('The fixture administrator is unavailable outside fixture mode.');
   }
+  if (
+    options.fixtureBarberId !== undefined &&
+    (!options.fixtureAdmin || options.mode !== 'fixture')
+  ) {
+    throw new Error('The fixture barber is unavailable outside explicit fixture mode.');
+  }
   if (options.mode === 'fixture' && process.env.NODE_ENV === 'production') {
     throw new Error('Fixture mode is unavailable in a production process.');
   }
@@ -173,14 +181,16 @@ export async function startAgendaNodeServer(
   origin = explicitOrigin ?? `http://${hostname === '::1' ? '[::1]' : hostname}:${boundPort}`;
   let identityResolver: TrustedIdentityResolver | undefined = options.identityResolver;
   let adminSubjects = options.adminSubjects ?? [];
+  let barberSubjects = options.barberSubjects;
   if (options.fixtureAdmin) {
-    const subject = 'local-fixture-owner';
+    const subject = options.fixtureBarberId ? 'local-fixture-barber' : 'local-fixture-owner';
     identityResolver = {
       async resolve(_request, context) {
         return context.runtime === 'node' && isLoopback(context.remoteAddress) ? { subject } : null;
       },
     };
-    adminSubjects = [subject];
+    adminSubjects = options.fixtureBarberId ? ['local-fixture-owner'] : [subject];
+    barberSubjects = options.fixtureBarberId ? { [subject]: options.fixtureBarberId } : {};
   }
   try {
     handler = createAgendaRouter({
@@ -188,6 +198,7 @@ export async function startAgendaNodeServer(
       mode: options.mode,
       allowedOrigins: options.allowedOrigins ?? [origin],
       adminSubjects,
+      barberSubjects,
       identityResolver,
       rateLimiter: options.rateLimiter,
       bodyLimitBytes: options.bodyLimitBytes,

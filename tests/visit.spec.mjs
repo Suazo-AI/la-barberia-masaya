@@ -30,7 +30,7 @@ for (const viewport of [
       .not.toContain('0.57735');
     await page.locator('.space-grid').scrollIntoViewIfNeeded();
     await expect.poll(() => page.locator('.is-revealing').count()).toBe(0);
-    const visit = page.getByRole('region', { name: 'NOS VEMOS EN EL LOCAL.' });
+    const visit = page.getByRole('contentinfo', { name: 'SEGUÍ EL ESTILO.' });
     await visit.scrollIntoViewIfNeeded();
     await expect(visit.getByRole('heading', { name: 'HORARIO' })).toBeVisible();
     const expected = [
@@ -44,7 +44,7 @@ for (const viewport of [
     ];
     expect(
       await visit
-        .locator('.hours-list > div')
+        .locator('.lb-footer-hours-list > div')
         .evaluateAll((rows) =>
           rows.map((row) => [
             row.querySelector('dt').textContent,
@@ -89,7 +89,7 @@ for (const viewport of [
       JSON.stringify(
         {
           commit: process.env.SOURCE_COMMIT || 'local-uncommitted',
-          baselineCommit: '0755fce62688e380a737db9e267bad22e35acf25',
+          baselineCommit: '9a4f3858be2078ab0ff3b4cb8d31d1beb874f851',
           viewport,
           url: page.url(),
           checks: [

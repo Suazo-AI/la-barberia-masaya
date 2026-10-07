@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#111110" />
+    <title>La Barbería · Demo de reservas y agenda</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./demo.css" />
+    <script src="./demo.js" type="module"></script>
+  </head>
+  <body class="demo-page">
+    <a class="skip-link" href="#demo-main">Saltar a la demo</a>
+    <header class="demo-header">
+      <a href="./index.html" aria-label="Volver al sitio de La Barbería">LA BARBERÍA · MASAYA</a>
+      <span class="demo-badge">DEMO</span>
+    </header>
+    <main id="demo-main" class="demo-shell" tabindex="-1">
+      <div class="demo-intro">
+        <p class="section-label">RESERVAS Y ADMINISTRACIÓN</p>
+        <h1>PROBÁ LA AGENDA.</h1>
+        <p>Creá, mové y cancelá citas de prueba con los servicios y precios del negocio.</p>
+        <p class="demo-notice">
+          Esta demo guarda datos ficticios solo en este navegador. No crea citas reales ni envía
+          avisos. Los nombres de los profesionales son ejemplos.
+        </p>
+      </div>
+      <noscript
+        ><p class="demo-notice">
+          Activá JavaScript para usar esta demo. La web del negocio permite consultar servicios y
+          precios sin JavaScript.
+        </p></noscript
+      >
+      <p id="demo-storage-status" class="demo-storage" role="status"></p>
+      <div class="demo-navigation" role="group" aria-label="Vistas de la demo">
+        <button type="button" id="demo-client-tab" aria-pressed="true">Reservar</button>
+        <button type="button" id="demo-admin-tab" aria-pressed="false">Administración</button>
+        <button type="button" id="demo-reset" class="demo-text-button">Reiniciar demo</button>
+      </div>
+      <p id="demo-feedback" class="demo-feedback" role="status" aria-live="polite"></p>
+      <section id="demo-client-pane" aria-labelledby="demo-client-heading">
+        <div class="demo-grid">
+          <form id="demo-booking-form" class="demo-panel">
+            <h2 id="demo-client-heading">Elegí tu cita de prueba</h2>
+            <div class="demo-fields">
+              <label>Servicio<select id="demo-service" required></select></label>
+              <label>Profesional de ejemplo<select id="demo-professional" required></select></label>
+              <label>Fecha<input id="demo-date" type="date" required /></label>
+            </div>
+            <p id="demo-selection-note" class="demo-muted"></p>
+            <fieldset class="demo-times">
+              <legend>Hora · Nicaragua</legend>
+              <div id="demo-slots" class="demo-slots"></div>
+            </fieldset>
+            <p class="demo-muted">Reservá con 1 hora de anticipación, hasta 14 días antes.</p>
+            <button type="submit" id="demo-submit" class="demo-primary" disabled>
+              Crear cita demo
+            </button>
+          </form>
+          <div class="demo-panel">
+            <h2>Tus citas de prueba</h2>
+            <p class="demo-muted">
+              Podés cambiar o cancelar hasta 1 hora antes. No pedimos datos personales.
+            </p>
+            <div id="demo-client-entries" class="demo-entries"></div>
+          </div>
+        </div>
+      </section>
+      <section id="demo-admin-pane" aria-labelledby="demo-admin-heading" hidden>
+        <div class="demo-panel">
+          <h2 id="demo-admin-heading">Agenda administrativa demo</h2>
+          <div class="demo-fields">
+            <label
+              >Persona simulada<select id="demo-persona">
+                <option value="owner">Dueño · simulado</option>
+                <option value="jonathan">Jonathan · simulado</option>
+              </select></label
+            >
+            <label>Fecha de la agenda<input id="demo-admin-date" type="date" required /></label>
+            <label>Mostrar profesional<select id="demo-admin-professional"></select></label>
+          </div>
+          <p id="demo-persona-note" class="demo-muted"></p>
+          <p class="demo-muted">
+            Estas dos vistas simulan administración. No son cuentas ni permisos reales.
+          </p>
+          <div id="demo-admin-entries" class="demo-entries"></div>
+        </div>
+        <div class="demo-grid demo-admin-tools">
+          <form id="demo-walkin-form" class="demo-panel">
+            <h2>Añadir atención demo</h2>
+            <div class="demo-fields">
+              <label>Servicio<select id="demo-walkin-service" required></select></label>
+              <label>Profesional<select id="demo-walkin-professional" required></select></label>
+              <label>Hora<input id="demo-walkin-time" type="time" step="300" required /></label>
+            </div>
+            <p class="demo-muted">
+              Se usa la fecha de la agenda. La demo impide solapamientos y deja 5 minutos de
+              preparación.
+            </p>
+            <button type="submit" class="demo-primary">Añadir a la agenda demo</button>
+          </form>
+          <form id="demo-block-form" class="demo-panel">
+            <h2>Bloquear un horario demo</h2>
+            <div class="demo-fields">
+              <label>Profesional<select id="demo-block-professional" required></select></label>
+              <label>Desde<input id="demo-block-start" type="time" step="300" required /></label>
+              <label>Hasta<input id="demo-block-end" type="time" step="300" required /></label>
+            </div>
+            <p class="demo-muted">
+              El bloqueo afecta solo a esta demo y se puede quitar desde la agenda.
+            </p>
+            <button type="submit" class="demo-primary">Crear bloqueo demo</button>
+          </form>
+        </div>
+      </section>
+    </main>
+    <dialog id="demo-edit-dialog" class="demo-dialog" aria-labelledby="demo-edit-heading">
+      <form id="demo-edit-form">
+        <div class="demo-dialog-header">
+          <h2 id="demo-edit-heading">Reprogramar cita demo</h2>
+          <button type="button" data-close-edit>Cerrar</button>
+        </div>
+        <p id="demo-edit-description" class="demo-muted"></p>
+        <div class="demo-fields">
+          <label>Fecha<input id="demo-edit-date" type="date" required /></label>
+          <label>Profesional<select id="demo-edit-professional" required></select></label>
+        </div>
+        <fieldset class="demo-times">
+          <legend>Nuevo horario · Nicaragua</legend>
+          <div id="demo-edit-slots" class="demo-slots"></div>
+        </fieldset>
+        <p id="demo-edit-error" class="demo-feedback" role="status"></p>
+        <button type="submit" id="demo-edit-save" class="demo-primary" disabled>
+          Guardar cambio demo
+        </button>
+      </form>
+    </dialog>
+    <dialog id="demo-confirm-dialog" class="demo-dialog" aria-labelledby="demo-confirm-heading">
+      <h2 id="demo-confirm-heading">Confirmar acción de prueba</h2>
+      <p id="demo-confirm-copy"></p>
+      <div class="demo-entry-actions">
+        <button type="button" id="demo-confirm-back">Volver</button
+        ><button type="button" id="demo-confirm-action" class="demo-primary">Confirmar</button>
+      </div>
+    </dialog>
+  </body>
+</html>

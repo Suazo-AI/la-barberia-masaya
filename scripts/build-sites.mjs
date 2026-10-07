@@ -51,7 +51,7 @@ const compressedBytes = gzipSync(worker).byteLength;
 if (compressedBytes > 2 * 1024 * 1024)
   throw new Error('Worker exceeds the 2 MiB project gzip budget.');
 for (const input of Object.keys(result.metafile.inputs))
-  if (/fixtures|local-server|node-server|adapters\/sqlite|backup-cli/.test(input))
+  if (/fixtures|local-server|node-server|adapters\/sqlite|backup-cli|setup-check/.test(input))
     throw new Error(`Non-hosted source entered the Worker: ${input}`);
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist/server', { recursive: true });

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expectViewportReflow, fillAndCheckAbsenceControls } from './reflow-diagnostics.mjs';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
@@ -153,10 +154,13 @@ for (const viewport of [
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Descargar respaldo', exact: true }).click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^agenda-backup-v1-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(download.suggestedFilename()).toMatch(/^agenda-backup-v2-\d{4}-\d{2}-\d{2}\.json$/);
     const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
     expect(backup.format).toBe('portable-agenda');
-    expect(backup.version).toBe(1);
+    expect(backup.version).toBe(2);
+    expect(backup.tables.map((table) => table.name)).toEqual(
+      expect.arrayContaining(['agenda_absences', 'agenda_absence_audit']),
+    );
     expect(JSON.stringify(backup.tables)).toContain(booking.id);
     expect(JSON.stringify(backup.tables)).toContain(block.id);
     const finalSchedule = await request.get(
@@ -340,7 +344,7 @@ test('real committed walk-in with lost response freezes changed fields, survives
 test('admin accessibility, native focus and reflow at 320px / 200% text / reduced motion', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const catalog = await catalogFor(request);
@@ -351,11 +355,15 @@ test('admin accessibility, native focus and reflow at 320px / 200% text / reduce
     document.documentElement.style.fontSize = '200%';
   });
   await createWalkIn(page, day, name);
+  await fillAndCheckAbsenceControls(page, testInfo, {
+    'absence-start-date': day.date,
+    'absence-start-time': time(day.slots[0].startMinute),
+    'absence-end-date': day.date,
+    'absence-end-time': time(day.slots[0].startMinute + 60),
+  });
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
+  await expectViewportReflow(page, testInfo);
   const opener = page
     .locator('#booking-list article')
     .filter({ hasText: name })

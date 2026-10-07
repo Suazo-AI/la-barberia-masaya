@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 const media = resolve(process.env.HERO_ASSET_DIR || 'src/assets/images');
 const requiredImages = [
   'barber-at-work-2026-09-17.jpg',
+  'finished-fade-highlight-2026-10-06.jpg',
+  'jonatan-at-work-2026-09-16.jpg',
   'cut-rear-view-2026-09-05.jpg',
   ...[720, 1200, 1672].map((width) => `interior-${width}.webp`),
   ...[720, 1000].map((width) => `local-overview-${width}.webp`),
@@ -31,6 +33,10 @@ for (const name of [
   'admin.css',
   'admin.js',
   'art-gallery.js',
+  'demo.html',
+  'demo.css',
+  'demo.js',
+  'demo-store.js',
   'THIRD-PARTY-NOTICES.txt',
   'favicon.svg',
 ]) {

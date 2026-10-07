@@ -100,6 +100,15 @@ function service(overrides: Partial<AgendaService> = {}): AgendaService {
         reason: 'closed',
       };
     },
+    async rescheduleAvailability(id, input) {
+      return {
+        date: input.date,
+        timeZone: 'America/Managua',
+        mode: 'fixture',
+        slots: [],
+        reason: 'closed',
+      };
+    },
     async createBooking() {
       return RECEIPT;
     },
@@ -130,10 +139,39 @@ function service(overrides: Partial<AgendaService> = {}): AgendaService {
     async cancelBlock() {
       return BLOCK;
     },
+    async listAbsences() {
+      return [];
+    },
+    async createAbsence(input) {
+      return {
+        ...input,
+        id: 'absence-1',
+        status: 'active',
+        version: 1,
+        affectedBookingIds: [],
+        resolution: 'none',
+        timeZone: 'America/Managua',
+      };
+    },
+    async revokeAbsence() {
+      return {
+        id: 'absence-1',
+        professionalId: 'a',
+        startDate: '2026-10-05',
+        startMinute: 840,
+        endDate: '2026-10-05',
+        endMinute: 900,
+        status: 'revoked',
+        version: 2,
+        affectedBookingIds: [],
+        resolution: 'none',
+        timeZone: 'America/Managua',
+      };
+    },
     async exportData() {
       return {
         format: 'portable-agenda',
-        version: 1,
+        version: 2,
         exportedAt: '2026-10-04T00:00:00.000Z',
         config: {} as AgendaBackup['config'],
         tables: [],
@@ -385,7 +423,7 @@ test('admin data and export require the trusted server resolver and exact owner 
       privateCalls += 1;
       return {
         format: 'portable-agenda',
-        version: 1,
+        version: 2,
         exportedAt: '',
         config: {} as AgendaBackup['config'],
         tables: [],
@@ -889,10 +927,292 @@ test('real SQLite HTTP flow persists retries, owner-authorized changes and admin
     assert.equal(exported.status, 200);
     const backup = (await exported.json()) as AgendaBackup;
     assert.equal(backup.format, 'portable-agenda');
-    assert.equal(backup.version, 1);
+    assert.equal(backup.version, 2);
     assert.equal(JSON.stringify(backup).includes(TOKEN), false);
   } finally {
     await running.close();
     store.close();
   }
+});
+
+test('staff session and absence routes enforce trusted barber scope without changing existing bookings', async (t) => {
+  const store = new SqliteStore(':memory:');
+  t.after(() => store.close());
+  await migrateSqlite(store);
+  const agenda = createAgendaService(store, localFixtureConfig, {
+    now: () => new Date('2026-10-04T15:00:00Z'),
+  });
+  let subject = 'owner';
+  const handle = router({
+    service: agenda,
+    adminSubjects: ['owner'],
+    barberSubjects: { 'barber-a': 'a', 'barber-b': 'b' },
+    identityResolver: {
+      async resolve() {
+        return { subject };
+      },
+    },
+  });
+  const ownBooking = await handle(request('/bookings', { body: INPUT }));
+  assert.equal(ownBooking.status, 201);
+  const own = (await ownBooking.json()).booking;
+  const otherBooking = await handle(
+    request('/bookings', {
+      body: { ...INPUT, professionalId: 'b' },
+      headers: { 'Idempotency-Key': 'other-booking-key' },
+    }),
+  );
+  assert.equal(otherBooking.status, 201);
+  const other = (await otherBooking.json()).booking;
+  assert.deepEqual(await (await handle(request('/admin/session'))).json(), {
+    role: 'owner',
+    capabilities: { manageShop: true, reportAbsence: true },
+  });
+
+  subject = 'barber-a';
+  assert.deepEqual(
+    await (
+      await handle(
+        request('/admin/session', { headers: { 'X-Role': 'owner', 'X-Professional-Id': 'b' } }),
+      )
+    ).json(),
+    {
+      role: 'barber',
+      professionalId: 'a',
+      capabilities: { manageShop: false, reportAbsence: true },
+    },
+  );
+  const schedule = await handle(request(`/admin/schedule?date=${INPUT.date}`));
+  assert.equal(schedule.status, 200);
+  const scheduleBody = await schedule.json();
+  assert.deepEqual(
+    scheduleBody.bookings.map((booking: { id: string }) => booking.id),
+    [own.id],
+  );
+  assert.deepEqual(scheduleBody.absences, []);
+  assert.equal(
+    (await handle(request(`/admin/schedule?date=${INPUT.date}&professionalId=b`))).status,
+    403,
+  );
+  for (const [path, body] of [
+    ['/admin/export', undefined],
+    ['/admin/walk-ins', { ...INPUT, managementToken: undefined }],
+    [
+      '/admin/blocks',
+      {
+        professionalId: 'a',
+        date: INPUT.date,
+        startMinute: 900,
+        endMinute: 930,
+        label: 'blocked',
+        configVersion: 1,
+      },
+    ],
+    [`/admin/bookings/${own.id}/cancel`, { expectedVersion: 1, configVersion: 1 }],
+    [`/admin/bookings/${other.id}/cancel`, { expectedVersion: 1, configVersion: 1 }],
+    [
+      `/admin/bookings/${own.id}/reschedule`,
+      {
+        date: INPUT.date,
+        startMinute: 900,
+        professionalId: 'a',
+        expectedVersion: 1,
+        configVersion: 1,
+      },
+    ],
+  ] as const)
+    assert.equal((await handle(request(path, { body }))).status, 403, path);
+
+  const absenceBody = {
+    professionalId: 'a',
+    startDate: INPUT.date,
+    startMinute: 830,
+    endDate: INPUT.date,
+    endMinute: 910,
+    configVersion: 1,
+  };
+  assert.equal(
+    (await handle(request('/admin/absences', { body: { ...absenceBody, professionalId: 'b' } })))
+      .status,
+    403,
+  );
+  for (const invalid of [
+    { ...absenceBody, role: 'owner' },
+    { ...absenceBody, actor: { kind: 'admin' } },
+    { ...absenceBody, endDate: '2026-02-30' },
+    { ...absenceBody, reason: 'x'.repeat(121) },
+    { ...absenceBody, endMinute: 1441 },
+  ])
+    assert.equal((await handle(request('/admin/absences', { body: invalid }))).status, 400);
+  const first = await handle(request('/admin/absences', { body: absenceBody }));
+  assert.equal(first.status, 201);
+  const absence = await first.json();
+  assert.equal(absence.resolution, 'requires-resolution');
+  assert.deepEqual(absence.affectedBookingIds, [own.id]);
+  const retry = await handle(request('/admin/absences', { body: absenceBody }));
+  assert.deepEqual(await retry.json(), absence);
+  const unchanged = (await (await handle(request(`/admin/schedule?date=${INPUT.date}`))).json())
+    .bookings[0];
+  assert.equal(unchanged.status, 'confirmed');
+  assert.equal(unchanged.version, 1);
+  assert.equal((await store.all('SELECT * FROM agenda_outbox')).length, 2);
+  const newBooking = await handle(
+    request('/bookings', {
+      body: { ...INPUT, startMinute: 885 },
+      headers: { 'Idempotency-Key': 'absence-blocked-booking' },
+    }),
+  );
+  assert.equal(newBooking.status, 409);
+  subject = 'barber-b';
+  assert.equal(
+    (
+      await handle(
+        request(`/admin/absences/${absence.id}/revoke`, {
+          body: { expectedVersion: 1, configVersion: 1 },
+        }),
+      )
+    ).status,
+    403,
+  );
+  subject = 'owner';
+  const ownerSchedule = await (await handle(request(`/admin/schedule?date=${INPUT.date}`))).json();
+  assert.equal(ownerSchedule.bookings.length, 2);
+  assert.equal(ownerSchedule.absences[0].resolution, 'requires-resolution');
+  const revoked = await handle(
+    request(`/admin/absences/${absence.id}/revoke`, {
+      body: { expectedVersion: 1, configVersion: 1 },
+    }),
+  );
+  assert.equal(revoked.status, 200);
+  assert.equal((await revoked.json()).status, 'revoked');
+  subject = 'outsider';
+  assert.equal(
+    (
+      await handle(
+        request('/admin/session', {
+          headers: { 'X-User': 'owner', 'X-Role': 'owner', Authorization: `Bearer ${TOKEN}` },
+        }),
+      )
+    ).status,
+    403,
+  );
+});
+
+test('ambiguous, stale or malformed staff identity mappings fail closed', async () => {
+  assert.throws(() => router({ adminSubjects: ['owner'], barberSubjects: { owner: 'a' } }));
+  assert.throws(() => router({ adminSubjects: ['owner', 'owner'] }));
+  assert.throws(() => router({ adminSubjects: ['bad subject'] }));
+  assert.throws(() => router({ barberSubjects: { barber: '../a' } }));
+  const handle = router({
+    barberSubjects: { barber: 'missing' },
+    identityResolver: {
+      async resolve() {
+        return { subject: 'barber' };
+      },
+    },
+  });
+  const result = await handle(request('/admin/session'));
+  assert.equal(result.status, 503);
+  assert.equal(await code(result), 'CONFIGURATION_REQUIRED');
+});
+
+test('barber fixture is explicit, loopback-only and cannot be selected by client role headers', async (t) => {
+  const store = new SqliteStore(':memory:');
+  t.after(() => store.close());
+  await migrateSqlite(store);
+  const agenda = createAgendaService(store, localFixtureConfig, {
+    now: () => new Date('2026-10-04T15:00:00Z'),
+  });
+  const running = await startAgendaNodeServer({
+    service: agenda,
+    mode: 'fixture',
+    fixtureAdmin: true,
+    fixtureBarberId: 'a',
+    rateLimiter: ALLOW_RATE,
+  });
+  t.after(() => running.close());
+  const result = await fetch(`${running.origin}${AGENDA_API_PREFIX}/admin/session`, {
+    headers: { 'X-Role': 'admin', 'X-User': 'local-fixture-owner' },
+  });
+  assert.equal(result.status, 200);
+  assert.equal((await result.json()).role, 'barber');
+  assert.equal((await fetch(`${running.origin}${AGENDA_API_PREFIX}/admin/export`)).status, 403);
+  await assert.rejects(
+    startAgendaNodeServer({ service: agenda, mode: 'fixture', fixtureBarberId: 'a' }),
+    /explicit fixture mode/,
+  );
+  await assert.rejects(
+    startAgendaNodeServer({ service: agenda, mode: 'production', fixtureBarberId: 'a' }),
+    /explicit fixture mode/,
+  );
+});
+
+test('private reschedule availability requires the scoped capability and rejects public exclusion parameters', async () => {
+  let calls = 0;
+  const handle = router({
+    service: service({
+      async rescheduleAvailability(id, input, actor) {
+        calls++;
+        assert.equal(id, 'reservation-1');
+        assert.deepEqual(input, { date: '2026-10-05', professionalId: 'a' });
+        assert.deepEqual(actor, { kind: 'customer', reservationId: id });
+        return {
+          date: input.date,
+          timeZone: 'America/Managua',
+          mode: 'fixture',
+          reason: 'available',
+          slots: [{ startMinute: 855, endMinute: 885, professionalIds: ['a'] }],
+        };
+      },
+    }),
+  });
+  const path = '/bookings/reservation-1/availability?date=2026-10-05&professionalId=a';
+  const headers = { Authorization: `Bearer ${TOKEN}` };
+  for (const candidate of [{}, { Authorization: 'Bearer invalid' }] as Record<string, string>[]) {
+    assert.equal((await handle(request(path, { headers: candidate }))).status, 403);
+  }
+  assert.equal(
+    (await handle(request(path.replace('reservation-1', 'reservation-2'), { headers }))).status,
+    403,
+  );
+  assert.equal(calls, 0);
+  const response = await handle(request(path, { headers }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal((await response.json()).slots[0].startMinute, 855);
+  assert.equal(calls, 1);
+  assert.equal((await handle(request(`${path}&ignoreId=someone-else`, { headers }))).status, 400);
+  assert.equal((await handle(request(`${path}&token=${TOKEN}`, { headers }))).status, 400);
+  assert.equal(
+    (await handle(request(path, { headers: { ...headers, Origin: 'https://other.example.test' } })))
+      .status,
+    403,
+  );
+  assert.equal((await handle(request(path, { method: 'POST', headers }))).status, 405);
+  assert.equal(
+    (await handle(request('/availability?serviceId=cut&date=2026-10-05&ignoreId=reservation-1')))
+      .status,
+    400,
+  );
+  assert.equal(calls, 1);
+});
+
+test('generic hosts do not expose Sites self-identity or accept spoofed dispatcher identity headers', async () => {
+  const headers = {
+    'oai-authenticated-user-id': 'pretend-owner',
+    'oai-authenticated-user-email': 'synthetic@example.test',
+    'X-Role': 'owner',
+  };
+  const local = await router()(request('/identity', { headers }));
+  assert.equal(local.status, 404);
+  assert.doesNotMatch(await local.text(), /pretend-owner|synthetic@example/);
+  const portable = createAgendaWorker({
+    mode: () => 'fixture',
+    createService: async () => service(),
+    allowedOrigins: () => [ORIGIN],
+    adminSubjects: () => ['pretend-owner'],
+  });
+  const response = await portable.fetch(request('/identity', { headers }), {});
+  assert.equal(response.status, 503);
+  assert.doesNotMatch(await response.text(), /pretend-owner|synthetic@example/);
 });

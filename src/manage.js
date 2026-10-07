@@ -2,7 +2,7 @@ import {
   consumeManagementLink,
   readBooking,
   readCatalog,
-  readAvailability,
+  readRescheduleAvailability,
   mutateBooking,
   newIdempotencyKey,
   managementUrl,
@@ -182,12 +182,13 @@ async function loadSlots() {
   }
   $('#manage-slot-message').textContent = 'Consultando horarios…';
   try {
-    const result = await readAvailability(
+    const result = await readRescheduleAvailability(
+      capability.id,
       {
-        serviceId: receipt.booking.serviceId,
         professionalId: $('#manage-professional').value,
         date,
       },
+      capability.token,
       controller.signal,
     );
     if (requestGeneration !== generation || $('#manage-reschedule').hidden) return;
