@@ -33,6 +33,10 @@ for (const name of [
   'admin.css',
   'admin.js',
   'art-gallery.js',
+  'demo.html',
+  'demo.css',
+  'demo.js',
+  'demo-store.js',
   'THIRD-PARTY-NOTICES.txt',
   'favicon.svg',
 ]) {

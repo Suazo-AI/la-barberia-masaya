@@ -39,6 +39,10 @@ test('every approved public file is served byte-for-byte including fonts and pho
     'admin.css',
     'admin.js',
     'art-gallery.js',
+    'demo.html',
+    'demo.css',
+    'demo.js',
+    'demo-store.js',
     'THIRD-PARTY-NOTICES.txt',
     'favicon.svg',
   ];

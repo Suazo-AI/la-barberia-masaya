@@ -166,3 +166,19 @@ test('confirmed public services and future policies are readable without activat
   assert.doesNotMatch(section, /<button|<input|<form|data-booking-open/);
   assert.doesNotMatch(html, /Servicios y profesionales pendientes de configuración/);
 });
+
+test('isolated demo entry and persona disclosures never activate the production API', async () => {
+  assert.match(html, /href="\.\/demo\.html"/);
+  const demo = await readFile('dist/demo.html', 'utf8');
+  assert.match(demo, /No crea citas reales ni envía/);
+  assert.match(demo, /Dueño · simulado/);
+  assert.match(demo, /Jonathan · simulado/);
+  assert.doesNotMatch(demo, /type="email"|autocomplete="name"|type="password"/);
+  for (const file of ['demo.js', 'demo-store.js']) {
+    const source = await readFile(`dist/${file}`, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /\bfetch\s*\(|XMLHttpRequest|\/api\/agenda|document\.cookie|AGENDA_ADMIN/,
+    );
+  }
+});

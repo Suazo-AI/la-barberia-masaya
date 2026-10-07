@@ -2,6 +2,8 @@
 
 Website and agenda pilot. Canonical public repository: https://github.com/Suazo-AI/la-barberia-masaya.
 
+Current delivery, 2026-10-07: [complete isolated browser-local demo](docs/demo-2026-10-07.md), with booking, changes/cancellation and Dueño/Jonathan simulated administration. Real production activation is outside this delivery; the production API, identities, configuration and data remain unchanged. No real administrator account information is needed to use this demo.
+
 Public services increment, 2026-10-06: [confirmed prices, planned durations and prospective booking rules](docs/public-services-2026-10-06.md) are readable without JavaScript or a configured booking API. This supersedes the earlier statement that public prices are absent. The private business candidate now has its approved schema inputs; administrator assignment is deliberately deferred and online reservations remain closed. No private configuration or role mapping is published.
 
 Authentic content candidate, 2026-10-06: [finished-cut frame and source-verified, on-demand team introductions](docs/authentic-content-2026-10-06.md). Existing visual direction and closed agenda remain. Only Jonatan’s caption-identified portrait is shipped; Manuel and the unnamed interview link to their sources. No real-person/catalog identity mapping, fabricated portfolio or booking activation. Browser evidence is prepared for exact-head CI; local Chromium could not launch.

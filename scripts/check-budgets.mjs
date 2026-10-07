@@ -27,7 +27,20 @@ const workPhotoBytes =
   (await gzip('assets/images/cut-rear-view-2026-09-05.jpg'));
 const teamPhotoBytes = await gzip('assets/images/jonatan-at-work-2026-09-16.jpg');
 const pageBeforeTeamBytes = total + workPhotoBytes + bookingJsGzipBytes;
+const demoJsBytes =
+  (await readFile('dist/demo.js')).length + (await readFile('dist/demo-store.js')).length;
+const demoRouteGzipBytes =
+  (await gzip('demo.html')) +
+  (await gzip('demo.css')) +
+  (await gzip('demo.js')) +
+  (await gzip('demo-store.js'));
 const report = {
+  optionalDemoJsBytes: demoJsBytes,
+  optionalDemoJsBudget: 48 * 1024,
+  optionalDemoRouteGzipBytes: demoRouteGzipBytes,
+  optionalDemoRouteGzipBudget: 32 * 1024,
+  optionalDemoReason:
+    'Separate browser-local synthetic demo route, loaded only when opened. Existing homepage and live API budgets are unchanged.',
   lazyWorkPhotoGzipBytes: workPhotoBytes,
   modeledPageBeforeTeamGzipBytes: pageBeforeTeamBytes,
   pageBeforeTeamBudget: 550 * 1024,
@@ -65,6 +78,8 @@ await mkdir('.private-evidence', { recursive: true });
 await writeFile('.private-evidence/budgets.json', JSON.stringify(report, null, 2));
 console.log(report);
 if (
+  demoJsBytes > report.optionalDemoJsBudget ||
+  demoRouteGzipBytes > report.optionalDemoRouteGzipBudget ||
   markup > report.markupBudget ||
   report.modeledPageBeforeTeamGzipBytes > report.pageBeforeTeamBudget ||
   report.optionalTeamPhotoGzipBytes > report.optionalTeamPhotoBudget ||
